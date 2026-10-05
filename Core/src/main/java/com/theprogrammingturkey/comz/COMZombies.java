@@ -1,7 +1,9 @@
 package com.theprogrammingturkey.comz;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -77,6 +79,28 @@ public class COMZombies extends JavaPlugin
 	public static INMSUtil nmsUtil;
 
 	public Vault vault;
+
+	@Override
+	public void onLoad()
+	{
+		migrateOldDataFolder();
+	}
+
+	/**
+	 * The plugin used to be called COM_Zombies, and the data folder is named after the plugin. Moves an old
+	 * plugins/COM_Zombies folder to the new name so existing arenas, signs and config carry over.
+	 */
+	private void migrateOldDataFolder()
+	{
+		File oldFolder = new File(getDataFolder().getParentFile(), "COM_Zombies");
+		if(!oldFolder.isDirectory() || getDataFolder().exists())
+			return;
+
+		if(oldFolder.renameTo(getDataFolder()))
+			log.info("Moved the old COM_Zombies data folder to " + getDataFolder().getName());
+		else
+			log.log(Level.SEVERE, "Could not move the old COM_Zombies data folder to " + getDataFolder().getName() + "! Move it yourself while the server is off.");
+	}
 
 	public void onEnable()
 	{

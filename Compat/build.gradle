@@ -1,4 +1,4 @@
-archivesBaseName = "comz-compat"
+archivesBaseName = "MinecraftZombies-compat"
 
 // Compiled against the oldest supported API so it only uses methods every supported server has.
 // The Spigot API is public, so no BuildTools run is needed.

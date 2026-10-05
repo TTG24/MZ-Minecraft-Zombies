@@ -1,15 +1,6 @@
-ext.buildnumber = 0
-if (System.getenv('BUILD_NUMBER') != null) {
-    project.buildnumber = Integer.parseInt(System.getenv('BUILD_NUMBER'))
-} else {
-    project.buildnumber = 'DEV'
-    logger.lifecycle "No build number detected, setting to 0"
-}
-
 allprojects {
     group = 'comz'
-    version = "2.3.${buildnumber}"
-    logger.lifecycle "${project.version}"
+    version = '1.0'
 }
 
 subprojects {

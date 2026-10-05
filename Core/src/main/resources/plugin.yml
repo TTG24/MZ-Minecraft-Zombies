@@ -1,4 +1,4 @@
-name: COM_Zombies
+name: MinecraftZombies
 main: com.theprogrammingturkey.comz.COMZombies
 description: 'MinecraftZombies, based on Call of Minecraft: Zombies'
 version: @version@
