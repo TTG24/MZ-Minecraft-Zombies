@@ -9,8 +9,11 @@ Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
   Bukkit API, so the plugin runs on 1.21 through 26.x without needing a new build for each Minecraft version.
 - **Configurable signs.** The text on every game sign (guns, perks, doors, mystery box, barriers, join signs and more)
   is set in the `signs` section of `config.yml`. Signs are recognised by their location, so the text can be anything.
-- **Fixes**, including: barriers letting players through at negative coordinates, barrier cracks disappearing between
-  rounds, the power switch never working, kit round rewards never firing, and the gun zoom getting stuck.
+- **Smarter barriers.** Zombies have to be right next to a barrier to break it, and on Paper they are walked to their
+  barrier and held there until it breaks (see [Server software](#server-software)).
+- **Fixes**, including: barriers letting players through at negative coordinates, zombies breaking barriers from far
+  away, barrier cracks disappearing between rounds, the power switch never working, kit round rewards never firing,
+  and the gun zoom getting stuck.
 
 ## Building
 
@@ -18,6 +21,13 @@ Requires JDK 21. From the project folder run `gradlew build` (`.\gradlew.bat bui
 created in `Core/build/libs`. No BuildTools run is needed.
 
 Servers need Java 21 for 1.21.x, or Java 25 for 26.x.
+
+## Server software
+
+**Paper (or a fork such as Purpur) is recommended.** Everything works on Spigot too, except one feature: on Paper,
+zombies that spawn behind a barrier are walked to it and held there until they break it down. Spigot has no
+pathfinding API for this, so there zombies simply chase the nearest player. On Spigot, build maps so a barrier is the
+only way out of a spawn room, or zombies can get stuck at a closer wall and never reach the barrier.
 
 ---
 

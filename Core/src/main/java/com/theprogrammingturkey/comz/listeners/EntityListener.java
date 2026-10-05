@@ -20,6 +20,7 @@ import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
@@ -28,6 +29,22 @@ import java.util.Map;
 public class EntityListener implements Listener
 {
 	private final Map<Player, Integer> healTimers = new HashMap<>();
+
+	@EventHandler(ignoreCancelled = true)
+	public void onEntityTarget(EntityTargetEvent event)
+	{
+		// Zombies held back at a barrier are walked to it, so don't let their AI go after players
+		if(!(event.getTarget() instanceof Player))
+			return;
+		for(Game game : GameManager.INSTANCE.getGames())
+		{
+			if(game.barrierManager.isHeldBack(event.getEntity()))
+			{
+				event.setCancelled(true);
+				return;
+			}
+		}
+	}
 
 	@EventHandler(priority = EventPriority.HIGH)
 	public void entityCombustEvent(EntityCombustEvent event)

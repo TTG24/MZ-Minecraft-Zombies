@@ -13,6 +13,7 @@ import com.theprogrammingturkey.comz.util.BlockUtils;
 import com.theprogrammingturkey.comz.util.Util;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -195,6 +196,17 @@ public class BarrierManager
 	public String getNextBarrierNumber()
 	{
 		return Util.genRandId();
+	}
+
+	/**
+	 * @return true if the entity is a zombie being held back at one of this game's barriers
+	 */
+	public boolean isHeldBack(Entity ent)
+	{
+		for(Barrier b : barriers)
+			if(b.isHeldBack(ent))
+				return true;
+		return false;
 	}
 
 	public void refreshDamage()

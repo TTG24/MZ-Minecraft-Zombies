@@ -266,7 +266,9 @@ public class SpawnManager
 			Mob ent = roundSpawner.spawnEntity(game, finalPoint, wave);
 			mobs.add(ent);
 
-			ent.setTarget(getNearestPlayer(ent));
+			// Zombies held back at a barrier are walked to it instead of chasing players
+			if(!game.barrierManager.isHeldBack(ent))
+				ent.setTarget(getNearestPlayer(ent));
 
 			mobsSpawned++;
 			smartSpawn(wave);
@@ -285,7 +287,7 @@ public class SpawnManager
 				Mob mob = mobs.get(i);
 				if(mob.isDead())
 					removeEntity(mob);
-				else
+				else if(!game.barrierManager.isHeldBack(mob))
 					mob.setTarget(getNearestPlayer(mob));
 			}
 
@@ -296,7 +298,7 @@ public class SpawnManager
 		});
 	}
 
-	private Player getNearestPlayer(Entity e)
+	public Player getNearestPlayer(Entity e)
 	{
 		Player closestPlayer = null;
 		double dist = Integer.MAX_VALUE;
