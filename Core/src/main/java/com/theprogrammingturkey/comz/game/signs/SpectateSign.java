@@ -6,20 +6,36 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class SpectateSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-
+		return "spectate";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines) throws SignParseException
 	{
-		game = GameManager.INSTANCE.getGame(lines[3]);
+		// Typed with the arena on line 3. Old-style signs show "Arena:" there and the name on line 4.
+		String name = lines[2].equalsIgnoreCase("Arena:") ? lines[3] : lines[2];
+		Game arena = GameManager.INSTANCE.getGame(name);
+		if(arena == null)
+			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "Arena name is", ChatColor.RED + "" + ChatColor.BOLD + "not a valid", ChatColor.RED + "" + ChatColor.BOLD + "arena!");
+
+		Map<String, String> data = new HashMap<>();
+		data.put("arena", arena.getName());
+		return data;
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
+	{
+		game = GameManager.INSTANCE.getGame(data.get("arena"));
 		if(game == null)
 		{
 			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "Invalid Arena!");
@@ -29,22 +45,9 @@ public class SpectateSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent sign)
+	public String[] getText(Map<String, String> data)
 	{
-		String name = sign.getLine(2);
-		game = GameManager.INSTANCE.getGame(name);
-		if(game == null)
-		{
-			sign.setLine(0, ChatColor.RED + "" + ChatColor.BOLD + "Arena name is");
-			sign.setLine(1, ChatColor.RED + "" + ChatColor.BOLD + "not a valid");
-			sign.setLine(2, ChatColor.RED + "" + ChatColor.BOLD + "arena!");
-			sign.setLine(3, "");
-			return;
-		}
-		sign.setLine(0, ChatColor.RED + "[Zombies]");
-		sign.setLine(1, ChatColor.AQUA + "Spectate");
-		sign.setLine(2, ChatColor.RED + "Arena:");
-		sign.setLine(3, name);
+		return SignText.render(getType(), data);
 	}
 
 	@Override

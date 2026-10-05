@@ -1,30 +1,54 @@
 package com.theprogrammingturkey.comz.game.signs;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+
 import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.features.PerkType;
 import com.theprogrammingturkey.comz.listeners.customEvents.PlayerPerkPurchaseEvent;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class PerkMachineSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-
+		return "perk";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines) throws SignParseException
 	{
-		PerkType perk = PerkType.getPerkType(lines[2]);
+		PerkType type = PerkType.getPerkType(lines[2]);
+		if(type == null)
+			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "No such", ChatColor.RED + "" + ChatColor.BOLD + "perk!");
+
+		String cost = lines[3];
+		if(!cost.matches("[0-9]{1,5}"))
+		{
+			if(player != null)
+				CommandUtil.sendMessageToPlayer(player, cost + " is not a valid amount!");
+			cost = "2000";
+		}
+
+		Map<String, String> data = new HashMap<>();
+		data.put("perk", type.toString().toLowerCase());
+		data.put("price", cost);
+		return data;
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
+	{
+		PerkType perk = PerkType.getPerkType(data.get("perk"));
 		if(game.hasPower() && !game.isPowered())
 		{
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must turn on the power first!");
@@ -39,17 +63,7 @@ public class PerkMachineSign implements IGameSign
 		}
 
 		int playerPoints = PointManager.INSTANCE.getPlayersPoints(player);
-		String costStr = lines[3];
-		int cost;
-		if(costStr.matches("[0-9]{1,5}"))
-		{
-			cost = Integer.parseInt(costStr);
-		}
-		else
-		{
-			cost = 2000;
-			CommandUtil.sendMessageToPlayer(player, costStr + " is not a valid amount!");
-		}
+		int cost = Integer.parseInt(data.get("price"));
 
 		if(playerPoints < cost)
 		{
@@ -82,37 +96,9 @@ public class PerkMachineSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent sign)
+	public String[] getText(Map<String, String> data)
 	{
-		String thirdLine = ChatColor.stripColor(sign.getLine(2));
-		String fourthLine = ChatColor.stripColor(sign.getLine(3));
-
-		PerkType type = PerkType.getPerkType(thirdLine);
-		if(type == null)
-		{
-			sign.setLine(0, ChatColor.RED + "" + ChatColor.BOLD + "No such");
-			sign.setLine(1, ChatColor.RED + "" + ChatColor.BOLD + "perk!");
-			sign.setLine(2, "");
-			sign.setLine(3, "");
-		}
-		else
-		{
-			int cost;
-			if(fourthLine != null && fourthLine.matches("[0-9]{1,5}"))
-			{
-				cost = Integer.parseInt(fourthLine);
-			}
-			else
-			{
-				cost = 2000;
-				CommandUtil.sendMessageToPlayer(player, fourthLine + " is not a valid amount!");
-			}
-
-			sign.setLine(0, ChatColor.RED + "[Zombies]");
-			sign.setLine(1, ChatColor.AQUA + "Perk Machine");
-			sign.setLine(2, type.toString().toLowerCase());
-			sign.setLine(3, Integer.toString(cost));
-		}
+		return SignText.render(getType(), data);
 	}
 
 	@Override

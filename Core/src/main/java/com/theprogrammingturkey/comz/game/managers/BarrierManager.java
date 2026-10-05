@@ -197,6 +197,12 @@ public class BarrierManager
 		return Util.genRandId();
 	}
 
+	public void refreshDamage()
+	{
+		for(Barrier b : barriers)
+			b.refreshDamage();
+	}
+
 	public void unloadAllBarriers()
 	{
 		for(Barrier b : barriers)

@@ -8,7 +8,10 @@ import com.theprogrammingturkey.comz.config.COMZConfig;
 import com.theprogrammingturkey.comz.config.ConfigManager;
 import com.theprogrammingturkey.comz.config.CustomConfig;
 import com.theprogrammingturkey.comz.game.Game;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.game.signs.JoinSign;
+import com.theprogrammingturkey.comz.game.signs.SignRegistry;
+import com.theprogrammingturkey.comz.game.signs.SignText;
+import com.theprogrammingturkey.comz.util.BlockUtils;
 import org.bukkit.Location;
 import org.bukkit.block.Sign;
 
@@ -66,16 +69,9 @@ public class SignManager
 			return;
 		}
 		JsonObject jsonObject = jsonElement.getAsJsonObject();
-		JsonArray signsArray;
-		if(jsonObject.has(game.getName()))
-		{
-			signsArray = jsonObject.getAsJsonArray(game.getName());
-		}
-		else
-		{
-			signsArray = new JsonArray();
-			jsonObject.add(game.getName(), signsArray);
-		}
+		// Rebuilt each time. Adding to the saved list duplicated every sign on each save.
+		JsonArray signsArray = new JsonArray();
+		jsonObject.add(game.getName(), signsArray);
 
 		for(Location loc : gameSigns)
 			signsArray.add(CustomConfig.locationToJson(loc));
@@ -89,29 +85,9 @@ public class SignManager
 		{
 			for(Location loc : gameSigns)
 			{
-				final Sign sign = (Sign) loc.getBlock().getState();
-				if(game.getStatus() == Game.GameStatus.DISABLED)
-				{
-					sign.setLine(0, ChatColor.DARK_RED + "[maintenance]".toUpperCase());
-					sign.setLine(1, game.getName());
-					sign.setLine(2, "Game will be");
-					sign.setLine(3, "available soon!");
-				}
-				else if(game.getStatus() == Game.GameStatus.WAITING || game.getStatus() == Game.GameStatus.STARTING)
-				{
-					sign.setLine(0, ChatColor.RED + "[Zombies]");
-					sign.setLine(1, ChatColor.AQUA + "Join");
-					sign.setLine(2, game.getName());
-					sign.setLine(3, ChatColor.GREEN + "Players: " + game.getPlayersInGame().size() + "/" + game.maxPlayers);
-				}
-				else if(game.getStatus() == Game.GameStatus.INGAME)
-				{
-					sign.setLine(0, ChatColor.GREEN + game.getName());
-					sign.setLine(1, ChatColor.RED + "InProgress");
-					sign.setLine(2, ChatColor.RED + "Wave: " + game.getWave());
-					sign.setLine(3, ChatColor.DARK_RED + "Alive: " + game.getPlayersInGame().size());
-				}
-				sign.update();
+				if(!BlockUtils.isSign(loc.getBlock()))
+					continue;
+				SignText.apply((Sign) loc.getBlock().getState(), JoinSign.getText(game));
 			}
 		});
 	}
@@ -142,11 +118,15 @@ public class SignManager
 	{
 		for(Location loc : gameSigns)
 		{
+			if(!BlockUtils.isSign(loc.getBlock()))
+				continue;
 			Sign sign = (Sign) loc.getBlock().getState();
+			SignRegistry.INSTANCE.remove(loc);
 			sign.setLine(0, "");
 			sign.setLine(1, "");
 			sign.setLine(2, "");
 			sign.setLine(3, "");
+			sign.update();
 		}
 		gameSigns.clear();
 		save();

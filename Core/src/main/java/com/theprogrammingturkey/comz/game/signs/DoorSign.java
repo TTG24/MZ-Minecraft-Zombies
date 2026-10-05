@@ -7,17 +7,32 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class DoorSign implements IGameSign
 {
+	@Override
+	public String getType()
+	{
+		return "door";
+	}
+
+	@Override
+	public Map<String, String> parse(Game game, Player player, String[] lines)
+	{
+		// Door signs only get their price once the door is set up
+		return new HashMap<>();
+	}
+
 	@Override
 	public void onBreak(Game game, Player player, Location location)
 	{
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
 	{
 		Door door = game.doorManager.getDoorFromSign(location);
 		if(door == null)
@@ -47,14 +62,22 @@ public class DoorSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent event)
+	public String[] getText(Map<String, String> data)
 	{
-
+		// Leave the typed text until the door is set up, which then draws the sign
+		return null;
 	}
 
 	@Override
 	public boolean requiresGame()
 	{
 		return true;
+	}
+
+	@Override
+	public boolean isRegistered()
+	{
+		// Doors already keep track of their signs
+		return false;
 	}
 }

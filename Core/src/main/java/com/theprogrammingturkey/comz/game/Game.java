@@ -26,13 +26,13 @@ import com.theprogrammingturkey.comz.listeners.customEvents.GameStartEvent;
 import com.theprogrammingturkey.comz.spawning.RoundSpawnType;
 import com.theprogrammingturkey.comz.spawning.SpawnManager;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
+import com.theprogrammingturkey.comz.util.ApiCompat;
 import com.theprogrammingturkey.comz.util.BlockUtils;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.EntityEffect;
 import org.bukkit.GameMode;
-import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -305,6 +305,16 @@ public class Game
 	public int getWave()
 	{
 		return this.waveNumber;
+	}
+
+	/**
+	 * Makes this arena use power, so power doors, perks, pack-a-punch and teleporters need the power sign first.
+	 */
+	public void enablePower(Player player)
+	{
+		powerSetup = true;
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Power enabled! Type /z disablepower " + getName() + " to disable the power!");
+		GameManager.INSTANCE.saveAllGames();
 	}
 
 	public void removePower(Player player)
@@ -715,7 +725,7 @@ public class Game
 	 */
 	public void forceNight()
 	{
-		arena.getWorld().setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+		arena.getWorld().setGameRule(ApiCompat.ADVANCE_TIME, false);
 		arena.getWorld().setTime(18000L);
 	}
 
@@ -1257,7 +1267,9 @@ public class Game
 
 	public void updateBarrierDamage(int damage, Collection<Block> blocks)
 	{
-		List<Player> players = getPlayersAndSpectators();
+		// Cracks only go to players in the game, but clearing them goes to everyone in the world. When a game ends,
+		// the players have usually already left it, so they would otherwise never be told the cracks are gone.
+		List<Player> players = damage < 0 ? arena.getWorld().getPlayers() : getPlayersAndSpectators();
 		for(Block block : blocks)
 			COMZombies.nmsUtil.playBlockBreakAction(players, damage, block);
 	}

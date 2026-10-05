@@ -8,20 +8,48 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class JoinSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-		game.signManager.removeSign(location);
+		return "join";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines) throws SignParseException
 	{
-		game = GameManager.INSTANCE.getGame(lines[2]);
+		Game arena = GameManager.INSTANCE.isValidArena(lines[2]) ? GameManager.INSTANCE.getGame(lines[2]) : null;
+		if(arena == null)
+			throw new SignParseException(ChatColor.DARK_RED + "No such", ChatColor.DARK_RED + "game!");
+
+		Map<String, String> data = new HashMap<>();
+		data.put("arena", arena.getName());
+		return data;
+	}
+
+	@Override
+	public void onCreate(Game game, Player player, Location location, Map<String, String> data)
+	{
+		GameManager.INSTANCE.getGame(data.get("arena")).signManager.addSign(location);
+	}
+
+	@Override
+	public void onBreak(Game game, Player player, Location location)
+	{
+		for(Game g : GameManager.INSTANCE.getGames())
+			if(g.signManager.isSign(location))
+				g.signManager.removeSign(location);
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
+	{
+		game = GameManager.INSTANCE.getGame(data.get("arena"));
 		if(game != null)
 		{
 			if(!game.signManager.isSign(location))
@@ -36,25 +64,38 @@ public class JoinSign implements IGameSign
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "There is no arena called " + ChatColor.GOLD + lines[2] + ChatColor.DARK_RED + "! Contact an admin to fix this issue!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "There is no arena called " + ChatColor.GOLD + data.get("arena") + ChatColor.DARK_RED + "! Contact an admin to fix this issue!");
 		}
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent event)
+	public String[] getText(Map<String, String> data)
 	{
-		String thirdLine = ChatColor.stripColor(event.getLine(2));
+		Game game = GameManager.INSTANCE.getGame(data.get("arena"));
+		return game == null ? null : getText(game);
+	}
 
-		if(!GameManager.INSTANCE.isValidArena(thirdLine))
+	/**
+	 * Join signs change with the state of their game.
+	 */
+	public static String[] getText(Game game)
+	{
+		Map<String, String> values = new HashMap<>();
+		values.put("arena", game.getName());
+		values.put("players", String.valueOf(game.getPlayersInGame().size()));
+		values.put("max", String.valueOf(game.maxPlayers));
+		values.put("alive", String.valueOf(game.getPlayersInGame().size()));
+		values.put("wave", String.valueOf(game.getWave()));
+
+		switch(game.getStatus())
 		{
-			event.setLine(0, ChatColor.DARK_RED + "No such");
-			event.setLine(1, ChatColor.DARK_RED + "game!");
-			event.setLine(2, "");
-			event.setLine(3, "");
-			return;
+			case DISABLED:
+				return SignText.render("join_maintenance", values);
+			case INGAME:
+				return SignText.render("join_ingame", values);
+			default:
+				return SignText.render("join_waiting", values);
 		}
-		game = GameManager.INSTANCE.getGame(thirdLine);
-		game.signManager.addSign(event.getBlock().getLocation());
 	}
 
 	@Override

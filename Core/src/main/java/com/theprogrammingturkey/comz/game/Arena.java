@@ -119,6 +119,10 @@ public class Arena
 		if(currentLoc.getWorld() != world)
 			return false;
 
+		// Arenas that are still being set up may not have both corners yet
+		if(min == null || max == null)
+			return false;
+
 		double x = currentLoc.getX();
 		double y = currentLoc.getY();
 		double z = currentLoc.getZ();

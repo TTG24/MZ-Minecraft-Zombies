@@ -72,7 +72,8 @@ public class Kit
 				this.perks.add(perk);
 		}
 
-		points = CustomConfig.getInt(kitJson, "points", 0);
+		// Total points the player starts with. Everyone normally starts with 500.
+		points = CustomConfig.getInt(kitJson, "points", 500);
 
 		for(JsonElement roundRewardElem : kitJson.getAsJsonArray("round_rewards"))
 		{
@@ -111,8 +112,8 @@ public class Kit
 				perks.add(perk);
 			}
 
-			int points = CustomConfig.getInt(roundRewardJson, "points,", 0);
-			int roundEnd = CustomConfig.getInt(roundRewardJson, "after_round,", 0);
+			int points = CustomConfig.getInt(roundRewardJson, "points", 0);
+			int roundEnd = CustomConfig.getInt(roundRewardJson, "after_round", 0);
 
 			roundRewards.add(new RoundReward(roundEnd, points, weapons, perks));
 		}
@@ -163,7 +164,7 @@ public class Kit
 				for(PerkType perk : roundReward.getPerks())
 					PerkManager.givePerk(game, player, perk);
 
-				PointManager.INSTANCE.addPoints(player, roundReward.getPoints() - 500);
+				PointManager.INSTANCE.addPoints(player, roundReward.getPoints());
 				game.scoreboard.update();
 				player.updateInventory();
 			}

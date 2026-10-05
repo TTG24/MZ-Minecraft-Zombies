@@ -5,18 +5,33 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class PowerSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-
+		return "power";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines)
+	{
+		return new HashMap<>();
+	}
+
+	@Override
+	public void onCreate(Game game, Player player, Location location, Map<String, String> data)
+	{
+		//TODO: Check that there are no other power signs
+		game.enablePower(player);
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
 	{
 		if(game.hasPower())
 		{
@@ -31,12 +46,9 @@ public class PowerSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent sign)
+	public String[] getText(Map<String, String> data)
 	{
-		sign.setLine(0, ChatColor.RED + "[Zombies]");
-		sign.setLine(1, ChatColor.AQUA + "Power");
-		//TODO: Check that there are no other power signs
-		game.removePower(player);
+		return SignText.render(getType(), data);
 	}
 
 	@Override

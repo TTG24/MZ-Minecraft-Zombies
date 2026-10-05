@@ -1,14 +1,12 @@
 package com.theprogrammingturkey.comz.game.features;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.config.CustomConfig;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.spawning.SpawnPoint;
-import com.theprogrammingturkey.comz.util.BlockUtils;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -17,11 +15,16 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.config.CustomConfig;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
+import com.theprogrammingturkey.comz.game.signs.SignText;
+import com.theprogrammingturkey.comz.spawning.SpawnPoint;
+import com.theprogrammingturkey.comz.util.BlockUtils;
 
 public class Door
 {
@@ -59,6 +62,8 @@ public class Door
 			loadSigns(doorJson.get("signs").getAsJsonArray());
 		if(doorJson.has("spawns"))
 			loadDoor(doorJson.get("spawns").getAsJsonArray());
+		if(doorJson.has("price"))
+			price = doorJson.get("price").getAsInt();
 	}
 
 	public JsonObject save()
@@ -66,6 +71,7 @@ public class Door
 		JsonObject saveJson = new JsonObject();
 		saveJson.addProperty("id", doorID);
 		saveJson.addProperty("powerRequired", powerRequired);
+		saveJson.addProperty("price", price);
 
 		JsonArray blocksJson = new JsonArray();
 		saveJson.add("blocks", blocksJson);
@@ -133,7 +139,10 @@ public class Door
 				if(BlockUtils.isSign(block.getType()))
 				{
 					Sign sign = (Sign) block.getState();
-					String costLine = sign.getLine(3);
+					// Older saves only stored the price on the sign, usually on line 4 but sometimes line 3
+					String costLine = ChatColor.stripColor(sign.getLine(3));
+					if(!costLine.matches("[0-9]{1,9}"))
+						costLine = ChatColor.stripColor(sign.getLine(2));
 					price = costLine.matches("[0-9]{1,9}") ? Integer.parseInt(costLine) : 750;
 					this.signsLocations.add(loc);
 				}
@@ -184,12 +193,9 @@ public class Door
 
 		for(Location loc : signsLocations)
 		{
-			Sign sign = (Sign) loc.getBlock().getState();
-			sign.setLine(0, ChatColor.RED + "[Zombies]");
-			sign.setLine(1, ChatColor.AQUA + "Door");
-			sign.setLine(2, ChatColor.GOLD + "Price:");
-			sign.setLine(3, Integer.toString(price));
-			sign.update(true);
+			if(!BlockUtils.isSign(loc.getBlock()))
+				continue;
+			SignText.apply((Sign) loc.getBlock().getState(), SignText.render("door", Collections.singletonMap("price", Integer.toString(price))));
 		}
 		isOpened = false;
 	}

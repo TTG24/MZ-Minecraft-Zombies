@@ -1,13 +1,9 @@
 package com.theprogrammingturkey.comz.game.features;
 
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.economy.PointManager;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.game.managers.WeaponManager;
-import com.theprogrammingturkey.comz.game.weapons.Weapon;
-import com.theprogrammingturkey.comz.util.BlockUtils;
-import com.theprogrammingturkey.comz.util.CommandUtil;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -25,8 +21,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.economy.PointManager;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
+import com.theprogrammingturkey.comz.game.managers.WeaponManager;
+import com.theprogrammingturkey.comz.game.signs.SignText;
+import com.theprogrammingturkey.comz.game.weapons.Weapon;
+import com.theprogrammingturkey.comz.util.BlockUtils;
+import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class RandomBox
 {
@@ -256,10 +259,6 @@ public class RandomBox
 		BlockData blockData = block.getBlockData();
 		((Directional) blockData).setFacing(facing);
 		block.setBlockData(blockData);
-		Sign sign = (Sign) block.getState();
-		sign.setLine(0, ChatColor.RED + "[Zombies]");
-		sign.setLine(1, ChatColor.AQUA + "Mystery Box");
-		sign.setLine(2, String.valueOf(boxGame.isFireSale() ? 10 : boxCost));
-		sign.update();
+		SignText.apply((Sign) block.getState(), SignText.render("mystery_box", Collections.singletonMap("price", String.valueOf(getCost()))));
 	}
 }

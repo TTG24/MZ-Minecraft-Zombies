@@ -1,28 +1,43 @@
 package com.theprogrammingturkey.comz.game.signs;
 
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+
 import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.managers.PlayerWeaponManager;
 import com.theprogrammingturkey.comz.game.managers.WeaponManager;
 import com.theprogrammingturkey.comz.game.weapons.Weapon;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class GrenadeSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-
+		return "grenade";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines)
 	{
-		int buyPoints = Integer.parseInt(lines[2]);
+		String cost = lines[2];
+		if(!cost.matches("[0-9]+"))
+			cost = "250";
+
+		Map<String, String> data = new HashMap<>();
+		data.put("price", cost);
+		return data;
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
+	{
+		int buyPoints = Integer.parseInt(data.get("price"));
 		Weapon w = WeaponManager.getWeapon("grenade");
 		PlayerWeaponManager manager = game.getPlayersWeapons(player);
 
@@ -46,19 +61,9 @@ public class GrenadeSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent event)
+	public String[] getText(Map<String, String> data)
 	{
-		String thirdLine = ChatColor.stripColor(event.getLine(2));
-
-		event.setLine(0, ChatColor.RED + "[Zombies]");
-		event.setLine(1, ChatColor.AQUA + "Grenade");
-
-		String price = thirdLine;
-		if(thirdLine == null || !thirdLine.matches("[0-9]+"))
-			price = "250";
-		else
-			price = thirdLine;
-		event.setLine(2, price);
+		return SignText.render(getType(), data);
 	}
 
 	@Override

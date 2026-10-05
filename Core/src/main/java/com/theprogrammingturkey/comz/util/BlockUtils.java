@@ -1,5 +1,7 @@
 package com.theprogrammingturkey.comz.util;
 
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -10,6 +12,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.block.data.type.Sign;
 import org.bukkit.block.data.type.WallSign;
+import org.bukkit.entity.Player;
 
 public class BlockUtils
 {
@@ -39,10 +42,15 @@ public class BlockUtils
 				ChatColor.stripColor(((org.bukkit.block.Sign) block.getState()).getLine(0)).equalsIgnoreCase("[Zombies]");
 	}
 
-	public static boolean isBarrierRepairSign(Block block)
+	/**
+	 * Checks by location, not sign text, so the sign text can be anything.
+	 */
+	public static boolean isBarrierRepairSign(Block block, Player player)
 	{
-		return isSign(block) &&
-				ChatColor.stripColor(((org.bukkit.block.Sign) block.getState()).getLine(0)).equalsIgnoreCase("[BarrierRepair]");
+		if(!isSign(block) || !GameManager.INSTANCE.isPlayerInGame(player))
+			return false;
+		Game game = GameManager.INSTANCE.getGame(player);
+		return game.barrierManager.getBarrierFromRepair(block.getLocation()) != null;
 	}
 
 	public static Material getMaterialFromKey(String key)

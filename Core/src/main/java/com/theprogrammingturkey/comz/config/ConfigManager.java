@@ -1,6 +1,7 @@
 package com.theprogrammingturkey.comz.config;
 
 import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.game.signs.SignRegistry;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,8 +23,10 @@ public class ConfigManager
 		CONFIGS.put(COMZConfig.SIGNS, new CustomConfig(COMZConfig.SIGNS));
 		CONFIGS.put(COMZConfig.KITS, new CustomConfig(COMZConfig.KITS));
 		CONFIGS.put(COMZConfig.STATS, new CustomConfig(COMZConfig.STATS));
+		CONFIGS.put(COMZConfig.GAME_SIGNS, new CustomConfig(COMZConfig.GAME_SIGNS));
 
 		mainConfig.setup();
+		SignRegistry.INSTANCE.load();
 	}
 
 	public static CustomConfig getConfig(COMZConfig comzConfig)

@@ -38,6 +38,97 @@ config:
     zombieDamage: 9
     #The amount of seconds after being hit to be healed (standard 5)
     healTime: 5
+  #Text shown on every game sign. Each sign has 4 lines, & color codes work, and {placeholders} are filled in.
+  #Any text works: signs are recognised by their location, not their text.
+  #To create a sign, still type [Zombies] on line 1 and the sign type on line 2 (e.g. gun, perk, door) as before.
+  signs:
+    #Join signs change with the game. Placeholders: {arena} {players} {max} {wave} {alive}
+    join_waiting:
+      - '&c[Zombies]'
+      - '&bJoin'
+      - '{arena}'
+      - '&aPlayers: {players}/{max}'
+    join_ingame:
+      - '&a{arena}'
+      - '&cInProgress'
+      - '&cWave: {wave}'
+      - '&4Alive: {alive}'
+    join_maintenance:
+      - '&4[MAINTENANCE]'
+      - '{arena}'
+      - 'Game will be'
+      - 'available soon!'
+    #{arena}
+    spectate:
+      - '&c[Zombies]'
+      - '&bSpectate'
+      - '&cArena:'
+      - '{arena}'
+    #{kit}
+    kit:
+      - '&c[Zombies]'
+      - '&bKit'
+      - '&c{kit}'
+      - ''
+    power:
+      - '&c[Zombies]'
+      - '&bPower'
+      - ''
+      - ''
+    #{price}
+    ammo_crate:
+      - '&c[Zombies]'
+      - '&bAmmo Crate'
+      - '{price}'
+      - ''
+    #{price}
+    grenade:
+      - '&c[Zombies]'
+      - '&bGrenade'
+      - '{price}'
+      - ''
+    #{teleporter} {price}
+    teleporter:
+      - '&c[Zombies]'
+      - '&bTeleporter'
+      - '{teleporter}'
+      - '{price}'
+    #{gun} {price} {refill}
+    gun:
+      - '&e[Zombies]'
+      - '&aGun'
+      - '&9{gun}'
+      - '&c{price} / {refill}'
+    #{perk} {price}
+    perk:
+      - '&c[Zombies]'
+      - '&bPerk Machine'
+      - '&a{perk}'
+      - '&e{price}'
+    #{price}
+    pack_a_punch:
+      - '&c[Zombies]'
+      - '&5Pack-a-Punch'
+      - '&6{price}'
+      - ''
+    #{price} (shows the fire sale price during a fire sale)
+    mystery_box:
+      - '&c[Zombies]'
+      - '&bMystery Box'
+      - '&9{price}'
+      - ''
+    #{price}
+    door:
+      - '&c[Zombies]'
+      - '&6Door'
+      - '&aOpen for:'
+      - '&9{price}'
+    #Shown on a barrier once zombies start breaking it
+    barrier:
+      - '[BarrierRepair]'
+      - ''
+      - 'Break to repair'
+      - ''
   ReviveSettings:
     ReviveTimer: 4
     ReviveRange: 2

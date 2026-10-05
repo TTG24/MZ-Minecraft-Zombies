@@ -1,6 +1,0 @@
-archivesBaseName = "comz-1.15.r1-support"
-
-dependencies {
-    implementation project(':API')
-    implementation group: 'org.spigotmc', name: 'spigot', version: '1.15.2-R0.1-SNAPSHOT'
-}

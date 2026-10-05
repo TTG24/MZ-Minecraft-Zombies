@@ -2,6 +2,7 @@ package com.theprogrammingturkey.comz.game.weapons;
 
 import com.google.gson.JsonObject;
 import com.theprogrammingturkey.comz.config.CustomConfig;
+import com.theprogrammingturkey.comz.util.ApiCompat;
 import org.bukkit.Color;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -34,7 +35,9 @@ public abstract class BaseGun extends Weapon
 		if(particleColor.matches("\\A[0-9a-fA-F]{6}$"))
 			this.particleColor = Color.fromRGB(Integer.parseInt(particleColor, 16));
 
-		this.sound = Sound.valueOf(CustomConfig.getString(json, "sound", this.isPackAPunched() ? "ENTITY_GHAST_SHOOT" : "BLOCK_LAVA_POP"));
+		String defaultSound = this.isPackAPunched() ? "ENTITY_GHAST_SHOOT" : "BLOCK_LAVA_POP";
+		Sound gunSound = ApiCompat.getSound(CustomConfig.getString(json, "sound", defaultSound));
+		this.sound = gunSound != null ? gunSound : ApiCompat.getSound(defaultSound);
 	}
 
 	public void updateAmmo(int clip, int total)

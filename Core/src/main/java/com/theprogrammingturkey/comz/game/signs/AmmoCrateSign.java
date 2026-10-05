@@ -1,27 +1,42 @@
 package com.theprogrammingturkey.comz.game.signs;
 
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+
 import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.managers.PlayerWeaponManager;
 import com.theprogrammingturkey.comz.game.weapons.GunInstance;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class AmmoCrateSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-
+		return "ammo_crate";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines) throws SignParseException
 	{
-		int buyPoints = Integer.parseInt(lines[2].trim());
+		String cost = lines[2].trim();
+		if(!cost.matches("[0-9]+"))
+			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "Invalid cost?");
+
+		Map<String, String> data = new HashMap<>();
+		data.put("price", cost);
+		return data;
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
+	{
+		int buyPoints = Integer.parseInt(data.get("price"));
 
 		PlayerWeaponManager manager = game.getPlayersWeapons(player);
 		if(manager.isHeldItemWeapon())
@@ -46,18 +61,9 @@ public class AmmoCrateSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent event)
+	public String[] getText(Map<String, String> data)
 	{
-		String thirdLine = ChatColor.stripColor(event.getLine(2));
-
-		if(thirdLine != null && thirdLine.equalsIgnoreCase("") && thirdLine.matches("[0-9]+"))
-		{
-			event.setLine(0, ChatColor.RED + "" + ChatColor.BOLD + "Invalid cost?");
-			return;
-		}
-		event.setLine(0, ChatColor.RED + "[Zombies]");
-		event.setLine(1, ChatColor.AQUA + "Ammo Crate");
-		event.setLine(2, thirdLine);
+		return SignText.render(getType(), data);
 	}
 
 	@Override

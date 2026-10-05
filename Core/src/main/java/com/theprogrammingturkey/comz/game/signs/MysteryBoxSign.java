@@ -1,19 +1,50 @@
 package com.theprogrammingturkey.comz.game.signs;
 
-import com.theprogrammingturkey.comz.economy.PointManager;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.features.RandomBox;
-import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import com.theprogrammingturkey.comz.economy.PointManager;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.features.RandomBox;
+import com.theprogrammingturkey.comz.util.CommandUtil;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MysteryBoxSign implements IGameSign
 {
+	@Override
+	public String getType()
+	{
+		return "mystery_box";
+	}
+
+	@Override
+	public Map<String, String> parse(Game game, Player player, String[] lines)
+	{
+		String cost = lines[2];
+		if(!cost.matches("[0-9]+"))
+			cost = "950";
+
+		Map<String, String> data = new HashMap<>();
+		data.put("price", cost);
+		return data;
+	}
+
+	@Override
+	public void onCreate(Game game, Player player, Location location, Map<String, String> data)
+	{
+		BlockFace facing = ((Directional) location.getBlock().getBlockData()).getFacing();
+		RandomBox box = new RandomBox(location, facing, game, game.boxManager.getNextBoxName(), Integer.parseInt(data.get("price")));
+		game.boxManager.addBox(box);
+		player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "Random Weapon Box Created!");
+	}
+
+	@Override
 	public void onBreak(Game game, Player player, Location location)
 	{
 		RandomBox box = game.boxManager.getBox(location);
@@ -22,7 +53,7 @@ public class MysteryBoxSign implements IGameSign
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
 	{
 		RandomBox box = game.boxManager.getBox(location);
 		if(box == null)
@@ -30,9 +61,8 @@ public class MysteryBoxSign implements IGameSign
 
 		if(box.canActivate())
 		{
-			int points = Integer.parseInt(lines[2]);
-			if(game.isFireSale())
-				points = 10;
+			// The box knows its own cost, including fire sales
+			int points = box.getCost();
 
 			if(PointManager.INSTANCE.canBuy(player, points))
 			{
@@ -51,24 +81,21 @@ public class MysteryBoxSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent event)
+	public String[] getText(Map<String, String> data)
 	{
-		String thirdLine = ChatColor.stripColor(event.getLine(2));
-		if(thirdLine == null || !thirdLine.matches("[0-9]+"))
-			thirdLine = "950";
-
-		event.setLine(0, ChatColor.RED + "[Zombies]");
-		event.setLine(1, ChatColor.AQUA + "Mystery Box");
-		event.setLine(2, thirdLine);
-		BlockFace facing = ((Directional) event.getBlock().getBlockData()).getFacing();
-		RandomBox box = new RandomBox(event.getBlock().getLocation(), facing, game, game.boxManager.getNextBoxName(), Integer.parseInt(thirdLine));
-		game.boxManager.addBox(box);
-		player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "Random Weapon Box Created!");
+		return SignText.render(getType(), data);
 	}
 
 	@Override
 	public boolean requiresGame()
 	{
 		return true;
+	}
+
+	@Override
+	public boolean isRegistered()
+	{
+		// The box moves around, so its sign is found through the game's box manager instead
+		return false;
 	}
 }

@@ -1,5 +1,10 @@
 package com.theprogrammingturkey.comz.game.signs;
 
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.entity.Player;
+
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
@@ -7,27 +12,58 @@ import com.theprogrammingturkey.comz.game.managers.PlayerWeaponManager;
 import com.theprogrammingturkey.comz.game.managers.WeaponManager;
 import com.theprogrammingturkey.comz.game.weapons.BaseGun;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class GunSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-
+		return "gun";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines) throws SignParseException
 	{
-		String line3 = lines[3];
-		int buyPoints = Integer.parseInt(line3.substring(0, line3.indexOf("/") - 1).trim());
-		int refillPoints = Integer.parseInt(line3.substring(line3.indexOf("/") + 2).trim());
-		BaseGun gunType = WeaponManager.getGun(lines[2]);
+		String gunName = lines[2];
+		if(gunName.isEmpty())
+			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "No gun?");
+
+		BaseGun gunType = WeaponManager.getGun(gunName);
+		if(gunType == null)
+			throw new SignParseException(ChatColor.RED + "Invalid Gun!");
+
+		// Typed as "buy / refill", e.g. "500/250"
+		String buyPrice = "200";
+		String refillPrice = "100";
+		String prices = lines[3];
+		int split = prices.indexOf("/");
+		if(split != -1)
+		{
+			String buy = prices.substring(0, split).trim();
+			String refill = prices.substring(split + 1).trim();
+			if(buy.matches("[0-9]+") && refill.matches("[0-9]+"))
+			{
+				buyPrice = buy;
+				refillPrice = refill;
+			}
+		}
+
+		Map<String, String> data = new HashMap<>();
+		data.put("gun", gunType.getName());
+		data.put("price", buyPrice);
+		data.put("refill", refillPrice);
+		return data;
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
+	{
+		int buyPoints = Integer.parseInt(data.get("price"));
+		int refillPoints = Integer.parseInt(data.get("refill"));
+		BaseGun gunType = WeaponManager.getGun(data.get("gun"));
 
 		if(gunType == null)
 		{
@@ -70,38 +106,9 @@ public class GunSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent event)
+	public String[] getText(Map<String, String> data)
 	{
-		String thirdLine = ChatColor.stripColor(event.getLine(2));
-		String fourthLine = ChatColor.stripColor(event.getLine(3));
-
-		if(thirdLine == null || thirdLine.equalsIgnoreCase(""))
-		{
-			event.setLine(0, ChatColor.RED + "" + ChatColor.BOLD + "No gun?");
-			return;
-		}
-		event.setLine(0, ChatColor.RED + "[Zombies]");
-		event.setLine(1, ChatColor.AQUA + "Gun");
-		event.setLine(2, thirdLine);
-		if(WeaponManager.getGun(thirdLine) == null)
-		{
-			event.setLine(0, ChatColor.RED + "Invalid Gun!");
-			event.setLine(1, "");
-			event.setLine(2, "");
-			event.setLine(3, "");
-			return;
-		}
-		String price = "";
-		try
-		{
-			price += fourthLine.substring(0, fourthLine.indexOf("/")).trim();
-			price += " / ";
-			price += fourthLine.substring(fourthLine.indexOf("/") + 1).trim();
-		} catch(Exception ex)
-		{
-			price = "200 / 100";
-		}
-		event.setLine(3, price);
+		return SignText.render(getType(), data);
 	}
 
 	@Override

@@ -1,0 +1,13 @@
+archivesBaseName = "comz-compat"
+
+// Compiled against the oldest supported API so it only uses methods every supported server has.
+// The Spigot API is public, so no BuildTools run is needed.
+repositories {
+    mavenCentral()
+    maven { url 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
+}
+
+dependencies {
+    implementation project(':API')
+    compileOnly group: 'org.spigotmc', name: 'spigot-api', version: '1.21.1-R0.1-SNAPSHOT'
+}

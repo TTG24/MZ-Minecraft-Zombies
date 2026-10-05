@@ -8,20 +8,35 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class KitSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-
+		return "kit";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines) throws SignParseException
 	{
-		Kit kit = KitManager.getKit(ChatColor.stripColor(lines[2]));
+		// getKit returns a placeholder kit rather than null for unknown names
+		Kit kit = KitManager.getKit(lines[2]);
+		if(kit == null || !kit.getName().equalsIgnoreCase(lines[2]))
+			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "Kit name is", ChatColor.RED + "" + ChatColor.BOLD + "not a valid", ChatColor.RED + "" + ChatColor.BOLD + "kit!");
+
+		Map<String, String> data = new HashMap<>();
+		data.put("kit", kit.getName());
+		return data;
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
+	{
+		Kit kit = KitManager.getKit(data.get("kit"));
 		if(COMZPermission.KIT.hasPerm(player, kit.getName()))
 		{
 			KitManager.addPlayersSelectedKit(player, kit);
@@ -34,20 +49,9 @@ public class KitSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent event)
+	public String[] getText(Map<String, String> data)
 	{
-		Kit kit = KitManager.getKit(event.getLine(2));
-		if(kit == null)
-		{
-			event.setLine(0, ChatColor.RED + "" + ChatColor.BOLD + "Kit name is");
-			event.setLine(1, ChatColor.RED + "" + ChatColor.BOLD + "not a valid");
-			event.setLine(2, ChatColor.RED + "" + ChatColor.BOLD + "kit!");
-			event.setLine(3, "");
-			return;
-		}
-		event.setLine(0, ChatColor.RED + "[Zombies]");
-		event.setLine(1, ChatColor.AQUA + "Kit");
-		event.setLine(2, ChatColor.RED + kit.getName());
+		return SignText.render(getType(), data);
 	}
 
 	@Override

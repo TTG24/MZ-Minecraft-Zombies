@@ -1,10 +1,10 @@
 package com.theprogrammingturkey.comz.game.features;
 
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.economy.PointManager;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.spawning.SpawnPoint;
-import com.theprogrammingturkey.comz.util.BlockUtils;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -15,10 +15,12 @@ import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.game.signs.SignText;
+import com.theprogrammingturkey.comz.economy.PointManager;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.spawning.SpawnPoint;
+import com.theprogrammingturkey.comz.util.BlockUtils;
 
 public class Barrier implements Runnable
 {
@@ -66,16 +68,12 @@ public class Barrier implements Runnable
 			if(stage > -1)
 			{
 				Block block = repairLoc.getBlock();
-				block.setType(Material.OAK_WALL_SIGN);
+				block.setType(Material.ACACIA_WALL_SIGN);
 				BlockData blockData = block.getBlockData();
 				((Directional) blockData).setFacing(signFacing);
 				block.setBlockData(blockData);
 				Sign sign = (Sign) block.getState();
-				sign.setLine(0, "[BarrierRepair]");
-				sign.setLine(1, "Break this to");
-				sign.setLine(2, "repair the");
-				sign.setLine(3, "barrier");
-				sign.update(true);
+				SignText.apply(sign, SignText.render("barrier"));
 			}
 			return false;
 		}
@@ -125,6 +123,17 @@ public class Barrier implements Runnable
 	public void resetEarnedPoints()
 	{
 		earnedPoints.replaceAll((p, v) -> 0);
+	}
+
+	/**
+	 * Re-sends the crack animation. Clients drop a block's cracks after 20 seconds without an update,
+	 * so without this they vanish during quiet periods like the break between rounds.
+	 */
+	public void refreshDamage()
+	{
+		// 0 is an undamaged barrier and 5 has no blocks left to show cracks on
+		if(stage > 0 && stage < 5)
+			game.updateBarrierDamage(stage, blocks.keySet());
 	}
 
 	public void addBarrierBlock(Location loc)

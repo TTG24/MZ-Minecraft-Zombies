@@ -289,6 +289,9 @@ public class SpawnManager
 					mob.setTarget(getNearestPlayer(mob));
 			}
 
+			// Runs every 5 seconds, well inside the 20 seconds before clients forget barrier cracks
+			game.barrierManager.refreshDamage();
+
 			update();
 		});
 	}

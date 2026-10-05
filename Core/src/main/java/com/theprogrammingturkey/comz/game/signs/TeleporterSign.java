@@ -10,25 +10,52 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class TeleporterSign implements IGameSign
 {
 	@Override
-	public void onBreak(Game game, Player player, Location location)
+	public String getType()
 	{
-
+		return "teleporter";
 	}
 
 	@Override
-	public void onInteract(Game game, Player player, Location location, String[] lines)
+	public Map<String, String> parse(Game game, Player player, String[] lines) throws SignParseException
+	{
+		String teleporterName = null;
+		for(String name : game.teleporterManager.getTeleporters().keySet())
+			if(name.equalsIgnoreCase(lines[2]))
+				teleporterName = name;
+
+		if(teleporterName == null)
+			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "No such", ChatColor.RED + "" + ChatColor.BOLD + "teleporter!");
+
+		String cost = lines[3];
+		if(!cost.matches("[0-9]+"))
+			cost = "500";
+
+		Map<String, String> data = new HashMap<>();
+		data.put("teleporter", teleporterName);
+		data.put("price", cost);
+		return data;
+	}
+
+	@Override
+	public void onInteract(Game game, Player player, Location location, Map<String, String> data)
 	{
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{
-			String teleporterName = lines[2].toLowerCase();
-			if(game.teleporterManager.getTeleporters().containsKey(teleporterName))
+			Location destination = null;
+			for(Map.Entry<String, Location> teleporter : game.teleporterManager.getTeleporters().entrySet())
+				if(teleporter.getKey().equalsIgnoreCase(data.get("teleporter")))
+					destination = teleporter.getValue();
+
+			if(destination != null)
 			{
 				if(game.hasPower() && !game.isPowered())
 				{
@@ -37,16 +64,16 @@ public class TeleporterSign implements IGameSign
 					return;
 				}
 
-				int points = Integer.parseInt(lines[3]);
+				int points = Integer.parseInt(data.get("price"));
 				if(PointManager.INSTANCE.canBuy(player, points))
 				{
-					player.teleport(game.teleporterManager.getTeleporters().get(teleporterName));
+					player.teleport(destination);
 					player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 30, 30));
 
 					for(int i = 0; i < 50; i++)
 					{
 						Location loc = player.getLocation();
-						player.getWorld().spawnParticle(Particle.SPELL_WITCH, loc.getX(), loc.getY(), loc.getZ(), 1, COMZombies.rand.nextFloat(), COMZombies.rand.nextFloat(), COMZombies.rand.nextFloat(), 1);
+						player.getWorld().spawnParticle(Particle.WITCH, loc.getX(), loc.getY(), loc.getZ(), 1, COMZombies.rand.nextFloat(), COMZombies.rand.nextFloat(), COMZombies.rand.nextFloat(), 1);
 					}
 					PointManager.INSTANCE.takePoints(player, points);
 					PointManager.INSTANCE.notifyPlayer(player);
@@ -64,31 +91,9 @@ public class TeleporterSign implements IGameSign
 	}
 
 	@Override
-	public void onChange(Game game, Player player, SignChangeEvent sign)
+	public String[] getText(Map<String, String> data)
 	{
-		String thirdLine = ChatColor.stripColor(sign.getLine(2));
-		if(game.teleporterManager.getTeleporters().containsKey(thirdLine))
-		{
-			String line3 = sign.getLine(3);
-			if(line3 == null || line3.isEmpty())
-			{
-				sign.setLine(0, ChatColor.RED + "[Zombies]");
-				sign.setLine(1, ChatColor.AQUA + "Teleporter");
-				sign.setLine(3, "500");
-			}
-			else
-			{
-				sign.setLine(0, ChatColor.RED + "[Zombies]");
-				sign.setLine(1, ChatColor.AQUA + "Teleporter");
-			}
-		}
-		else
-		{
-			sign.setLine(0, ChatColor.RED + "" + ChatColor.BOLD + "No such");
-			sign.setLine(1, ChatColor.RED + "" + ChatColor.BOLD + "teleporter!");
-			sign.setLine(2, "");
-			sign.setLine(3, "");
-		}
+		return SignText.render(getType(), data);
 	}
 
 	@Override
