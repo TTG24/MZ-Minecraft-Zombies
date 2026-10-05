@@ -70,23 +70,23 @@ public class WeaponManager
 	public static void listGuns(Player player)
 	{
 		List<BaseGun> guns = weapons.stream().filter(weapon -> weapon instanceof BaseGun).map(weapon -> (BaseGun) weapon).collect(Collectors.toList());
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "---------" + ChatColor.GOLD + "Guns" + ChatColor.RED + "----------");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "---------" + ChatColor.RED + " Guns " + ChatColor.DARK_GREEN + "----------");
 		if(guns.isEmpty())
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You have no guns! Make sure COM: Z can read from your " + ChatColor.GOLD + "guns.json");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You have no guns! Make sure MinecraftZombies can read from your " + ChatColor.GRAY + "guns.json");
 
 		WeaponType gunClass = guns.get(0).getWeaponType();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + gunClass.toString());
+		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + gunClass.toString());
 		for(BaseGun gun : guns)
 		{
 			if(gunClass == gun.getWeaponType())
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "  " + gun.getName());
+				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "  " + gun.getName());
 				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "     Ammo: " + gun.clipAmmo + "/" + gun.totalAmmo);
 				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "     Damage: " + gun.damage);
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + gun.getWeaponType().toString());
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + gun.getWeaponType().toString());
 				gunClass = gun.getWeaponType();
 			}
 		}

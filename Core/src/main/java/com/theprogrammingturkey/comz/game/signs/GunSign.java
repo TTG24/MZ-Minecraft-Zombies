@@ -67,7 +67,7 @@ public class GunSign implements IGameSign
 
 		if(gunType == null)
 		{
-			player.sendRawMessage(COMZombies.PREFIX + " Sorry! That gun doesn't seem to exist!");
+			player.sendRawMessage(COMZombies.PREFIX + "Sorry! That gun doesn't seem to exist!");
 			return;
 		}
 
@@ -77,7 +77,7 @@ public class GunSign implements IGameSign
 			if(PointManager.INSTANCE.canBuy(player, refillPoints))
 			{
 				manager.getGun(gunType).maxAmmo();
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Filling ammo!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Filling ammo!");
 				PointManager.INSTANCE.takePoints(player, refillPoints);
 				PointManager.INSTANCE.notifyPlayer(player);
 			}
@@ -91,7 +91,7 @@ public class GunSign implements IGameSign
 			int slot = manager.getCorrectSlot(gunType);
 			if(PointManager.INSTANCE.canBuy(player, buyPoints))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You got the " + ChatColor.GOLD + "" + ChatColor.BOLD + gunType.getName() + ChatColor.RED + ChatColor.BOLD + "!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You got the " + ChatColor.RED + gunType.getName() + ChatColor.DARK_GREEN + "!");
 				manager.removeWeapon(manager.getGun(slot));
 				manager.addWeapon(gunType.getNewInstance(player, slot));
 				player.getLocation().getWorld().playSound(player.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1, 1);

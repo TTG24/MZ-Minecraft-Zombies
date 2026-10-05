@@ -313,7 +313,7 @@ public class Game
 	public void enablePower(Player player)
 	{
 		powerSetup = true;
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Power enabled! Type /z disablepower " + getName() + " to disable the power!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Power enabled! Type /z disablepower " + getName() + " to disable the power!");
 		GameManager.INSTANCE.saveAllGames();
 	}
 
@@ -378,7 +378,7 @@ public class Game
 		if(forced)
 			starter.forced = true;
 
-		sendMessageToPlayers(ChatColor.RED + "" + ChatColor.BOLD + "Game starting soon!");
+		sendMessageToPlayers(ChatColor.GRAY + "Game starting soon!");
 		status = GameStatus.STARTING;
 	}
 
@@ -618,7 +618,7 @@ public class Game
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, "Something could have went wrong here, COM Zombies has picked this up and will continue without error.");
+			CommandUtil.sendMessageToPlayer(player, "Something may have gone wrong here, but MinecraftZombies caught it and will continue without error.");
 		}
 		signManager.updateGame();
 	}
@@ -668,7 +668,8 @@ public class Game
 	{
 		double points = waveNumber;
 		COMZombies.getPlugin().vault.addMoney(player, points);
-		CommandUtil.sendMessageToPlayer(player, "You got " + points + " for getting to round " + waveNumber + "!");
+		// Ƶ is the Ƶ currency symbol, escaped so the file's encoding can't garble it
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You earned " + ChatColor.RED + "Ƶ" + (int) points + ChatColor.DARK_GREEN + " for reaching round " + ChatColor.RED + waveNumber + ChatColor.DARK_GREEN + "!");
 
 		PlayerStats stats = Leaderboard.getPlayerStatFromPlayer(player);
 		if(stats.getHighestRound() < this.waveNumber)
@@ -1002,7 +1003,7 @@ public class Game
 		{
 			case 27:
 				data.setDisplayName("Knife slot");
-				lore.add("Holds players knife");
+				lore.add("Holds the player's knife");
 				lore.add("Knife only works within 2 blocks!");
 				break;
 			case 28:
@@ -1011,12 +1012,12 @@ public class Game
 				break;
 			case 29:
 				data.setDisplayName("Gun Slot 2");
-				lore.add("Holds 1 gun");
+				lore.add("Holds 1 Gun");
 				break;
 			case 30:
 				data.setDisplayName("Gun Slot 3");
 				lore.add("Holds 1 Gun");
-				lore.add("Requires MuleKick to work!");
+				lore.add("Requires Mule Kick to work!");
 				break;
 			case 31:
 				data.setDisplayName("Perk Slot 1");
@@ -1320,20 +1321,20 @@ public class Game
 	{
 		if(!arena.areMinAndMaxSet())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Either P1 or P2 or both are not set!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Either P1 or P2 or both are not set!");
 			return false;
 		}
 
 		if(!arena.areAllLocationsSet())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "One or multiple of the game warps (gw, lw, sw) are not set!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "One or multiple of the game warps (gw, lw, sw) are not set!");
 			return false;
 		}
 
 		status = GameStatus.DISABLED;
 		maxPlayers = 8;
 		GameManager.INSTANCE.saveAllGames();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Arena [" + arena.getName() + "] is setup!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Arena [" + arena.getName() + "] is setup!");
 		return true;
 	}
 

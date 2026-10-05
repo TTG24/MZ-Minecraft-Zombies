@@ -23,7 +23,7 @@ public class AddBarrier extends SubCommand
 	{
 		if(!COMZPermission.ADD_BARRIER.hasPerm(player))
 		{
-			CommandUtil.noPermission(player, "add a door");
+			CommandUtil.noPermission(player, "add a barrier");
 			return true;
 		}
 

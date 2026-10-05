@@ -225,7 +225,7 @@ public class CommandManager implements CommandExecutor, TabExecutor
 		{
 			if(!(sender instanceof Player))
 			{
-				COMZombies.log.info("You must be in game to issue this command!");
+				COMZombies.log.info("You must be in a game to use this command!");
 				return true;
 			}
 
@@ -233,9 +233,8 @@ public class CommandManager implements CommandExecutor, TabExecutor
 
 			if(args.length == 0)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Call of Minecraft: Zombies, By : " + ChatColor.GOLD + "IModZombies4Fun, turkey2349 and smeths!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Call of Minecraft: Zombies, By : " + ChatColor.GOLD + "Turkey2349, IModZombies4Fun and Smeths!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + " Type /zombies help for a list of commands!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "MinecraftZombies" + ChatColor.GRAY + " by " + ChatColor.RED + "TTG24" + ChatColor.GRAY + ", based on Call of Minecraft: Zombies by " + ChatColor.RED + "IModZombies4Fun, Turkey2349 and Smeths" + ChatColor.GRAY + "!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type /zombies help for a list of commands!");
 				return true;
 			}
 			else if(args[0].equalsIgnoreCase("setround"))
@@ -248,7 +247,7 @@ public class CommandManager implements CommandExecutor, TabExecutor
 
 				for(int i = 0; i < Integer.parseInt(args[2]); i++)
 					arena.nextWave();
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Setting wave to: " + ChatColor.GOLD + args[2]);
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Setting wave to: " + ChatColor.RED + args[2]);
 			}
 			else if(args[0].equalsIgnoreCase("version"))
 			{

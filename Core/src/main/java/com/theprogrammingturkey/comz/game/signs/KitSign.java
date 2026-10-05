@@ -40,11 +40,11 @@ public class KitSign implements IGameSign
 		if(COMZPermission.KIT.hasPerm(player, kit.getName()))
 		{
 			KitManager.addPlayersSelectedKit(player, kit);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + " You have selected the " + kit.getName() + " Kit!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You have selected the " + kit.getName() + " kit!");
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You dont have permission to use that kit!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have permission to use that kit!");
 		}
 	}
 

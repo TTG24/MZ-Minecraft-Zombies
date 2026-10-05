@@ -102,7 +102,7 @@ public class PlayerListener implements Listener
 		{
 			if(downedPlayer.isPlayerDown() && change.lengthSquared() > DEAD_ZONE)
 			{
-				player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "You Moved! You are no longer reviving " + downedPlayer.getPlayer().getName());
+				player.sendMessage(ChatColor.RED + "You Moved! You are no longer reviving " + downedPlayer.getPlayer().getName());
 				downedPlayer.cancelRevive();
 			}
 		}
@@ -225,8 +225,8 @@ public class PlayerListener implements Listener
 
 		if(GameManager.INSTANCE.isPlayerInGame(reviver))
 		{
-			reviver.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "You are reviving " + clickedPlayer.getName());
-			clickedPlayer.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "You are being revived by " + reviver.getName() + "!");
+			reviver.sendMessage(ChatColor.GRAY + "You are reviving " + clickedPlayer.getName());
+			clickedPlayer.sendMessage(ChatColor.GRAY + "You are being revived by " + reviver.getName() + "!");
 			downedPlayer.startRevive(reviver);
 			event.setCancelled(true);
 		}

@@ -50,7 +50,7 @@ public class PlayerChatListener implements Listener
 				Sign sign = (Sign) loc.getBlock().getState();
 				plugin.isEditingASign.remove(player);
 				Bukkit.getServer().getPluginManager().callEvent(new SignChangeEvent(sign.getBlock(), player, sign.getLines()));
-				CommandUtil.sendMessageToPlayer(player, "You are No longer editing a sign");
+				CommandUtil.sendMessageToPlayer(player, "You are no longer editing a sign!");
 				playerChat.setCancelled(true);
 				sign.update();
 			}

@@ -85,7 +85,7 @@ public class TeleporterSign implements IGameSign
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "ERROR teleporter does not exist!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This teleporter does not exist!");
 			}
 		}
 	}

@@ -28,8 +28,7 @@ public class CommandUtil
 		TextComponent first = new TextComponent(COMZombies.PREFIX + message);
 		//bold red
 		TextComponent component = new TextComponent(clickMessage);
-		component.setBold(true);
-		component.setColor(net.md_5.bungee.api.ChatColor.GOLD);
+		component.setColor(net.md_5.bungee.api.ChatColor.RED);
 		component.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to run command")));
 		component.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command));
 		player.spigot().sendMessage(first, component);

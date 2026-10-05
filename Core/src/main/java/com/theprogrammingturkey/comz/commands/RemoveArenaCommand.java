@@ -35,7 +35,7 @@ public class RemoveArenaCommand extends SubCommand
 			game.endGame();
 			GameManager.INSTANCE.removeGame(game);
 			GameManager.INSTANCE.saveAllGames();
-			CommandUtil.sendMessageToPlayer(player, "Game " + game.getName() + " has been removed!");
+			CommandUtil.sendMessageToPlayer(player, "Arena " + game.getName() + " has been removed!");
 		}
 		else
 		{

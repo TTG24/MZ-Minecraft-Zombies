@@ -21,7 +21,7 @@ public class EditZSpawnCommand extends SubCommand
 	{
 		if(!COMZPermission.EDIT_ZOMBIE_SPAWNS.hasPerm(player))
 		{
-			CommandUtil.noPermission(player, "remove spawns");
+			CommandUtil.noPermission(player, "edit zombie spawns");
 			return true;
 		}
 
@@ -32,7 +32,7 @@ public class EditZSpawnCommand extends SubCommand
 		}
 		else if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Please specify an arena to remove spawns from!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena to edit the spawns of!");
 		}
 		else
 		{
@@ -40,7 +40,7 @@ public class EditZSpawnCommand extends SubCommand
 			Game game = GameManager.INSTANCE.getGame(arena);
 			if(game == null)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.RED + arena + " is not a valid arena! Type /z la for a list of arenas!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + arena + " is not a valid arena! Type /z la for a list of arenas!");
 				return true;
 			}
 

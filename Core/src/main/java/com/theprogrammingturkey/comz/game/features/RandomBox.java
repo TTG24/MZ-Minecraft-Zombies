@@ -134,7 +134,7 @@ public class RandomBox
 					{
 						if(!boxGame.isFireSale() && !boxGame.boxManager.isMultiBox() && boxGame.getTeddyBearPercent() != 0 && COMZombies.rand.nextInt(boxGame.getTeddyBearPercent()) == 0)
 						{
-							CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "Teddy Bear!!!!!!");
+							CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Teddy Bear!!!!!!");
 							item.setItemStack(new ItemStack(Material.TOTEM_OF_UNDYING));
 							namePlate.setCustomName("");
 							namePlate.setCustomNameVisible(false);
@@ -218,7 +218,7 @@ public class RandomBox
 	{
 		if(boxLoc == null)
 		{
-			Bukkit.getServer().broadcastMessage("Mysterybox " + this.getId() + "Is broken and has no location!! what did you do!!");
+			Bukkit.getServer().broadcastMessage("Mystery box " + this.getId() + " is broken and has no location!");
 			return;
 		}
 

@@ -19,18 +19,18 @@ public class LeaderboardsCommand extends SubCommand
 	{
 		if(!COMZPermission.LEADERBOARDS.hasPerm(player))
 		{
-			CommandUtil.noPermission(player, "view the leaderboards!");
+			CommandUtil.noPermission(player, "view the leaderboards");
 			return true;
 		}
 
 		if(args.length < 2)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "Try /z leaderboard <catergory>");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Try /z leaderboard <category>");
 			StringBuilder cats = new StringBuilder();
 			for(StatsCategory cat : StatsCategory.values())
 				cats.append(cat.name().toLowerCase()).append(", ");
 			cats.delete(cats.length() - 2, cats.length());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "Categories: " + cats);
+			CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Categories: " + cats);
 		}
 		else if(args.length == 2)
 		{
@@ -44,16 +44,16 @@ public class LeaderboardsCommand extends SubCommand
 					return true;
 				}
 			}
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + catName + " is not a valid category! ");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + catName + " is not a valid category!");
 			StringBuilder cats = new StringBuilder();
 			for(StatsCategory cat : StatsCategory.values())
 				cats.append(cat.name().toLowerCase()).append(", ");
 			cats.delete(cats.length() - 2, cats.length());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "Categories: " + cats);
+			CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Categories: " + cats);
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "Invalid leaderboard command");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Invalid leaderboard command!");
 		}
 		return true;
 	}

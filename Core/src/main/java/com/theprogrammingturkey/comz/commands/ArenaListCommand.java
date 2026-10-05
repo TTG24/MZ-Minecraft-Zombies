@@ -19,13 +19,13 @@ public class ArenaListCommand extends SubCommand
 	{
 		if(!COMZPermission.LIST_ARENAS.hasPerm(player))
 		{
-			CommandUtil.noPermission(player, "view this");
+			CommandUtil.noPermission(player, "view the arena list");
 			return true;
 		}
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.STRIKETHROUGH + "---------------" + ChatColor.DARK_RED + "Arenas" + ChatColor.RED + "" + ChatColor.STRIKETHROUGH + "---------------");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "---------------" + ChatColor.RED + "Arenas" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "---------------");
 		for(Game game : GameManager.INSTANCE.getGames())
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + game.getName() + ": " + ChatColor.GREEN + "Players: " + game.getPlayersInGame().size() + ", Status: " + game.getStatus().toString().toLowerCase());
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + game.getName() + ChatColor.GRAY + ": Players: " + game.getPlayersInGame().size() + ", Status: " + game.getStatus().toString().toLowerCase());
 
 		return true;
 	}

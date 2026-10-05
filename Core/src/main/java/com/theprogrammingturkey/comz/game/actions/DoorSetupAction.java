@@ -31,12 +31,12 @@ public class DoorSetupAction extends BaseAction
 		if(!player.getInventory().contains(Material.WOODEN_SWORD))
 			player.getInventory().addItem(new ItemStack(Material.WOODEN_SWORD));
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.DARK_RED + "Door Setup" + ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "-------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Select each block individually to be the door using the wooden sword.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Once you have this complete, type done, go into the room the door opens to and click on any ender portal frame (spawn point) that is in there with the sword.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Once you have this complete, type done, find any signs that open this door and click them with the sword.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "After clicking on the signs, type done");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Lastly! In chat, type a price for the door in chat.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.RED + "Door Setup" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Select each block individually to be the door using the wooden sword.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Once you have this complete, type done, go into the room the door opens to and click on any ender portal frame (spawn point) that is in there with the sword.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Once you have this complete, type done, find any signs that open this door and click them with the sword.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "After clicking on the signs, type done");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Lastly, type a price for the door in chat.");
 		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel to cancel this operation.");
 	}
 
@@ -61,7 +61,7 @@ public class DoorSetupAction extends BaseAction
 				return;
 
 			door.addSpawnPoint(point);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Spawn point selected!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spawn point selected!");
 			event.setCancelled(true);
 		}
 
@@ -72,7 +72,7 @@ public class DoorSetupAction extends BaseAction
 			{
 				door.addSign(block.getLocation());
 				event.setCancelled(true);
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Sign selected!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Sign selected!");
 			}
 		}
 
@@ -81,7 +81,7 @@ public class DoorSetupAction extends BaseAction
 			if(!door.hasDoorLoc(clickedBlock))
 			{
 				door.addDoorBlock(clickedBlock.getLocation());
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Block added!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Block added!");
 			}
 			else
 			{
@@ -101,8 +101,8 @@ public class DoorSetupAction extends BaseAction
 			{
 				if(door.hasDoorBlocks())
 				{
-					CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Door points for door set!");
-					CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Now select any spawn points in the room the door leads to.");
+					CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Door points for door set!");
+					CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now select any spawn points in the room the door leads to.");
 					state++;
 				}
 			}
@@ -113,14 +113,14 @@ public class DoorSetupAction extends BaseAction
 
 				COMZombies.scheduleTask(1, game::resetSpawnLocationBlocks);
 
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Spawn points for door set!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Now select any signs that can open this door.");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spawn points for door set!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now select any signs that can open this door.");
 				state++;
 			}
 			else if(state == 2)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Signs for door set!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Now type in a price for the doors. And use POWER:PRICE to make the door require power to open.");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Signs for door set!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now type in a price for the door. Use POWER:PRICE to make the door require power to open.");
 				state++;
 			}
 		}
@@ -141,7 +141,7 @@ public class DoorSetupAction extends BaseAction
 			int price = Integer.parseInt(message);
 
 			door.setPrice(price);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Door setup complete!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Door setup complete!");
 			door.closeDoor();
 			game.doorManager.addDoor(door);
 			GameManager.INSTANCE.saveAllGames();

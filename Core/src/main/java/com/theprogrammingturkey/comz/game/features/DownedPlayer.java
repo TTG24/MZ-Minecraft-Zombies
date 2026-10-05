@@ -46,7 +46,7 @@ public class DownedPlayer implements Listener
 		isPlayerDown = true;
 		PlayerStats stats = Leaderboard.getPlayerStatFromPlayer(player);
 		stats.setDowns(stats.getDowns() + 1);
-		player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "You have gone down and need to be revived!");
+		player.sendMessage(ChatColor.RED + "You have gone down and need to be revived!");
 		game.perkManager.clearPlayersPerks(player);
 		PlayerWeaponManager manager = game.getPlayersWeapons(player);
 		guns[0] = manager.removeWeapon(1);
@@ -72,10 +72,10 @@ public class DownedPlayer implements Listener
 
 	public void revivePlayer()
 	{
-		player.sendMessage(ChatColor.GREEN + "You have been revived!");
+		player.sendMessage(ChatColor.DARK_GREEN + "You have been revived!");
 		if(reviver != null)
 		{
-			reviver.sendMessage(ChatColor.GREEN + "You revived " + ChatColor.DARK_GREEN + player.getName());
+			reviver.sendMessage(ChatColor.GRAY + "You revived " + ChatColor.RED + player.getName());
 			PlayerStats stats = Leaderboard.getPlayerStatFromPlayer(reviver);
 			stats.setRevives(stats.getRevives() + 1);
 		}
@@ -116,7 +116,7 @@ public class DownedPlayer implements Listener
 			player.setHealth(1);
 			if(downTime >= COMZombies.getPlugin().getConfig().getInt("config.ReviveSettings.MaxDownTime"))
 			{
-				player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "You have died!");
+				player.sendMessage(ChatColor.RED + "You have died!");
 				//game.removePlayer(player);
 				clearDownedState();
 				game.setDead(player);

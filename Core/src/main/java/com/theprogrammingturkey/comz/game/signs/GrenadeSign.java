@@ -45,12 +45,12 @@ public class GrenadeSign implements IGameSign
 		{
 			if(manager.hasFullGrenades())
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You already have grenades!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You already have grenades!");
 				return;
 			}
 
 			manager.addWeapon(w);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Bought grenades!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Bought grenades!");
 			PointManager.INSTANCE.takePoints(player, buyPoints);
 			PointManager.INSTANCE.notifyPlayer(player);
 		}

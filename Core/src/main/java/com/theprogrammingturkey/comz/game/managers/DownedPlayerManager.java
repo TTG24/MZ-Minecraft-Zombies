@@ -28,7 +28,7 @@ public class DownedPlayerManager
 		down.setPlayerDown();
 		downedPlayers.add(down);
 		player.setHealth(1D);
-		game.sendMessageToPlayers(player.getName() + " has gone down! Stand close and right click them to revive");
+		game.sendMessageToPlayers(player.getName() + " has gone down! Stand close and right-click them to revive!");
 	}
 
 	public void removeDownedPlayer(Player player)

@@ -50,7 +50,7 @@ public class Kit
 			Weapon weapon = WeaponManager.getGun(weaponName);
 			if(weapon == null)
 			{
-				Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit Weapon: " + weaponName + "  is an invalid gun name!");
+				Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit weapon: " + weaponName + " is an invalid gun name!");
 				continue;
 			}
 			this.weapons.add(weapon);
@@ -65,7 +65,7 @@ public class Kit
 			PerkType perk = PerkType.getPerkType(perkName);
 			if(perk == null)
 			{
-				Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Perk: " + perkName + "  is an invalid perk name!");
+				Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit perk: " + perkName + " is an invalid perk name!");
 				continue;
 			}
 			if(perks.size() < 4)
@@ -90,7 +90,7 @@ public class Kit
 				Weapon weapon = WeaponManager.getWeapon(weaponName);
 				if(weapon == null)
 				{
-					Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit Round Reward weapon: " + weaponName + "  is an invalid weapon name!");
+					Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit round reward weapon: " + weaponName + " is an invalid weapon name!");
 					continue;
 				}
 				weapons.add(weapon);
@@ -106,7 +106,7 @@ public class Kit
 				PerkType perk = PerkType.getPerkType(perkName);
 				if(perk == null)
 				{
-					Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit Round Reward Perk: " + perkName + "  is an invalid perk name!");
+					Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit round reward perk: " + perkName + " is an invalid perk name!");
 					continue;
 				}
 				perks.add(perk);

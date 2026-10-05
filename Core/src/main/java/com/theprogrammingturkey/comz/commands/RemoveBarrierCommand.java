@@ -21,7 +21,7 @@ public class RemoveBarrierCommand extends SubCommand
 	{
 		if(!COMZPermission.REMOVE_BARRIER.hasPerm(player))
 		{
-			CommandUtil.noPermission(player, "remove this banner");
+			CommandUtil.noPermission(player, "remove a barrier");
 			return true;
 		}
 
@@ -34,14 +34,14 @@ public class RemoveBarrierCommand extends SubCommand
 
 		if(args.length < 2)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Please specify an arena to remove a barrier from!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena to remove a barrier from!");
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
 			Game game = GameManager.INSTANCE.getGame(args[1]);
 			if(game.barrierManager.getTotalBarriers() == 0)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "This arena has no barriers!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This arena has no barriers!");
 				return true;
 			}
 
@@ -49,7 +49,7 @@ public class RemoveBarrierCommand extends SubCommand
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + args[1] + " is not a valid arena!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + args[1] + " is not a valid arena!");
 		}
 
 		return true;

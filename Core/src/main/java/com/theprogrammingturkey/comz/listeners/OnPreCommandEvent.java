@@ -26,7 +26,7 @@ public class OnPreCommandEvent implements Listener
 			}
 			if(GameManager.INSTANCE.isPlayerInGame(player))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You are not allowed to use commands in game!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You are not allowed to use commands in game!");
 				event.setCancelled(true);
 			}
 		}

@@ -17,7 +17,7 @@ public class Vault
 	private boolean enabled = false;
 
 	/**
-	 * Sets up the economy plugin for the COM:Z to use
+	 * Sets up the economy plugin for MinecraftZombies to use
 	 */
 	private boolean setupEconomy()
 	{

@@ -21,7 +21,7 @@ public class RemoveDoorCommand extends SubCommand
 	{
 		if(!COMZPermission.REMOVE_DOOR.hasPerm(player))
 		{
-			CommandUtil.noPermission(player, "remove this door");
+			CommandUtil.noPermission(player, "remove a door");
 			return true;
 		}
 
@@ -32,14 +32,14 @@ public class RemoveDoorCommand extends SubCommand
 		}
 		else if(args.length < 2)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Please specify an arena to remove a door from!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena to remove a door from!");
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
 			Game game = GameManager.INSTANCE.getGame(args[1]);
 			if(game.doorManager.getDoors().isEmpty())
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "This arena has no doors!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This arena has no doors!");
 				return true;
 			}
 
@@ -47,7 +47,7 @@ public class RemoveDoorCommand extends SubCommand
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + args[2] + " is not a valid arena!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + args[2] + " is not a valid arena!");
 		}
 
 		return true;

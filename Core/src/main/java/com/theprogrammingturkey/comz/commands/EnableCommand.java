@@ -46,7 +46,7 @@ public class EnableCommand extends SubCommand
 						action.cancelAction();
 
 					game.setEnabled();
-					CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Arena " + game.getName() + " has been enabled!");
+					CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Arena " + game.getName() + " has been enabled!");
 					return true;
 				}
 			}

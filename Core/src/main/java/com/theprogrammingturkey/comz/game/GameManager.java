@@ -69,7 +69,7 @@ public class GameManager
 			else
 				COMZombies.log.log(Level.SEVERE, "Failed to load arena " + arena.getKey() + "!");
 		}
-		Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + ChatColor.BOLD + " Done loading arenas!");
+		Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + " Done loading arenas!");
 	}
 
 	public void saveAllGames()

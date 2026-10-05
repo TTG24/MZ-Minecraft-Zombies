@@ -4,6 +4,7 @@ import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 public class DebugCommand extends SubCommand
@@ -27,7 +28,7 @@ public class DebugCommand extends SubCommand
 				if(args[1].equalsIgnoreCase("status"))
 				{
 					game.setDebugMode(true);
-					player.sendRawMessage("===== INFO =====");
+					player.sendRawMessage(ChatColor.DARK_GREEN + "===== " + ChatColor.RED + "INFO" + ChatColor.DARK_GREEN + " =====");
 					player.sendRawMessage("Status: " + game.getStatus());
 					player.sendRawMessage("Zombies Alive: " + game.spawnManager.getZombiesAlive());
 					player.sendRawMessage("Zombies Round Info: " + game.spawnManager.getMobsSpawned() + "/" + game.spawnManager.getMobsToSpawn());

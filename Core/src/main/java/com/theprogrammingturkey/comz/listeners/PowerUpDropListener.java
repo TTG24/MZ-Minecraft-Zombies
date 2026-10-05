@@ -141,7 +141,7 @@ public class PowerUpDropListener implements Listener
 	{
 		for(Player pl : game.getPlayersInGame())
 		{
-			pl.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + powerUp.getDisplay() + "!");
+			pl.sendMessage(ChatColor.RED + powerUp.getDisplay() + "!");
 			pl.playSound(pl.getLocation(), powerUp.getSound(), 1, 1);
 		}
 	}

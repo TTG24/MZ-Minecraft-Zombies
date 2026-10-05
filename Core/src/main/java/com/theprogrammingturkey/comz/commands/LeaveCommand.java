@@ -21,19 +21,19 @@ public class LeaveCommand extends SubCommand
 
 		if(game == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You are not in game!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You are not in a game!");
 			return true;
 		}
 
 		if(game.isPlayerSpectating(player))
 		{
 			game.removeSpectator(player);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "You are no longer spectating!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "You are no longer spectating!");
 		}
 		else if(game.isPlayerPlaying(player))
 		{
 			game.removePlayer(player);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "You have left the game!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "You have left the game!");
 		}
 
 		return true;

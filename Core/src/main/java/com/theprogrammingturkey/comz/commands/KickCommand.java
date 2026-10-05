@@ -27,7 +27,7 @@ public class KickCommand extends SubCommand
 
 		if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Please specify a player to kick!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify a player to kick!");
 		}
 		else if(Bukkit.getPlayer(args[1]) != null)
 		{
@@ -41,18 +41,18 @@ public class KickCommand extends SubCommand
 			Game game = GameManager.INSTANCE.getGame(kick);
 			if(game.getStatus() == GameStatus.DISABLED)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "The arena that the player has a status of " + game.getStatus().toString() + "!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "That player's arena is " + game.getStatus().toString().toLowerCase() + "!");
 				return true;
 			}
 
 			if(kick.equals(player))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You may not kick yourself! " + ChatColor.GOLD + "Type /z leave to leave!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You may not kick yourself! " + ChatColor.GRAY + "Type /z leave to leave!");
 			}
 			else
 			{
 				game.removePlayer(kick);
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You kicked " + ChatColor.GOLD + kick.getName() + ChatColor.RED + " from the arena " + ChatColor.GOLD + game.getName() + ChatColor.RED + "!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You kicked " + ChatColor.RED + kick.getName() + ChatColor.DARK_GREEN + " from the arena " + ChatColor.RED + game.getName() + ChatColor.DARK_GREEN + "!");
 			}
 		}
 		else

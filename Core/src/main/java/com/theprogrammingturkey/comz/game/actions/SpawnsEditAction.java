@@ -18,12 +18,12 @@ public class SpawnsEditAction extends BaseAction
 		super(player, game);
 
 		game.showSpawnLocations();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.DARK_RED + "Zombie Spawn Point Edit" + ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "-------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "The Ender portal frames represent zombie spawn locations");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "If you break one of these blocks, the spawn point at that location will be removed.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Type add to add a spawn location.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.RED + "Zombie Spawn Point Edit" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "The Ender portal frames represent zombie spawn locations");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "If you break one of these blocks, the spawn point at that location will be removed.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type add to add a spawn location.");
 		//CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel or /zombies cancel to cancel this operation.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Type done to complete this operation.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type done to complete this operation.");
 	}
 
 	public void onChatMessage(String message)
@@ -32,7 +32,7 @@ public class SpawnsEditAction extends BaseAction
 		{
 			if(game.getStatus() != Game.GameStatus.DISABLED)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You cannot add spawn points to an arena unless it is disabled!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You cannot add spawn points to an arena unless it is disabled!");
 				return;
 			}
 
@@ -40,19 +40,19 @@ public class SpawnsEditAction extends BaseAction
 
 			if(!game.arena.containsBlock(b.getLocation()))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "The spawn point must be inside the arena!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "The spawn point must be inside the arena!");
 				return;
 			}
 
 			SpawnPoint point = new SpawnPoint(b.getLocation(), game, b.getType(), game.spawnManager.getNewSpawnPointNum());
 			if(!game.spawnManager.addPoint(point))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "Failed to add that spawn point for some reason!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Failed to add that spawn point for some reason!");
 				return;
 			}
 
 			GameManager.INSTANCE.saveAllGames();
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Spawn point added to arena " + ChatColor.BLUE + game.getName() + ChatColor.GREEN + "!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spawn point added to arena " + ChatColor.RED + game.getName() + ChatColor.DARK_GREEN + "!");
 			Block block = point.getLocation().getBlock();
 			point.setMaterial(block.getType());
 			block.setType(Material.END_PORTAL_FRAME);
@@ -61,7 +61,7 @@ public class SpawnsEditAction extends BaseAction
 		{
 			COMZombies.getPlugin().activeActions.remove(player);
 			game.setEnabled();
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "You are no longer editing zombies spawns for arena " + game.getName() + "!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You are no longer editing zombie spawns for arena " + game.getName() + "!");
 		}
 	}
 
@@ -80,7 +80,7 @@ public class SpawnsEditAction extends BaseAction
 			{
 				game.spawnManager.removePoint(point);
 				interact.setCancelled(false);
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Spawn point removed");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Spawn point removed!");
 				return;
 			}
 		}

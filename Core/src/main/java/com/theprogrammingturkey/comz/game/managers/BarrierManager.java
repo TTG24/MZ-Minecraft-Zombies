@@ -146,7 +146,7 @@ public class BarrierManager
 	{
 		if(barriers.contains(barrier))
 		{
-			player.sendMessage(ChatColor.GREEN + "" + ChatColor.BOLD + "Barrier removed!");
+			player.sendMessage(ChatColor.DARK_GREEN + "Barrier removed!");
 			BlockUtils.setBlockToAir(barrier.getRepairLoc());
 			barriers.remove(barrier);
 			GameManager.INSTANCE.saveAllGames();

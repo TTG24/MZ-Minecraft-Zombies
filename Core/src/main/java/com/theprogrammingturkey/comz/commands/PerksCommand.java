@@ -18,13 +18,13 @@ public class PerksCommand extends SubCommand
 	{
 		if(!COMZPermission.PERKS.hasPerm(player))
 		{
-			CommandUtil.noPermission(player, "view the perks info");
+			CommandUtil.noPermission(player, "view the perk info");
 			return true;
 		}
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.BLUE + "The following perks are available:\n");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "The following perks are available:\n");
 		for(PerkType perk : PerkType.values())
-			player.sendMessage(ChatColor.GREEN + "" + ChatColor.BOLD + "- " + perk.name());
+			player.sendMessage(ChatColor.GRAY + "- " + perk.name());
 
 		return true;
 	}

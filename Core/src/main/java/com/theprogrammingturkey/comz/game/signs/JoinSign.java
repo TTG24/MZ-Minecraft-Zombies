@@ -64,7 +64,7 @@ public class JoinSign implements IGameSign
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "There is no arena called " + ChatColor.GOLD + data.get("arena") + ChatColor.DARK_RED + "! Contact an admin to fix this issue!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "There is no arena called " + ChatColor.GRAY + data.get("arena") + ChatColor.RED + "! Contact an admin to fix this issue!");
 		}
 	}
 

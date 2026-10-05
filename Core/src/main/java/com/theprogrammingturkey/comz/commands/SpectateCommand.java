@@ -22,18 +22,18 @@ public class SpectateCommand extends SubCommand
 		}
 		else if(GameManager.INSTANCE.getGame(player) != null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must leave the game you are currently in first before you can spectate that game!!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must leave your current game before you can spectate another one!");
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
 			if(!COMZPermission.SPECTATE.hasPerm(player))
 			{
-				CommandUtil.noPermission(player, "to spectate");
+				CommandUtil.noPermission(player, "spectate");
 				return true;
 			}
 			Game game = GameManager.INSTANCE.getGame(args[1]);
 			game.addSpectator(player);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You are now spectating " + ChatColor.GOLD + game.getName() + ChatColor.RED + "!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You are now spectating " + ChatColor.RED + game.getName() + ChatColor.DARK_GREEN + "!");
 		}
 		else
 		{

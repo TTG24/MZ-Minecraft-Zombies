@@ -21,11 +21,11 @@ public class ArenaSetupAction extends BaseAction
 	{
 		super(player, game);
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "------------" + ChatColor.DARK_RED + "Arena Setup" + ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "------------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Type p1 for point one, and p2 for point two.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Type gw for game warp, lw for lobby warp, and sw for spectator warp.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "------------" + ChatColor.RED + "Arena Setup" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "------------");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type p1 for point one, and p2 for point two.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type gw for game warp, lw for lobby warp, and sw for spectator warp.");
 		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel to cancel this operation.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Type done when all points have been set where you want them.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type done when all points have been set where you want them.");
 
 		updateBoxParticles();
 	}
@@ -46,7 +46,7 @@ public class ArenaSetupAction extends BaseAction
 		if(message.equalsIgnoreCase("p1"))
 		{
 			game.addPointOne(player.getLocation());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Point p1 set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Point p1 set for arena : " + game.getName());
 			updateBoxParticles();
 		}
 		else if(message.equalsIgnoreCase("p2"))
@@ -56,23 +56,23 @@ public class ArenaSetupAction extends BaseAction
 				CommandUtil.sendMessageToPlayer(player, "Type p1 before p2!");
 				return;
 			}
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Point p2 set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Point p2 set for arena : " + game.getName());
 			updateBoxParticles();
 		}
 		else if(message.equalsIgnoreCase("gw"))
 		{
 			game.setPlayerTPLocation(player.getLocation());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Player location set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Player location set for arena : " + game.getName());
 		}
 		else if(message.equalsIgnoreCase("sw"))
 		{
 			game.setSpectateLocation(player.getLocation());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Spectator location set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spectator location set for arena : " + game.getName());
 		}
 		else if(message.equalsIgnoreCase("lw"))
 		{
 			game.setLobbySpawn(player.getLocation());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Lobby location set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Lobby location set for arena : " + game.getName());
 		}
 		else if(message.equalsIgnoreCase("done"))
 		{

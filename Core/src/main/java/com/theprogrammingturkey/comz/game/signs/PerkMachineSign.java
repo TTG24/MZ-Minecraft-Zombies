@@ -58,7 +58,7 @@ public class PerkMachineSign implements IGameSign
 
 		if(perk == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "An error occured when trying to buy this perk! Leave the game and contact an admin please.");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "An error occurred when trying to buy this perk! Please leave the game and contact an admin.");
 			return;
 		}
 
@@ -67,7 +67,7 @@ public class PerkMachineSign implements IGameSign
 
 		if(playerPoints < cost)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You do not have enough points to buy this!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You do not have enough points to buy this!");
 			return;
 		}
 
@@ -76,7 +76,7 @@ public class PerkMachineSign implements IGameSign
 			perk = game.perkManager.getRandomPerk(player);
 			if(perk == null)
 			{
-				player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "You already have all the perks!");
+				player.sendMessage(ChatColor.RED + "You already have all the perks!");
 				return;
 			}
 		}
@@ -85,7 +85,7 @@ public class PerkMachineSign implements IGameSign
 			return;
 
 		Bukkit.getPluginManager().callEvent(new PlayerPerkPurchaseEvent(player, perk));
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You now have " + perk.toString().toLowerCase() + "!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You now have " + perk.toString().toLowerCase() + "!");
 		int slot = game.perkManager.getAvailablePerkSlot(player);
 		perk.initialEffect(player, perk, slot);
 		if(perk.equals(PerkType.STAMIN_UP))

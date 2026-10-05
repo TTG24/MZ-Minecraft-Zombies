@@ -41,7 +41,7 @@ public class MysteryBoxSign implements IGameSign
 		BlockFace facing = ((Directional) location.getBlock().getBlockData()).getFacing();
 		RandomBox box = new RandomBox(location, facing, game, game.boxManager.getNextBoxName(), Integer.parseInt(data.get("price")));
 		game.boxManager.addBox(box);
-		player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "Random Weapon Box Created!");
+		player.sendMessage(ChatColor.DARK_GREEN + "Random Weapon Box Created!");
 	}
 
 	@Override

@@ -20,7 +20,7 @@ public class DisablePowerCommand extends SubCommand
 	{
 		if(!COMZPermission.DISABLE_POWER.hasPerm(player))
 		{
-			CommandUtil.noPermission(player, " disable the power");
+			CommandUtil.noPermission(player, "disable the power");
 			return true;
 		}
 

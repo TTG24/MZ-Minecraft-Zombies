@@ -27,12 +27,12 @@ public class JoinCommand extends SubCommand
 			if(gamePlayers.get(player).hasLeftGame())
 				gamePlayers.remove(player);
 			else
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You must leave your current game first!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must leave your current game first!");
 			return true;
 		}
 		if(GameManager.INSTANCE.getGames().isEmpty())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "There are no arenas!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "There are no arenas!");
 			return true;
 		}
 
@@ -53,7 +53,7 @@ public class JoinCommand extends SubCommand
 					}
 				}
 			}
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "No arena available!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No arena available!");
 		}
 		else
 		{
@@ -64,18 +64,18 @@ public class JoinCommand extends SubCommand
 				{
 					if(game.spawnManager.getPoints().isEmpty())
 					{
-						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Arena has no spawn points!");
+						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Arena has no spawn points!");
 						return true;
 					}
 					if(game.maxPlayers <= game.getPlayersInGame().size())
 					{
-						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Game is full!");
+						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Game is full!");
 						return true;
 					}
 					if(COMZPermission.JOIN_ARENA.hasPerm(player, game.getName()))
 					{
 						game.addPlayer(player);
-						CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "" + ChatColor.BOLD + "You joined " + game.getName());
+						CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You joined " + game.getName() + "!");
 						return true;
 					}
 
@@ -86,19 +86,19 @@ public class JoinCommand extends SubCommand
 				{
 					if(game.getStatus() == GameStatus.INGAME)
 					{
-						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + game.getName() + " is already in game!");
+						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + game.getName() + " is already in progress!");
 						return true;
 					}
 					else if(game.getStatus() == GameStatus.DISABLED)
 					{
-						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "This arena is disabled!");
+						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This arena is disabled!");
 						return true;
 					}
 				}
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "There is no arena called " + ChatColor.GOLD + args[1]);
+				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "There is no arena called " + ChatColor.GRAY + args[1]);
 				return true;
 			}
 		}

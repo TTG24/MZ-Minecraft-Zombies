@@ -38,7 +38,7 @@ public class AddTeleporterCommand extends SubCommand
 			return true;
 		}
 		game.teleporterManager.saveTeleporterSpot(args[1], loc);
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Teleporter added for arena: " + ChatColor.GOLD + game.getName() + ChatColor.RED + "!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Teleporter added for arena: " + ChatColor.RED + game.getName() + ChatColor.DARK_GREEN + "!");
 		return true;
 	}
 }

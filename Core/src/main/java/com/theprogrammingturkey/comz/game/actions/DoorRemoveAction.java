@@ -34,8 +34,8 @@ public class DoorRemoveAction extends BaseAction
 				sign.update(true);
 			}
 		}
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.DARK_RED + "Door Removal" + ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "-------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Break any sign that leads to a door to remove the door!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.RED + "Door Removal" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Break any sign that leads to a door to remove the door!");
 		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type done to exit this operation.");
 	}
 
@@ -51,7 +51,7 @@ public class DoorRemoveAction extends BaseAction
 		for(Location location : door.getSignsLocations())
 			BlockUtils.setBlockToAir(location.getBlock());
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "" + ChatColor.BOLD + "Door removed!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Door removed!");
 		game.doorManager.removeDoor(door);
 		if(game.doorManager.getDoors().isEmpty())
 		{

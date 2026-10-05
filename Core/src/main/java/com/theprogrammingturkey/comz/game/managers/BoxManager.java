@@ -105,7 +105,7 @@ public class BoxManager
 	{
 		if(boxes.contains(box))
 		{
-			player.sendMessage(ChatColor.GREEN + "" + ChatColor.BOLD + "MysteryBox removed!");
+			player.sendMessage(ChatColor.DARK_GREEN + "MysteryBox removed!");
 			BlockUtils.setBlockToAir(box.getLocation());
 			boxes.remove(box);
 			GameManager.INSTANCE.saveAllGames();

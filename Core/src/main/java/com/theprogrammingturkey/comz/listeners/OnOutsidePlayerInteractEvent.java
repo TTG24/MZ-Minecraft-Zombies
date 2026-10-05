@@ -58,7 +58,7 @@ public class OnOutsidePlayerInteractEvent implements Listener
 
 			event.setCancelled(true);
 			if(!GameManager.INSTANCE.isPlayerInGame(player))
-				player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "Do not drop items in this arena!");
+				player.sendMessage(ChatColor.RED + "Do not drop items in this arena!");
 		}
 	}
 }

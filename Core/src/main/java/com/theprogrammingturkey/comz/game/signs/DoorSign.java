@@ -37,7 +37,7 @@ public class DoorSign implements IGameSign
 		Door door = game.doorManager.getDoorFromSign(location);
 		if(door == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "An error occured when trying to open this door! Leave the game an contact an admin please.");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "An error occurred when trying to open this door! Please leave the game and contact an admin.");
 		}
 		else if(door.isOpened())
 		{
@@ -57,7 +57,7 @@ public class DoorSign implements IGameSign
 			door.playerDoorOpenSound();
 			PointManager.INSTANCE.takePoints(player, door.getCost());
 			PointManager.INSTANCE.notifyPlayer(player);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Door opened!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Door opened!");
 		}
 	}
 

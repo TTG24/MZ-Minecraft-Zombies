@@ -35,8 +35,8 @@ public class BarrierRemoveAction extends BaseAction
 			sign.update();
 		}
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "---------------" + ChatColor.DARK_RED + "Barrier Removal" + ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "---------------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Break any sign that leads to a door to remove the barrier!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "---------------" + ChatColor.RED + "Barrier Removal" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "---------------");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Break the [BarrierRemove] sign of the barrier you want to remove!");
 		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel to cancel this operation.");
 	}
 
@@ -56,7 +56,7 @@ public class BarrierRemoveAction extends BaseAction
 
 		interact.setCancelled(true);
 		game.barrierManager.removeBarrier(player, barrier);
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "" + ChatColor.BOLD + "Barrier removed!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Barrier removed!");
 		if(game.barrierManager.getTotalBarriers() == 0)
 		{
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No barriers left!");

@@ -111,7 +111,7 @@ public class AutoStart
 			}
 
 			for(Player player : game.getPlayersInGame())
-				player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(ChatColor.RED + "Starting In: " + remain));
+				player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(ChatColor.RED + "Starting in: " + remain));
 
 			countdownTaskId = COMZombies.scheduleTask(20, this);
 		}

@@ -48,7 +48,7 @@ public class COMZombies extends JavaPlugin
 	/**
 	 * Default plugin logger.
 	 */
-	public static final Logger log = Logger.getLogger("COM:Z");
+	public static final Logger log = Logger.getLogger("MinecraftZombies");
 	/**
 	 * Players currently performing some sort of action or maintenance
 	 */
@@ -71,8 +71,8 @@ public class COMZombies extends JavaPlugin
 		activeActions.clear();
 	}
 
-	public static final String CONSOLE_PREFIX = "[Zombies] ";
-	public static final String PREFIX = ChatColor.GREEN + "[ " + ChatColor.RED + ChatColor.ITALIC + "Zombies" + ChatColor.GREEN + " ]" + ChatColor.GRAY + " ";
+	public static final String CONSOLE_PREFIX = "";
+	public static final String PREFIX = ChatColor.DARK_GREEN + "[ " + ChatColor.RED + "MinecraftZombies" + ChatColor.DARK_GREEN + " ]" + ChatColor.GRAY + " ";
 
 	public static INMSUtil nmsUtil;
 
@@ -112,12 +112,12 @@ public class COMZombies extends JavaPlugin
 	{
 		String version = getMinecraftVersion();
 		if(version == null)
-			throw new IllegalStateException("Sorry, COM:Z Does not current support server version" + Bukkit.getVersion());
+			throw new IllegalStateException("Sorry, MinecraftZombies does not currently support server version " + Bukkit.getVersion());
 
 		log.info(COMZombies.CONSOLE_PREFIX + "Version info | MC: " + version + " | Bukkit: " + Bukkit.getVersion() + " & " + Bukkit.getBukkitVersion() + " | CB: " + Bukkit.getServer().getClass().getPackage().getName());
 
 		if(!isSupportedVersion(version))
-			throw new IllegalStateException("Sorry, COM:Z Does not current support server version" + version);
+			throw new IllegalStateException("Sorry, MinecraftZombies does not currently support server version " + version);
 
 		nmsUtil = new BukkitApiUtil();
 	}

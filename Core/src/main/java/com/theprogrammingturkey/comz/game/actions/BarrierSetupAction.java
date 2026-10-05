@@ -30,10 +30,10 @@ public class BarrierSetupAction extends BaseAction
 		if(!player.getInventory().contains(Material.WOODEN_SWORD))
 			player.getInventory().addItem(new ItemStack(Material.WOODEN_SWORD));
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "------" + ChatColor.DARK_RED + "Barrier Setup" + ChatColor.RED + "" + ChatColor.BOLD + "" + ChatColor.STRIKETHROUGH + "-----");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Select each block individually to be the barrier using the wooden sword.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Once you have this complete, type done, go into the room the barrier blocks to and click on any ender portal frames (spawn points) that is in there with the sword.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Lastly! In chat, type a price for the each repairation stage of the barrier");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "------" + ChatColor.RED + "Barrier Setup" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-----");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Select each block individually to be the barrier using the wooden sword.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Once you have this complete, type done, go into the room the barrier blocks and click on any ender portal frames (spawn points) in there with the sword.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Lastly, type in chat the points given for each repair stage of the barrier.");
 		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel to cancel this operation.");
 	}
 
@@ -78,7 +78,7 @@ public class BarrierSetupAction extends BaseAction
 				BlockFace face = event.getBlockFace();
 				if(face == BlockFace.UP || face == BlockFace.DOWN)
 				{
-					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "The sign can't be place on that block face!");
+					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "The sign can't be placed on that block face!");
 					event.setCancelled(true);
 					return;
 				}
@@ -97,7 +97,7 @@ public class BarrierSetupAction extends BaseAction
 					return;
 
 				barrier.addSpawnPoint(point);
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GREEN + "Spawn point selected!");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spawn point selected!");
 				event.setCancelled(true);
 			}
 		}
@@ -108,7 +108,7 @@ public class BarrierSetupAction extends BaseAction
 	{
 		if(barrier == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "You have not selected a block for the barrier yet!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You have not selected a block for the barrier yet!");
 			return;
 		}
 
@@ -117,13 +117,13 @@ public class BarrierSetupAction extends BaseAction
 			if(state == 0)
 			{
 				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Barrier block for barrier set!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Now select where the repair sign will be located at.");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now select where the repair sign will be located.");
 				state++;
 			}
 			else if(state == 1)
 			{
 				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Barrier block repair sign location for barrier set!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Now select the spawn points that are located behind the barrier.");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now select the spawn points that are located behind the barrier.");
 				state++;
 			}
 			else
@@ -131,7 +131,7 @@ public class BarrierSetupAction extends BaseAction
 				COMZombies.scheduleTask(1, game::resetSpawnLocationBlocks);
 
 				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Spawn point for barrier set!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GOLD + "Now type in the amount the player will receive per repairation level of the barrier.");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now type in the points a player will receive per repair stage of the barrier.");
 			}
 		}
 		else if(!barrier.getSpawnPoints().isEmpty() && !barrier.getBlocks().isEmpty() && barrier.getRepairLoc() != null)

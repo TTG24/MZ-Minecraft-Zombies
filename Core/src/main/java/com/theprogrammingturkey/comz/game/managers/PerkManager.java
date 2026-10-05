@@ -47,13 +47,13 @@ public class PerkManager
 
 		if(playerPerks.contains(type))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You already have " + type + "!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You already have " + type + "!");
 			return false;
 		}
 
 		if(playerPerks.size() >= ConfigManager.getMainConfig().maxPerks)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "You can only have " + ConfigManager.getMainConfig().maxPerks + " perks!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You can only have " + ConfigManager.getMainConfig().maxPerks + " perks!");
 			return false;
 		}
 		playerPerks.add(type);

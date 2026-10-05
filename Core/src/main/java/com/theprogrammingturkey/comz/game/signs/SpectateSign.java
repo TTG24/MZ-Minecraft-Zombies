@@ -38,7 +38,7 @@ public class SpectateSign implements IGameSign
 		game = GameManager.INSTANCE.getGame(data.get("arena"));
 		if(game == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_RED + "Invalid Arena!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Invalid Arena!");
 			return;
 		}
 		player.performCommand("zombies spec " + game.getName());

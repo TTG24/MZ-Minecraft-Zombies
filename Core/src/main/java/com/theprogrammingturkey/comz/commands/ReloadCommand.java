@@ -19,7 +19,7 @@ public class ReloadCommand extends SubCommand
 	{
 		if(!COMZPermission.RELOAD.hasPerm(player))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You do not have permission to reload zombies!");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You do not have permission to reload MinecraftZombies!");
 			return true;
 		}
 
@@ -35,7 +35,7 @@ public class ReloadCommand extends SubCommand
 
 		plugin.loadConfigFiles();
 		GameManager.INSTANCE.loadAllGames();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "" + ChatColor.BOLD + "Zombies has been reloaded!");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "MinecraftZombies has been reloaded!");
 		return true;
 	}
 }
