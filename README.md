@@ -1,3 +1,28 @@
+# MZ-Minecraft-Zombies
+A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
+
+Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
+
+## What this fork changes
+
+- **One jar for 1.21 and newer.** The per-version NMS modules are replaced by a single module that only uses the
+  Bukkit API, so the plugin runs on 1.21 through 26.x without needing a new build for each Minecraft version.
+- **Configurable signs.** The text on every game sign (guns, perks, doors, mystery box, barriers, join signs and more)
+  is set in the `signs` section of `config.yml`. Signs are recognised by their location, so the text can be anything.
+- **Fixes**, including: barriers letting players through at negative coordinates, barrier cracks disappearing between
+  rounds, the power switch never working, kit round rewards never firing, and the gun zoom getting stuck.
+
+## Building
+
+Requires JDK 21. From the project folder run `gradlew build` (`.\gradlew.bat build` on Windows). The plugin jar is
+created in `Core/build/libs`. No BuildTools run is needed.
+
+Servers need Java 21 for 1.21.x, or Java 25 for 26.x.
+
+---
+
+*The original project README follows.*
+
 # Call Of MineCraft: Zombies
 COMZ, is a Bukkit plugin that adds the Zombies minigame from the Call Of Duty© Franchise
 
