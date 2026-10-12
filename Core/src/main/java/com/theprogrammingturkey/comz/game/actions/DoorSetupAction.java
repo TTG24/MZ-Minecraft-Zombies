@@ -5,7 +5,6 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.features.Door;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
-import com.theprogrammingturkey.comz.util.BlockUtils;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -34,9 +33,7 @@ public class DoorSetupAction extends BaseAction
 		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.RED + "Door Setup" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------");
 		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Select each block individually to be the door using the wooden sword.");
 		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Once you have this complete, type done, go into the room the door opens to and click on any ender portal frame (spawn point) that is in there with the sword.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Once you have this complete, type done, find any signs that open this door and click them with the sword.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "After clicking on the signs, type done");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Lastly, type a price for the door in chat.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Then type done and enter the door price in chat (POWER:PRICE if power is required). No sign is needed.");
 		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel to cancel this operation.");
 	}
 
@@ -63,17 +60,6 @@ public class DoorSetupAction extends BaseAction
 			door.addSpawnPoint(point);
 			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spawn point selected!");
 			event.setCancelled(true);
-		}
-
-		if(state == 2 && (event.getAction().equals(Action.LEFT_CLICK_BLOCK) || event.getAction().equals(Action.RIGHT_CLICK_BLOCK)))
-		{
-			Block block = event.getClickedBlock();
-			if(BlockUtils.isSign(block.getType()))
-			{
-				door.addSign(block.getLocation());
-				event.setCancelled(true);
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Sign selected!");
-			}
 		}
 
 		if(state == 0 && clickedBlock != null && (event.getAction().equals(Action.LEFT_CLICK_BLOCK) || event.getAction().equals(Action.RIGHT_CLICK_BLOCK)))
@@ -114,17 +100,11 @@ public class DoorSetupAction extends BaseAction
 				COMZombies.scheduleTask(1, game::resetSpawnLocationBlocks);
 
 				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spawn points for door set!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now select any signs that can open this door.");
-				state++;
-			}
-			else if(state == 2)
-			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Signs for door set!");
 				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now type in a price for the door. Use POWER:PRICE to make the door require power to open.");
 				state++;
 			}
 		}
-		else if(state == 3)
+		else if(state == 2)
 		{
 			if(!message.matches("[0-9]{1,5}") && !message.matches("POWER:[0-9]{1,5}"))
 			{

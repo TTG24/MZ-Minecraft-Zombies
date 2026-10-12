@@ -2,6 +2,7 @@
 
 # Package Files #
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 /bin/
@@ -13,4 +14,7 @@
 .idea/
 build/
 Core/bin/*
+**/bin/
+.vscode/
+release/
 .project

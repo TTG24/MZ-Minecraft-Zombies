@@ -4,6 +4,7 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.Game.GameStatus;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.managers.PlayerWeaponManager;
+import com.theprogrammingturkey.comz.game.managers.DoorProximityManager;
 import com.theprogrammingturkey.comz.game.weapons.WeaponInstance;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -44,6 +45,9 @@ public class OnInventoryChangeEvent implements Listener
 
 		Game game = GameManager.INSTANCE.getGame(event.getPlayer());
 		if(game == null || game.getStatus() != GameStatus.INGAME)
+			return;
+
+		if(DoorProximityManager.INSTANCE.interactNearby(event.getPlayer()))
 			return;
 
 		if(game.getPlayersWeapons(event.getPlayer()) != null)

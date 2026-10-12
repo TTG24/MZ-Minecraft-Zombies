@@ -1,8 +1,9 @@
 package com.theprogrammingturkey.comz.commands;
 
-import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+
+import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class ZombiesHelpCommand
 {
@@ -51,6 +52,7 @@ public class ZombiesHelpCommand
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies removeBarrier [arena]" + ChatColor.GRAY + " - Begins the process to remove a barrier.");
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies addDoor [arena]" + ChatColor.GRAY + " - Begins the creation of a door.");
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies removeDoor [arena]" + ChatColor.GRAY + " - Begins the process to remove a door.");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies setregion [arena] [region|none]" + ChatColor.GRAY + " - Links an arena to a WorldGuard region for custom containment.");
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies help admin 4 - Type this for the next page of admin help!");
 		}
 		else

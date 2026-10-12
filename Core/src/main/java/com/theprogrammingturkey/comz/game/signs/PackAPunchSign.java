@@ -54,7 +54,7 @@ public class PackAPunchSign implements IGameSign
 		}
 
 		PlayerWeaponManager manager = game.getPlayersWeapons(player);
-		if(!manager.isHeldItemGun())
+		if(manager == null || !manager.isHeldItemGun())
 		{
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must hold the gun you want to Pack-a-Punch!");
 			return;
@@ -75,6 +75,7 @@ public class PackAPunchSign implements IGameSign
 				player.getWorld().playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1, 1);
 				gun.setPackOfPunch();
 				PointManager.INSTANCE.takePoints(player, cost);
+				PointManager.INSTANCE.notifyPlayer(player);
 			}
 		}
 		else

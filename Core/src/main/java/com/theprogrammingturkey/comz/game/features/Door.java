@@ -217,6 +217,18 @@ public class Door
 	}
 
 	/**
+	 * @return the locations of the door's blocks, used as a proximity anchor when the door has no sign
+	 */
+	public List<Location> getBlockLocations()
+	{
+		List<Location> locations = new ArrayList<>();
+		for(Block block : blocks.keySet())
+			if(block.getType() != Material.AIR)
+				locations.add(block.getLocation());
+		return locations;
+	}
+
+	/**
 	 * Loads all the blocks to the block list
 	 *
 	 * @param blocks array to load from

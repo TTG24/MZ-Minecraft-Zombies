@@ -1,15 +1,16 @@
 package com.theprogrammingturkey.comz.game.signs;
 
-import com.theprogrammingturkey.comz.COMZombies;
-import org.bukkit.ChatColor;
-import org.bukkit.block.Sign;
-import org.bukkit.configuration.file.FileConfiguration;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.bukkit.ChatColor;
+import org.bukkit.block.Sign;
+import org.bukkit.configuration.file.FileConfiguration;
+
+import com.theprogrammingturkey.comz.COMZombies;
 
 /**
  * Builds the text shown on game signs from the "config.signs" section of config.yml.
@@ -26,7 +27,8 @@ public class SignText
 		DEFAULTS.put("join_maintenance", Arrays.asList("&4[MAINTENANCE]", "{arena}", "Game will be", "available soon!"));
 		DEFAULTS.put("spectate", Arrays.asList("&c[Zombies]", "&bSpectate", "&cArena:", "{arena}"));
 		DEFAULTS.put("kit", Arrays.asList("&c[Zombies]", "&bKit", "&c{kit}", ""));
-		DEFAULTS.put("power", Arrays.asList("&c[Zombies]", "&bPower", "", ""));
+		DEFAULTS.put("power_off", Arrays.asList("&c[Zombies]", "&bPower", "&cOFF", ""));
+		DEFAULTS.put("power_on", Arrays.asList("&c[Zombies]", "&bPower", "&aON", ""));
 		DEFAULTS.put("ammo_crate", Arrays.asList("&c[Zombies]", "&bAmmo Crate", "{price}", ""));
 		DEFAULTS.put("grenade", Arrays.asList("&c[Zombies]", "&bGrenade", "{price}", ""));
 		DEFAULTS.put("teleporter", Arrays.asList("&c[Zombies]", "&bTeleporter", "{teleporter}", "{price}"));

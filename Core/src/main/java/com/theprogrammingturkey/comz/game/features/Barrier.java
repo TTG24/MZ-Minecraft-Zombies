@@ -11,15 +11,11 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.Sign;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 
 import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.game.signs.SignText;
 import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
@@ -36,10 +32,11 @@ public class Barrier
 
 	private final Map<Block, Material> blocks = new HashMap<>();
 	private Location repairLoc;
-	private BlockFace signFacing;
+	private BlockFace signFacing = BlockFace.NORTH;
 	private final List<SpawnPoint> spawns = new ArrayList<>();
 
 	private int stage;
+	private long lastRepairNanos;
 	private boolean breaking = false;
 	// Lets an old breaking loop notice a newer one has replaced it, so two never run at once
 	private int breakingLoopId = 0;
@@ -53,11 +50,11 @@ public class Barrier
 	private final List<Entity> ents = new ArrayList<>();
 	// Zombies from this barrier's spawns that are free to chase players
 	private final Set<Entity> releasedZombies = new HashSet<>();
-	private final HashMap<Player, Integer> earnedPoints = new HashMap<>();
 
 	public Barrier(String id, Game game)
 	{
-		stage = 0;
+		// Match repairFull(): untouched barriers must not offer a repair or award points.
+		stage = -1;
 		this.id = id;
 		this.game = game;
 	}
@@ -79,39 +76,34 @@ public class Barrier
 		}
 		else
 		{
-			if(stage > -1)
-			{
-				Block block = repairLoc.getBlock();
-				block.setType(Material.ACACIA_WALL_SIGN);
-				BlockData blockData = block.getBlockData();
-				((Directional) blockData).setFacing(signFacing);
-				block.setBlockData(blockData);
-				Sign sign = (Sign) block.getState();
-				SignText.apply(sign, SignText.render("barrier"));
-			}
 			return false;
 		}
 	}
 
 	public boolean repair(Player player)
 	{
+		if(stage <= -1)
+			return true;
+		long now = System.nanoTime();
+		// Shared by all players and repair inputs: at most one repair per second.
+		if(lastRepairNanos != 0 && now - lastRepairNanos < 1_000_000_000L)
+			return false;
+		lastRepairNanos = now;
 		stage--;
 
 		if(stage < -1)
 			stage = -1;
 
 		game.updateBarrierDamage(stage, blocks.keySet());
-		int pointsEarned = earnedPoints.getOrDefault(player, 0);
-		//TODO: Make configurable
-		if(pointsEarned < reward * 6)
+		// Every successful stage pays, including repeated repairs in the same round.
+		if(reward > 0)
 		{
-			earnedPoints.put(player, pointsEarned + reward);
 			PointManager.INSTANCE.addPoints(player, reward);
 			PointManager.INSTANCE.notifyPlayer(player);
 		}
 
 		if(stage == -1)
-			BlockUtils.setBlockToAir(repairLoc);
+			clearRepairSign();
 
 		for(Block b : blocks.keySet())
 			if(game.getWorld().getBlockAt(b.getLocation()).getType().equals(Material.AIR))
@@ -122,6 +114,7 @@ public class Barrier
 	public void repairFull()
 	{
 		stage = -1;
+		lastRepairNanos = 0;
 
 		game.updateBarrierDamage(-1, blocks.keySet());
 
@@ -129,14 +122,9 @@ public class Barrier
 			if(b.getType().equals(Material.AIR))
 				BlockUtils.setBlockTypeHelper(b, blocks.get(b));
 
-		BlockUtils.setBlockToAir(repairLoc);
+		clearRepairSign();
 		// The breaking loop is left running: it stops by itself once its zombies are dead (e.g. at game end),
 		// and stopping it here would leave a barrier unbreakable after a mid-game Carpenter power-up.
-	}
-
-	public void resetEarnedPoints()
-	{
-		earnedPoints.replaceAll((p, v) -> 0);
 	}
 
 	/**
@@ -219,6 +207,13 @@ public class Barrier
 	public Location getRepairLoc()
 	{
 		return repairLoc;
+	}
+
+	/** Old arenas may still contain a repair sign; new barriers have no sign location. */
+	public void clearRepairSign()
+	{
+		if(repairLoc != null && BlockUtils.isSign(repairLoc.getBlock()))
+			BlockUtils.setBlockToAir(repairLoc);
 	}
 
 	public void setRepairLoc(Location repairLoc)

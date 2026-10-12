@@ -1,12 +1,13 @@
 package com.theprogrammingturkey.comz.commands;
 
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 
 public class ReloadCommand extends SubCommand
 {
@@ -35,7 +36,10 @@ public class ReloadCommand extends SubCommand
 
 		plugin.loadConfigFiles();
 		GameManager.INSTANCE.loadAllGames();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "MinecraftZombies has been reloaded!");
+
+		int signsRefreshed = com.theprogrammingturkey.comz.game.signs.SignRegistry.INSTANCE.refreshAllText();
+
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "MinecraftZombies has been reloaded! (" + signsRefreshed + " sign" + (signsRefreshed == 1 ? "" : "s") + " refreshed.)");
 		return true;
 	}
 }

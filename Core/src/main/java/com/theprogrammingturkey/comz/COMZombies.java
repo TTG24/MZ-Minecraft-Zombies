@@ -21,9 +21,11 @@ import com.theprogrammingturkey.comz.config.ConfigManager;
 import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.actions.BaseAction;
+import com.theprogrammingturkey.comz.game.managers.DoorProximityManager;
 import com.theprogrammingturkey.comz.game.managers.WeaponManager;
 import com.theprogrammingturkey.comz.kits.KitManager;
 import com.theprogrammingturkey.comz.listeners.ArenaListener;
+import com.theprogrammingturkey.comz.listeners.DoorProximityListener;
 import com.theprogrammingturkey.comz.listeners.EXPListener;
 import com.theprogrammingturkey.comz.listeners.EntityListener;
 import com.theprogrammingturkey.comz.listeners.OnBlockInteractEvent;
@@ -121,6 +123,7 @@ public class COMZombies extends JavaPlugin
 		log.info(COMZombies.CONSOLE_PREFIX + "has been enabled!");
 
 		GameManager.INSTANCE.loadAllGames();
+		DoorProximityManager.INSTANCE.start();
 	}
 
 	public void loadConfigFiles()
@@ -177,6 +180,7 @@ public class COMZombies extends JavaPlugin
 		m.registerEvents(new PlayerListener(), this);
 		m.registerEvents(new OnInventoryChangeEvent(), this);
 		m.registerEvents(new ScopeListener(), this);
+		m.registerEvents(new DoorProximityListener(), this);
 	}
 
 	/**
@@ -185,6 +189,7 @@ public class COMZombies extends JavaPlugin
 	public void onDisable()
 	{
 		reloadConfig();
+		DoorProximityManager.INSTANCE.stop();
 		GameManager.INSTANCE.endAll();
 		log.info(COMZombies.CONSOLE_PREFIX + "has been disabled!");
 	}

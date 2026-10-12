@@ -143,6 +143,11 @@ public class BoxManager
 		return boxes.size();
 	}
 
+	public List<RandomBox> getBoxes()
+	{
+		return new ArrayList<>(boxes);
+	}
+
 	public void setCurrentBox(RandomBox box)
 	{
 		if(multiBox)

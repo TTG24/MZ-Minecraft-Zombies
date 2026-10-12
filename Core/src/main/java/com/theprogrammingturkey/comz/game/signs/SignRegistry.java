@@ -1,5 +1,13 @@
 package com.theprogrammingturkey.comz.game.signs;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+
+import org.bukkit.Location;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -7,13 +15,6 @@ import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.config.COMZConfig;
 import com.theprogrammingturkey.comz.config.ConfigManager;
 import com.theprogrammingturkey.comz.config.CustomConfig;
-import org.bukkit.Location;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
 
 /**
  * Remembers every game sign by location, along with its type and data (prices, gun names, etc), so signs are
@@ -104,6 +105,53 @@ public class SignRegistry
 	{
 		if(signs.remove(toKey(loc)) != null)
 			save();
+	}
+
+	/**
+	 * @return all locations of signs with the given type
+	 */
+	public List<Location> findByType(String type)
+	{
+		List<Location> result = new ArrayList<>();
+		for(Map.Entry<Location, Entry> entry : signs.entrySet())
+			if(entry.getValue().type.equals(type))
+				result.add(entry.getKey());
+		return result;
+	}
+
+	/**
+	 * @return a snapshot of every registered sign, location to its entry
+	 */
+	public Map<Location, Entry> getAll()
+	{
+		return new HashMap<>(signs);
+	}
+
+	/**
+	 * Re-renders the text of every registered sign from its logic and current data. Used after a reload so
+	 * already-placed signs pick up edited config (e.g. sign text).
+	 *
+	 * @return the number of signs updated
+	 */
+	public int refreshAllText()
+	{
+		int updated = 0;
+		for(Map.Entry<Location, Entry> entry : signs.entrySet())
+		{
+			IGameSign logic = GameSigns.fromType(entry.getValue().type);
+			if(logic == null)
+				continue;
+			String[] text = logic.getText(entry.getValue().data);
+			if(text == null)
+				continue;
+			org.bukkit.block.Block block = entry.getKey().getBlock();
+			if(block.getState() instanceof org.bukkit.block.Sign sign)
+			{
+				SignText.apply(sign, text);
+				updated++;
+			}
+		}
+		return updated;
 	}
 
 	private static Location toKey(Location loc)

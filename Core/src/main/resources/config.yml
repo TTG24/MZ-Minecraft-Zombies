@@ -36,8 +36,81 @@ config:
     roundSoundVolume: 0.2
     #The amount of damage zombies do, 9 is the equivalent 3 hits down, juggernog after the 5th hit down
     zombieDamage: 9
+    #Keep arena zombies alive on Peaceful without changing world difficulty.
+    #Requires Paper/Purpur with the per-mob override (works on 26.3; 26.2 clients do not support it).
+    zombiesInPeaceful: true
     #The amount of seconds after being hit to be healed (standard 5)
     healTime: 5
+  #Lets players buy a nearby door using Swap Item With Offhand (F by default).
+  doorProximity:
+    enabled: true
+    #How close a player must be to a door (its sign or block) to see the tooltip
+    radius: 3
+    #Legacy display label; use interaction.key below for all nearby prompts.
+    key: F
+    #Customize all nearby door messages below. Use & color codes; '' hides a message.
+    #Placeholders: {key} = key label, {price} = formatted cost, {missing} = points needed (no_funds).
+    tooltip:
+      #Shown when the door is buyable using the swap-hand key
+      open: '&aPress {key} to open &7- {price} points'
+      #Shown when the door needs power but the arena's power is off
+      no_power: '&cRequires power &7- {price} points'
+      #Shown when the player can't afford the door; {missing} is the additional points needed
+      no_funds: '&cNeed {missing} more points &7- {price} points'
+      #Shown when the door is already open
+      already_open: '&7Door is already open.'
+      #How the price is formatted inside the messages above
+      price: '&e{price}'
+  #Repair barriers without signs using Swap Item With Offhand (F by default).
+  barrierProximity:
+    enabled: true
+    radius: 3
+    #Customize all nearby barrier messages below. Use & color codes; '' hides a message.
+    #The {key} placeholder uses the display label from interaction.key.
+    tooltip:
+      repair: '&aPress {key} to start repairing &7- 1 stage per second'
+      repairing: '&aRepairing one stage per second &7- Press {key} to stop'
+      repaired: '&aBarrier fully repaired'
+  #The action is Swap Item With Offhand. Players rebind it in Minecraft Controls.
+  #This label only changes prompt text; it does not change client keybindings.
+  interaction:
+    key: F
+    #All messages support & colors, {key}, {price}, {missing}; perks also support {perk}.
+    #Set any message to '' to hide it. Each feature has its own range and enable switch.
+    power:
+      enabled: true
+      radius: 3
+      tooltip:
+        use: '&aPress {key} to turn on power'
+        already_on: '&aPower is already on'
+        unavailable: '&cPower is disabled in this arena'
+    mystery_box:
+      enabled: true
+      radius: 3
+      tooltip:
+        use: '&aPress {key} to use mystery box &7- {price} points'
+        pickup: '&aPress {key} to take your weapon'
+        busy: '&eMystery box is busy'
+        no_funds: '&cNeed {missing} more points &7- {price} points'
+    perk:
+      enabled: true
+      radius: 3
+      tooltip:
+        use: '&aPress {key} to buy {perk} &7- {price} points'
+        no_power: '&cRequires power &7- {price} points'
+        no_funds: '&cNeed {missing} more points &7- {price} points'
+        owned: '&aYou already have {perk}'
+        limit: '&cPerk limit reached'
+        unavailable: '&cPerk machine is unavailable'
+    pack_a_punch:
+      enabled: true
+      radius: 3
+      tooltip:
+        use: '&aPress {key} to Pack-a-Punch &7- {price} points'
+        no_power: '&cRequires power &7- {price} points'
+        no_funds: '&cNeed {missing} more points &7- {price} points'
+        no_weapon: '&eHold a gun to Pack-a-Punch &7- {price} points'
+        upgraded: '&aThis gun is already Pack-a-Punched'
   #Text shown on every game sign. Each sign has 4 lines, & color codes work, and {placeholders} are filled in.
   #Any text works: signs are recognised by their location, not their text.
   #To create a sign, still type [Zombies] on line 1 and the sign type on line 2 (e.g. gun, perk, door) as before.
@@ -70,10 +143,16 @@ config:
       - '&bKit'
       - '&c{kit}'
       - ''
-    power:
+    #The power sign flips between these two based on whether the arena's power is on.
+    power_off:
       - '&c[Zombies]'
       - '&bPower'
+      - '&cOFF'
       - ''
+    power_on:
+      - '&c[Zombies]'
+      - '&bPower'
+      - '&aON'
       - ''
     #{price}
     ammo_crate:

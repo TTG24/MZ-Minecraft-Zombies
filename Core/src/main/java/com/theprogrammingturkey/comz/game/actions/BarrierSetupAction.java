@@ -4,12 +4,10 @@ import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.features.Barrier;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
-import com.theprogrammingturkey.comz.util.BlockUtils;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -43,7 +41,6 @@ public class BarrierSetupAction extends BaseAction
 		for(Barrier barrier : game.barrierManager.getBarriers())
 		{
 			barrier.repairFull();
-			BlockUtils.setBlockToAir(barrier.getRepairLoc());
 		}
 		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Barrier setup operation has been canceled!");
 	}
@@ -73,23 +70,6 @@ public class BarrierSetupAction extends BaseAction
 		}
 		else if(state == 1)
 		{
-			if(event.getAction().equals(Action.LEFT_CLICK_BLOCK) || event.getAction().equals(Action.RIGHT_CLICK_BLOCK))
-			{
-				BlockFace face = event.getBlockFace();
-				if(face == BlockFace.UP || face == BlockFace.DOWN)
-				{
-					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "The sign can't be placed on that block face!");
-					event.setCancelled(true);
-					return;
-				}
-				barrier.setRepairLoc(clickedBlock.getLocation().add(face.getModX(), face.getModY(), face.getModZ()));
-				barrier.setSignFacing(face);
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Barrier repair sign location set!");
-				event.setCancelled(true);
-			}
-		}
-		else if(state == 2)
-		{
 			if(clickedBlock.getType().equals(Material.END_PORTAL_FRAME))
 			{
 				SpawnPoint point = game.spawnManager.getSpawnPoint(clickedBlock.getLocation());
@@ -116,25 +96,30 @@ public class BarrierSetupAction extends BaseAction
 		{
 			if(state == 0)
 			{
+				if(barrier.getBlocks().isEmpty())
+				{
+					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Select at least one barrier block first!");
+					return;
+				}
 				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Barrier block for barrier set!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now select where the repair sign will be located.");
+				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now select the spawn points that are located behind the barrier.");
 				state++;
 			}
 			else if(state == 1)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Barrier block repair sign location for barrier set!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now select the spawn points that are located behind the barrier.");
+				if(barrier.getSpawnPoints().isEmpty())
+				{
+					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Select at least one spawn point first!");
+					return;
+				}
 				state++;
-			}
-			else
-			{
 				COMZombies.scheduleTask(1, game::resetSpawnLocationBlocks);
 
 				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Spawn point for barrier set!");
 				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Now type in the points a player will receive per repair stage of the barrier.");
 			}
 		}
-		else if(!barrier.getSpawnPoints().isEmpty() && !barrier.getBlocks().isEmpty() && barrier.getRepairLoc() != null)
+		else if(state == 2)
 		{
 			if(!message.matches("[0-9]{1,5}"))
 			{

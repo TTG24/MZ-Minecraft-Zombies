@@ -1,5 +1,10 @@
 package com.theprogrammingturkey.comz.game.managers;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.bukkit.Location;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -7,10 +12,6 @@ import com.theprogrammingturkey.comz.config.CustomConfig;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.features.Door;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
-import org.bukkit.Location;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class DoorManager
 {
@@ -26,6 +27,18 @@ public class DoorManager
 	{
 		for(Door door : doors)
 			for(Location loc : door.getSignsLocations())
+				if(loc.equals(location))
+					return door;
+		return null;
+	}
+
+	/**
+	 * Finds the door that contains the given block, or null if none.
+	 */
+	public Door getDoorFromBlock(Location location)
+	{
+		for(Door door : doors)
+			for(Location loc : door.getBlockLocations())
 				if(loc.equals(location))
 					return door;
 		return null;

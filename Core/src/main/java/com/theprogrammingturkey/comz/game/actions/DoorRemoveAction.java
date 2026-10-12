@@ -9,57 +9,66 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
 
 public class DoorRemoveAction extends BaseAction
 {
 	public DoorRemoveAction(Player player, Game game)
 	{
 		super(player, game);
-
 		for(Door door : game.doorManager.getDoors())
-		{
-			for(Location loc : door.getSignsLocations())
-			{
-				if(!(loc.getBlock().getState() instanceof Sign))
-					loc.getBlock().setType(Material.OAK_WALL_SIGN);
-				Sign sign = (Sign) loc.getBlock().getState();
-				sign.setLine(0, ChatColor.RED + "Break a sign");
-				sign.setLine(1, ChatColor.RED + "to remove the");
-				sign.setLine(2, ChatColor.RED + "door that the");
-				sign.setLine(3, ChatColor.RED + "sign is for!");
-				sign.update();
-				sign.update(true);
-			}
-		}
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.RED + "Door Removal" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Break any sign that leads to a door to remove the door!");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type done to exit this operation.");
+			door.closeDoor();
+		if(!player.getInventory().contains(Material.WOODEN_SWORD))
+			player.getInventory().addItem(new ItemStack(Material.WOODEN_SWORD));
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Click a door block with the wooden sword to remove that door.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type done or cancel to exit this operation.");
+	}
+
+	private Door findDoor(Location location)
+	{
+		Door door = game.doorManager.getDoorFromBlock(location);
+		return door != null ? door : game.doorManager.getDoorFromSign(location);
+	}
+
+	@Override
+	public void onPlayerInteractEvent(PlayerInteractEvent event)
+	{
+		if(event.getClickedBlock() == null || (event.getAction() != Action.LEFT_CLICK_BLOCK && event.getAction() != Action.RIGHT_CLICK_BLOCK))
+			return;
+		Door door = findDoor(event.getClickedBlock().getLocation());
+		if(door == null)
+			return;
+		event.setCancelled(true);
+		removeDoor(door);
 	}
 
 	@Override
 	public void onBlockBreakevent(BlockBreakEvent event)
 	{
-		Location loc = event.getBlock().getLocation();
-		Door door = game.doorManager.getDoorFromSign(loc);
+		Door door = findDoor(event.getBlock().getLocation());
 		if(door == null)
 			return;
-
 		event.setCancelled(true);
-		for(Location location : door.getSignsLocations())
-			BlockUtils.setBlockToAir(location.getBlock());
+		removeDoor(door);
+	}
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Door removed!");
+	private void removeDoor(Door door)
+	{
+		for(Location location : door.getSignsLocations())
+			if(BlockUtils.isSign(location.getBlock()))
+				BlockUtils.setBlockToAir(location);
 		game.doorManager.removeDoor(door);
+		GameManager.INSTANCE.saveAllGames();
+		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Door removed!");
 		if(game.doorManager.getDoors().isEmpty())
 		{
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No doors left!");
-			cancelAction();
 			COMZombies.getPlugin().activeActions.remove(player);
 		}
-		GameManager.INSTANCE.saveAllGames();
 	}
 
 	@Override

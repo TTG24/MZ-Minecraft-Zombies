@@ -7,6 +7,38 @@
 
 package com.theprogrammingturkey.comz.game;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.EntityEffect;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.ItemFrame;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Minecart;
+import org.bukkit.entity.Mob;
+import org.bukkit.entity.Painting;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Wolf;
+import org.bukkit.entity.Zombie;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffectType;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.theprogrammingturkey.comz.COMZombies;
@@ -17,7 +49,16 @@ import com.theprogrammingturkey.comz.game.features.Barrier;
 import com.theprogrammingturkey.comz.game.features.Door;
 import com.theprogrammingturkey.comz.game.features.PowerUp;
 import com.theprogrammingturkey.comz.game.features.RandomBox;
-import com.theprogrammingturkey.comz.game.managers.*;
+import com.theprogrammingturkey.comz.game.managers.BarrierManager;
+import com.theprogrammingturkey.comz.game.managers.BoxManager;
+import com.theprogrammingturkey.comz.game.managers.DoorManager;
+import com.theprogrammingturkey.comz.game.managers.DownedPlayerManager;
+import com.theprogrammingturkey.comz.game.managers.PerkManager;
+import com.theprogrammingturkey.comz.game.managers.PlayerWeaponManager;
+import com.theprogrammingturkey.comz.game.managers.PowerUpManager;
+import com.theprogrammingturkey.comz.game.managers.SignManager;
+import com.theprogrammingturkey.comz.game.managers.TeleporterManager;
+import com.theprogrammingturkey.comz.game.managers.WeaponManager;
 import com.theprogrammingturkey.comz.game.weapons.BaseGun;
 import com.theprogrammingturkey.comz.kits.KitManager;
 import com.theprogrammingturkey.comz.leaderboards.Leaderboard;
@@ -29,28 +70,6 @@ import com.theprogrammingturkey.comz.spawning.SpawnPoint;
 import com.theprogrammingturkey.comz.util.ApiCompat;
 import com.theprogrammingturkey.comz.util.BlockUtils;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.EntityEffect;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.entity.*;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.potion.PotionEffectType;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 /**
  * Main game class.
@@ -272,6 +291,7 @@ public class Game
 	public void turnOffPower()
 	{
 		powerOn = false;
+		com.theprogrammingturkey.comz.game.signs.PowerSign.refreshSigns(this);
 	}
 
 	/**
@@ -519,8 +539,6 @@ public class Game
 			signManager.updateGame();
 			changingRound = false;
 			scoreboard.update();
-			for(Barrier b : barrierManager.getBarriers())
-				b.resetEarnedPoints();
 		});
 
 	}
@@ -719,6 +737,7 @@ public class Game
 				player.showPlayer(plugin, pl);
 		}
 		signManager.updateGame();
+		com.theprogrammingturkey.comz.game.managers.DoorProximityManager.INSTANCE.clearPlayer(player);
 	}
 
 	/**
@@ -834,6 +853,7 @@ public class Game
 			{
 				PointManager.INSTANCE.playerLeaveGame(v.getPlayer());
 				removePlayerActions(v.getPlayer());
+				com.theprogrammingturkey.comz.game.managers.DoorProximityManager.INSTANCE.clearPlayer(v.getPlayer());
 			}
 			else
 			{

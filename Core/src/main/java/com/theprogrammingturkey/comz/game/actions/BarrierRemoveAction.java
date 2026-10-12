@@ -7,61 +7,70 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.Sign;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
 
 public class BarrierRemoveAction extends BaseAction
 {
 	public BarrierRemoveAction(Player player, Game game)
 	{
 		super(player, game);
-
 		for(Barrier barrier : game.barrierManager.getBarriers())
-		{
-			Block block = barrier.getRepairLoc().getBlock();
-			block.setType(Material.OAK_WALL_SIGN);
-			BlockData blockData = block.getBlockData();
-			((Directional) blockData).setFacing(barrier.getSignFacing());
-			block.setBlockData(blockData);
-			Sign sign = (Sign) block.getState();
-			sign.setLine(0, "[BarrierRemove]");
-			sign.setLine(1, "Break this to");
-			sign.setLine(2, "remove the");
-			sign.setLine(3, "barrier");
-			sign.update();
-		}
-
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "---------------" + ChatColor.RED + "Barrier Removal" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "---------------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Break the [BarrierRemove] sign of the barrier you want to remove!");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel to cancel this operation.");
+			barrier.repairFull();
+		if(!player.getInventory().contains(Material.WOODEN_SWORD))
+			player.getInventory().addItem(new ItemStack(Material.WOODEN_SWORD));
+		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Click a barrier block with the wooden sword to remove that barrier.");
+		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type done or cancel to exit this operation.");
 	}
 
-	public void cancelAction()
+	private Barrier findBarrier(Location location)
 	{
-		game.resetSpawnLocationBlocks();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Barrier removal operation has been canceled!");
+		Barrier barrier = game.barrierManager.getBarrier(location);
+		return barrier != null ? barrier : game.barrierManager.getBarrierFromRepair(location);
 	}
 
 	@Override
-	public void onBlockBreakevent(BlockBreakEvent interact)
+	public void onPlayerInteractEvent(PlayerInteractEvent event)
 	{
-		Location loc = interact.getBlock().getLocation();
-		Barrier barrier = game.barrierManager.getBarrierFromRepair(loc);
+		if(event.getClickedBlock() == null || (event.getAction() != Action.LEFT_CLICK_BLOCK && event.getAction() != Action.RIGHT_CLICK_BLOCK))
+			return;
+		Barrier barrier = findBarrier(event.getClickedBlock().getLocation());
 		if(barrier == null)
 			return;
+		event.setCancelled(true);
+		removeBarrier(barrier);
+	}
 
-		interact.setCancelled(true);
+	@Override
+	public void onBlockBreakevent(BlockBreakEvent event)
+	{
+		Barrier barrier = findBarrier(event.getBlock().getLocation());
+		if(barrier == null)
+			return;
+		event.setCancelled(true);
+		removeBarrier(barrier);
+	}
+
+	private void removeBarrier(Barrier barrier)
+	{
 		game.barrierManager.removeBarrier(player, barrier);
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Barrier removed!");
 		if(game.barrierManager.getTotalBarriers() == 0)
 		{
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No barriers left!");
-			this.cancelAction();
 			COMZombies.getPlugin().activeActions.remove(player);
+		}
+	}
+
+	@Override
+	public void onChatMessage(String message)
+	{
+		if(message.equalsIgnoreCase("done"))
+		{
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Exiting barrier removal!");
+			COMZombies.scheduleTask(1, () -> COMZombies.getPlugin().activeActions.remove(player));
 		}
 	}
 }

@@ -1,10 +1,12 @@
 package com.theprogrammingturkey.comz.commands;
 
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.util.COMZPermission;
-import com.theprogrammingturkey.comz.util.CommandUtil;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -13,11 +15,11 @@ import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
+import com.theprogrammingturkey.comz.util.COMZPermission;
+import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class CommandManager implements CommandExecutor, TabExecutor
 {
@@ -210,6 +212,12 @@ public class CommandManager implements CommandExecutor, TabExecutor
 		// Perm
 		// - zombies.zombies.debug
 		commandList.put("debug", new DebugCommand(COMZPermission.DEBUG));
+
+		// Links an arena to a WorldGuard region for non-box containment:
+		// Perm
+		// - zombies.setregion
+		commandList.put("setregion", new SetRegionCommand(COMZPermission.SET_REGION));
+		commandList.put("region", commandList.get("setregion"));
 	}
 
 	public void onRemoteCommand(Player player, String[] args)

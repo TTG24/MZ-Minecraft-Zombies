@@ -1,8 +1,8 @@
 package com.theprogrammingturkey.comz.util;
 
-import org.bukkit.entity.Player;
-
 import java.util.Arrays;
+
+import org.bukkit.entity.Player;
 
 public enum COMZPermission
 {
@@ -33,7 +33,8 @@ public enum COMZPermission
 	REMOVE_DOOR(false, "zombies.removedoor"),
 	ADD_TELEPORTER(false, "zombies.addteleporter"),
 	REMOVE_TELEPORTER(false, "zombies.removeteleporter"),
-	DISABLE_POWER(false, "zombies.disablepower");
+	DISABLE_POWER(false, "zombies.disablepower"),
+	SET_REGION(false, "zombies.setregion");
 
 	private final boolean isUserPerm;
 	private final String[] perms;

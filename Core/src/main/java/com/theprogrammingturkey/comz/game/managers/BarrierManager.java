@@ -86,8 +86,11 @@ public class BarrierManager
 		{
 			JsonObject barrierJson = new JsonObject();
 			barrierJson.addProperty("id", barrier.getID());
-			barrierJson.add("repair_loc", CustomConfig.locationToJsonNoWorld(barrier.getRepairLoc()));
-			barrierJson.addProperty("repair_facing", barrier.getSignFacing().name());
+			if(barrier.getRepairLoc() != null)
+			{
+				barrierJson.add("repair_loc", CustomConfig.locationToJsonNoWorld(barrier.getRepairLoc()));
+				barrierJson.addProperty("repair_facing", barrier.getSignFacing().name());
+			}
 
 			JsonArray barrierBlocks = new JsonArray();
 			barrierJson.add("blocks", barrierBlocks);
@@ -129,7 +132,7 @@ public class BarrierManager
 	public Barrier getBarrierFromRepair(Location loc)
 	{
 		for(Barrier b : barriers)
-			if(b.getRepairLoc().equals(loc))
+			if(loc.equals(b.getRepairLoc()))
 				return b;
 		return null;
 	}
@@ -148,7 +151,7 @@ public class BarrierManager
 		if(barriers.contains(barrier))
 		{
 			player.sendMessage(ChatColor.DARK_GREEN + "Barrier removed!");
-			BlockUtils.setBlockToAir(barrier.getRepairLoc());
+			barrier.clearRepairSign();
 			barriers.remove(barrier);
 			GameManager.INSTANCE.saveAllGames();
 		}

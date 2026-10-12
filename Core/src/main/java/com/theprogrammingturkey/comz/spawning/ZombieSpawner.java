@@ -3,8 +3,8 @@ package com.theprogrammingturkey.comz.spawning;
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.features.Barrier;
+import com.theprogrammingturkey.comz.util.PeacefulArenaMobs;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Zombie;
 
@@ -15,7 +15,7 @@ public class ZombieSpawner extends RoundSpawner
 	{
 		Location location = new Location(loc.getLocation().getWorld(), loc.getLocation().getBlockX(), loc.getLocation().getBlockY(), loc.getLocation().getBlockZ());
 		location.add(0.5, 0, 0.5);
-		Zombie zomb = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
+		Zombie zomb = location.getWorld().spawn(location, Zombie.class, PeacefulArenaMobs::prepare);
 		COMZombies.scheduleTask(10, () ->
 		{
 			if(zomb.getEquipment() != null)
