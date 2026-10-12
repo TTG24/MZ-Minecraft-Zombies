@@ -3,9 +3,10 @@ A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
 Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
-## Release 1.1
+## Release 1.1.1
 
-See [the 1.1 release notes](RELEASE_NOTES.md) for installation, configuration, changes, and validation details.
+Disabled arenas now prevent block breaking and placing, including within linked WorldGuard regions.
+See [the 1.1.1 release notes](RELEASE_NOTES.md) for details and upgrade instructions.
 
 ## What this fork changes
 

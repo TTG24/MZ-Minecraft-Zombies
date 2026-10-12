@@ -1,18 +1,18 @@
-name: Publish MinecraftZombies 1.1
+name: Publish MinecraftZombies
 
 on:
   push:
     branches: [main]
     paths:
       - RELEASE_NOTES.md
-      - .github/workflows/publish-1.1.yml
+      - .github/workflows/publish.yml
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: publish-minecraftzombies-1.1
+  group: publish-minecraftzombies
   cancel-in-progress: false
 
 jobs:
@@ -26,26 +26,29 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Check release version
-        run: grep -Eq "version = '1.1'" build.gradle
+      - name: Read release version
+        run: |
+          version=$(sed -n "s/^[[:space:]]*version = '\([0-9][0-9.]*\)'[[:space:]]*$/\1/p" build.gradle)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
       - name: Build
         run: bash ./gradlew --no-daemon build
       - name: Prepare checksum
         working-directory: Core/build/libs
-        run: sha256sum MinecraftZombies-1.1.jar > SHA256SUMS.txt
+        run: sha256sum "MinecraftZombies-${RELEASE_VERSION}.jar" > SHA256SUMS.txt
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_COMMIT: ${{ github.sha }}
         run: |
-          if gh release view v1.1 >/dev/null 2>&1; then
-            echo 'Release v1.1 already exists; leaving it unchanged.'
+          if gh release view "v${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "Release v${RELEASE_VERSION} already exists; leaving it unchanged."
             exit 0
           fi
-          gh release create v1.1 \
+          gh release create "v${RELEASE_VERSION}" \
             --target "$RELEASE_COMMIT" \
-            --title 'MinecraftZombies 1.1' \
+            --title "MinecraftZombies ${RELEASE_VERSION}" \
             --notes-file RELEASE_NOTES.md \
-            Core/build/libs/MinecraftZombies-1.1.jar \
+            "Core/build/libs/MinecraftZombies-${RELEASE_VERSION}.jar" \
             Core/build/libs/SHA256SUMS.txt

@@ -31,6 +31,7 @@ jar {
 }
 
 processResources {
+    inputs.property 'version', project.version
     from(sourceSets.main.resources.srcDirs) {
         filter ReplaceTokens, tokens: [
                 "version": project.version.toString()
