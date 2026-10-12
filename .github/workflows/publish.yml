@@ -43,6 +43,19 @@ jobs:
           RELEASE_COMMIT: ${{ github.sha }}
         run: |
           if gh release view "v${RELEASE_VERSION}" >/dev/null 2>&1; then
+            # One-time correction explicitly replacing the original 1.1.1 release.
+            if [[ "$RELEASE_VERSION" == '1.1.1' ]]; then
+              tag_commit=$(gh api "repos/${GH_REPO}/git/ref/tags/v1.1.1" --jq '.object.sha')
+              if [[ "$tag_commit" == 'ac73478a37cdb6b726d3a499ffba62ff2a599c1b' ]]; then
+                gh release upload v1.1.1 --clobber \
+                  Core/build/libs/MinecraftZombies-1.1.1.jar \
+                  Core/build/libs/SHA256SUMS.txt
+                gh release edit v1.1.1 --notes-file RELEASE_NOTES.md
+                gh api --method PATCH "repos/${GH_REPO}/git/refs/tags/v1.1.1" \
+                  -f sha="$RELEASE_COMMIT" -F force=true
+                exit 0
+              fi
+            fi
             echo "Release v${RELEASE_VERSION} already exists; leaving it unchanged."
             exit 0
           fi

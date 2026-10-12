@@ -5,7 +5,7 @@ Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
 ## Release 1.1.1
 
-Disabled arenas now prevent block breaking and placing, including within linked WorldGuard regions.
+Disabled arenas allow block breaking and placing for editing; enabled arenas prevent both, including within linked WorldGuard regions.
 See [the 1.1.1 release notes](RELEASE_NOTES.md) for details and upgrade instructions.
 
 ## What this fork changes

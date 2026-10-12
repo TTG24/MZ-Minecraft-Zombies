@@ -38,8 +38,8 @@ public class ArenaListener implements Listener
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 			event.setCancelled(true);
 
-		// Protect registered arena bounds even while the arena is disabled.
-		if(GameManager.INSTANCE.getGame(event.getBlock().getLocation()) != null)
+		// Disabled arenas remain editable; enabled arenas use their configured bounds.
+		if(GameManager.INSTANCE.isLocationInGame(event.getBlock().getLocation()))
 			event.setCancelled(true);
 	}
 
@@ -47,7 +47,7 @@ public class ArenaListener implements Listener
 	public void onBlockPlaceEvent(BlockPlaceEvent interact)
 	{
 		Player player = interact.getPlayer();
-		if(GameManager.INSTANCE.isPlayerInGame(player) || GameManager.INSTANCE.getGame(interact.getBlock().getLocation()) != null)
+		if(GameManager.INSTANCE.isPlayerInGame(player) || GameManager.INSTANCE.isLocationInGame(interact.getBlock().getLocation()))
 			interact.setCancelled(true);
 	}
 
