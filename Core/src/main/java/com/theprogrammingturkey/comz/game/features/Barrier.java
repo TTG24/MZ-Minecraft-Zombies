@@ -1,6 +1,7 @@
 package com.theprogrammingturkey.comz.game.features;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -286,7 +287,7 @@ public class Barrier
 			// Undo any target the plugin gave it (e.g. after being shot) and keep it walking to the barrier
 			mob.setTarget(null);
 			if(!isAtBarrier(mob))
-				PaperPathfinding.moveTo(mob, getNearestBlockCenter(mob));
+				steerToBarrier(mob);
 		}
 
 		COMZombies.scheduleTask(10, () -> steerTick(loopId));
@@ -300,10 +301,29 @@ public class Barrier
 
 	private boolean isPlayerNear(Entity ent)
 	{
-		for(Player player : game.getPlayersInGame())
-			if(player.getWorld().equals(ent.getWorld()) && player.getLocation().distanceSquared(ent.getLocation()) <= PLAYER_RELEASE_RANGE_SQUARED)
-				return true;
-		return false;
+		Player player = game.spawnManager.getNearestPlayer(ent);
+		return player != null && player.getLocation().distanceSquared(ent.getLocation()) <= PLAYER_RELEASE_RANGE_SQUARED
+				&& ((Mob) ent).hasLineOfSight(player);
+	}
+
+	private void steerToBarrier(Mob mob)
+	{
+		// Aim at walkable spaces beside the barrier, rather than inside a solid barrier block.
+		List<Location> approaches = new ArrayList<>();
+		for(Block block : blocks.keySet())
+			for(BlockFace side : new BlockFace[] {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST})
+				for(int dy = -1; dy <= 1; dy++)
+				{
+					Block feet = block.getRelative(side).getRelative(0, dy, 0);
+					if(feet.isPassable() && feet.getRelative(BlockFace.UP).isPassable()
+							&& feet.getRelative(BlockFace.DOWN).getType().isSolid())
+						approaches.add(feet.getLocation().add(0.5, 0, 0.5));
+				}
+		approaches.sort(Comparator.comparingDouble(loc -> loc.distanceSquared(mob.getLocation())));
+		for(Location approach : approaches)
+			if(PaperPathfinding.moveTo(mob, approach))
+				return;
+		PaperPathfinding.moveTo(mob, getNearestBlockCenter(mob));
 	}
 
 	private Location getNearestBlockCenter(Entity ent)

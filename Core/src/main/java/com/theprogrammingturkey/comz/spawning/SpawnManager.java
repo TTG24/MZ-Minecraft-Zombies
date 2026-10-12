@@ -11,9 +11,12 @@ import com.theprogrammingturkey.comz.game.Game.GameStatus;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.features.Door;
 import com.theprogrammingturkey.comz.util.BlockUtils;
+import com.theprogrammingturkey.comz.util.PaperPathfinding;
+import com.theprogrammingturkey.comz.util.PeacefulArenaMobs;
 import com.theprogrammingturkey.comz.util.Util;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mob;
@@ -38,6 +41,8 @@ public class SpawnManager
 	private final Game game;
 	private final List<SpawnPoint> points = new ArrayList<>();
 	private final List<Mob> mobs = new ArrayList<>();
+	private final Map<Mob, Long> lastPeacefulAttack = new HashMap<>();
+	private int updatesSinceCrackRefresh;
 	private RoundSpawner roundSpawner = new ZombieSpawner();
 	private boolean canSpawn = false;
 	private double spawnInterval;
@@ -150,6 +155,7 @@ public class SpawnManager
 			return;
 
 		mobs.remove(entity);
+		lastPeacefulAttack.remove(entity);
 
 		if(mobs.isEmpty() && mobsSpawned >= mobsToSpawn)
 			game.nextWave();
@@ -277,7 +283,7 @@ public class SpawnManager
 
 	public void update()
 	{
-		COMZombies.scheduleTask(100, () ->
+		COMZombies.scheduleTask(10, () ->
 		{
 			if(game.getStatus() != GameStatus.INGAME)
 				return;
@@ -288,14 +294,44 @@ public class SpawnManager
 				if(mob.isDead())
 					removeEntity(mob);
 				else if(!game.barrierManager.isHeldBack(mob))
-					mob.setTarget(getNearestPlayer(mob));
+				{
+					Player target = getNearestPlayer(mob);
+					if(PeacefulArenaMobs.needsControlledCombat(mob))
+						updatePeacefulCombat(mob, target);
+					else
+					{
+						lastPeacefulAttack.remove(mob);
+						mob.setTarget(target);
+					}
+				}
+				if(game.getStatus() != GameStatus.INGAME)
+					return;
 			}
 
 			// Runs every 5 seconds, well inside the 20 seconds before clients forget barrier cracks
-			game.barrierManager.refreshDamage();
+			if(++updatesSinceCrackRefresh >= 10)
+			{
+				updatesSinceCrackRefresh = 0;
+				game.barrierManager.refreshDamage();
+			}
 
 			update();
 		});
+	}
+
+	private void updatePeacefulCombat(Mob mob, Player target)
+	{
+		if(target == null || !mob.isValid())
+			return;
+		PaperPathfinding.moveTo(mob, target.getLocation());
+		long now = System.nanoTime();
+		if(mob.getLocation().distanceSquared(target.getLocation()) <= 4
+				&& mob.hasLineOfSight(target)
+				&& now - lastPeacefulAttack.getOrDefault(mob, 0L) >= 1_000_000_000L)
+		{
+			lastPeacefulAttack.put(mob, now);
+			PeacefulArenaMobs.attackPlayer(mob, target);
+		}
 	}
 
 	public Player getNearestPlayer(Entity e)
@@ -304,6 +340,9 @@ public class SpawnManager
 		double dist = Integer.MAX_VALUE;
 		for(Player pl : game.getPlayersInGame())
 		{
+			if(!pl.isOnline() || pl.isDead() || !pl.getWorld().equals(e.getWorld())
+					|| pl.getGameMode() == GameMode.CREATIVE || pl.getGameMode() == GameMode.SPECTATOR)
+				continue;
 			if(game.downedPlayerManager.isDownedPlayer(pl))
 				continue;
 

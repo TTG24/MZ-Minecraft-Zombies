@@ -40,16 +40,17 @@ public class PaperPathfinding
 	/**
 	 * Starts the mob walking towards the location, or as close as it can get to it.
 	 */
-	public static void moveTo(Mob mob, Location location)
+	public static boolean moveTo(Mob mob, Location location)
 	{
-		if(!isAvailable())
-			return;
+		if(!isAvailable() || location == null)
+			return false;
 		try
 		{
-			MOVE_TO.invoke(GET_PATHFINDER.invoke(mob), location);
+			return Boolean.TRUE.equals(MOVE_TO.invoke(GET_PATHFINDER.invoke(mob), location));
 		} catch(ReflectiveOperationException e)
 		{
 			COMZombies.log.log(Level.WARNING, "Failed to steer a mob", e);
 		}
+		return false;
 	}
 }

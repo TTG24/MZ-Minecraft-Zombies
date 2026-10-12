@@ -179,9 +179,6 @@ public class CustomConfig
 			locationJson = json.get(key).getAsJsonObject();
 		}
 
-		int x = getInt(locationJson, "x", 0);
-		int y = getInt(locationJson, "y", 0);
-		int z = getInt(locationJson, "z", 0);
 		String worldName = getString(locationJson, "world", "Undefined");
 		World world = Bukkit.getWorld(worldName);
 		if(world == null)
@@ -189,7 +186,7 @@ public class CustomConfig
 			COMZombies.log.log(Level.CONFIG, "Failed to find world: " + worldName + "! And thus could not get the location!");
 			return null;
 		}
-		return new Location(world, x, y, z);
+		return readLocation(locationJson, world);
 	}
 
 	public static Location getLocationNoWorld(JsonObject json, String key)
@@ -206,10 +203,7 @@ public class CustomConfig
 			locationJson = json.get(key).getAsJsonObject();
 		}
 
-		int x = getInt(locationJson, "x", 0);
-		int y = getInt(locationJson, "y", 0);
-		int z = getInt(locationJson, "z", 0);
-		return new Location(null, x, y, z);
+		return readLocation(locationJson, null);
 	}
 
 	public static Location getLocationWithWorld(JsonObject json, String key, World world)
@@ -226,10 +220,23 @@ public class CustomConfig
 			locationJson = json.get(key).getAsJsonObject();
 		}
 
-		int x = getInt(locationJson, "x", 0);
-		int y = getInt(locationJson, "y", 0);
-		int z = getInt(locationJson, "z", 0);
-		return new Location(world, x, y, z);
+		return readLocation(locationJson, world);
+	}
+
+	private static Location readLocation(JsonObject json, World world)
+	{
+		return new Location(world, getDouble(json, "x", 0), getDouble(json, "y", 0),
+				getDouble(json, "z", 0), (float) getDouble(json, "yaw", 0),
+				(float) getDouble(json, "pitch", 0));
+	}
+
+	/** Saves a teleport destination, including the player's facing direction. */
+	public static JsonObject warpLocationToJsonNoWorld(Location loc)
+	{
+		JsonObject locJson = locationToJsonNoWorld(loc);
+		locJson.addProperty("yaw", loc.getYaw());
+		locJson.addProperty("pitch", loc.getPitch());
+		return locJson;
 	}
 
 	public static JsonObject locationToJson(Location loc)

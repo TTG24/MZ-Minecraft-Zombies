@@ -3,10 +3,10 @@ A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
 Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
-## Release 1.1.1
+## Release 1.1.2
 
-Disabled arenas allow block breaking and placing for editing; enabled arenas prevent both, including within linked WorldGuard regions.
-See [the 1.1.1 release notes](RELEASE_NOTES.md) for details and upgrade instructions.
+Fixed arena zombies targeting players and reaching barriers on Peaceful. Game, lobby, and spectator warps now preserve position and facing direction after a restart.
+See [the 1.1.2 release notes](RELEASE_NOTES.md) for details and upgrade instructions, including re-setting existing warps once.
 
 ## What this fork changes
 

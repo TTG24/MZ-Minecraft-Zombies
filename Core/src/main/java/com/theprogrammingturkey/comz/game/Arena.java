@@ -405,9 +405,9 @@ public class Arena
 		arenaSaveJson.addProperty("world_name", getWorldName());
 		arenaSaveJson.add("p1", CustomConfig.locationToJsonNoWorld(min));
 		arenaSaveJson.add("p2", CustomConfig.locationToJsonNoWorld(max));
-		arenaSaveJson.add("player_spawn", CustomConfig.locationToJsonNoWorld(playerTPLocation));
-		arenaSaveJson.add("spectator_spawn", CustomConfig.locationToJsonNoWorld(spectateLocation));
-		arenaSaveJson.add("lobby_spawn", CustomConfig.locationToJsonNoWorld(lobbyLocation));
+		arenaSaveJson.add("player_spawn", CustomConfig.warpLocationToJsonNoWorld(playerTPLocation));
+		arenaSaveJson.add("spectator_spawn", CustomConfig.warpLocationToJsonNoWorld(spectateLocation));
+		arenaSaveJson.add("lobby_spawn", CustomConfig.warpLocationToJsonNoWorld(lobbyLocation));
 		if(worldGuardRegionId != null && !worldGuardRegionId.isEmpty())
 			arenaSaveJson.addProperty("worldguard_region", worldGuardRegionId);
 	}

@@ -5,6 +5,9 @@ import java.util.logging.Level;
 
 import org.bukkit.Difficulty;
 import org.bukkit.entity.Mob;
+import org.bukkit.entity.Player;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 
 import com.theprogrammingturkey.comz.COMZombies;
 
@@ -34,6 +37,22 @@ public final class PeacefulArenaMobs
 	}
 
 	private PeacefulArenaMobs() {}
+
+	/** Vanilla refuses player targets on Peaceful, even with the despawn override. */
+	public static boolean needsControlledCombat(Mob mob)
+	{
+		return mob.getWorld().getDifficulty() == Difficulty.PEACEFUL
+				&& COMZombies.getPlugin().getConfig().getBoolean("config.gameSettings.zombiesInPeaceful", true);
+	}
+
+	public static void attackPlayer(Mob mob, Player player)
+	{
+		// A direct attacker keeps the normal EntityDamageByEntityEvent and armor handling.
+		// Leave the causing entity unset so vanilla does not scale damage to zero on Peaceful.
+		DamageSource source = DamageSource.builder(DamageType.MOB_ATTACK).withDirectEntity(mob).build();
+		mob.swingMainHand();
+		player.damage(1, source); // EntityListener applies arena damage, perks, downing, and healing rules.
+	}
 
 	/** Called before the zombie is added to the world. Applies even if difficulty changes later. */
 	public static void prepare(Mob mob)
