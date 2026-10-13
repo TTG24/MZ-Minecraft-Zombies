@@ -38,6 +38,7 @@ public class CommandManager implements CommandExecutor, TabExecutor
 		// Perm
 		// - zombies.createarena
 		commandList.put("createarena", new CreateArenaCommand(COMZPermission.CREATE_ARENA));
+		commandList.put("instances", new InstancesCommand(COMZPermission.CREATE_ARENA));
 		commandList.put("ca", commandList.get("createarena"));
 		commandList.put("addarena", commandList.get("createarena"));
 		commandList.put("newarena", commandList.get("createarena"));

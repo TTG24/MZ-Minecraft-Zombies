@@ -40,19 +40,29 @@ public class JoinCommand extends SubCommand
 		{
 			for(Game game : GameManager.INSTANCE.getGames())
 			{
+				if(game.isTemplate()) continue;
+				if(game.isInstance() && com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.hasQueue(game.getTemplateName())) continue;
 				if(game.getStatus() != GameStatus.DISABLED && game.getStatus() != GameStatus.INGAME)
 				{
 					if(game.spawnManager.getPoints().isEmpty())
 						continue;
 					if(game.maxPlayers <= game.getPlayersInGame().size())
 						continue;
-					if(COMZPermission.JOIN_ARENA.hasPerm(player, game.getName()))
+					if(COMZPermission.JOIN_ARENA.hasPerm(player, game.getTemplateName()))
 					{
+						com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.cancelQueue(player.getUniqueId());
 						game.addPlayer(player);
 						return true;
 					}
 				}
 			}
+			for(Game template : GameManager.INSTANCE.getGames())
+				if(template.isTemplate() && template.getStatus() != GameStatus.DISABLED
+						&& COMZPermission.JOIN_ARENA.hasPerm(player, template.getName()))
+				{
+					com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.enqueue(template, player);
+					return true;
+				}
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No arena available!");
 		}
 		else
@@ -60,6 +70,26 @@ public class JoinCommand extends SubCommand
 			if(GameManager.INSTANCE.isValidArena(args[1]))
 			{
 				Game game = GameManager.INSTANCE.getGame(args[1]);
+				if(game.isTemplate())
+				{
+					if(game.getStatus() == GameStatus.DISABLED)
+					{
+						CommandUtil.sendMessageToPlayer(player, "This arena pool is disabled.");
+						return true;
+					}
+					if(!COMZPermission.JOIN_ARENA.hasPerm(player, game.getName()))
+					{
+						CommandUtil.noPermission(player, "join this game");
+						return true;
+					}
+					Game available = GameManager.INSTANCE.findJoinable(game.getName());
+					if(available == null || com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.hasQueue(game.getName()))
+					{
+						com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.enqueue(game, player);
+						return true;
+					}
+					game = available;
+				}
 				if(game.getStatus() != GameStatus.DISABLED && game.getStatus() != GameStatus.INGAME)
 				{
 					if(game.spawnManager.getPoints().isEmpty())
@@ -72,8 +102,9 @@ public class JoinCommand extends SubCommand
 						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Game is full!");
 						return true;
 					}
-					if(COMZPermission.JOIN_ARENA.hasPerm(player, game.getName()))
+					if(COMZPermission.JOIN_ARENA.hasPerm(player, game.getTemplateName()))
 					{
+						com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.cancelQueue(player.getUniqueId());
 						game.addPlayer(player);
 						CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You joined " + game.getName() + "!");
 						return true;

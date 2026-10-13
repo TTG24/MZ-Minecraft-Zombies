@@ -1,6 +1,6 @@
 allprojects {
     group = 'comz'
-    version = '1.1.2'
+    version = '1.2'
 }
 
 subprojects {

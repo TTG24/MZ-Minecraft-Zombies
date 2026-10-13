@@ -61,6 +61,7 @@ public class SignManager
 
 	private void save()
 	{
+		if(game.isInstance()) return;
 		CustomConfig config = ConfigManager.getConfig(COMZConfig.SIGNS);
 		JsonElement jsonElement = config.getJson();
 		if(jsonElement.isJsonNull())
@@ -81,7 +82,12 @@ public class SignManager
 
 	public void updateGame()
 	{
-		COMZombies.scheduleTask(20, () ->
+		if(game.isInstance())
+		{
+			Game template = com.theprogrammingturkey.comz.game.GameManager.INSTANCE.getGame(game.getTemplateName());
+			if(template != null) template.signManager.updateGame();
+		}
+		game.scheduleMatchTask(20, () ->
 		{
 			for(Location loc : gameSigns)
 			{

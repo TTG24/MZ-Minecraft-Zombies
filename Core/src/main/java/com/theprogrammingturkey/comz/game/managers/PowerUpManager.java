@@ -28,6 +28,20 @@ public class PowerUpManager
 	private int dropChance = 0;
 	private final Map<PowerUp, Boolean> powerups = new HashMap<>();
 	private final Map<Entity, Integer> powerupTasks = new HashMap<>();
+	private final Map<Entity, Entity> displays = new HashMap<>();
+
+	public void clear()
+	{
+		powerupTasks.forEach((item, task) ->
+		{
+			Bukkit.getScheduler().cancelTask(task);
+			currentPowerUps.remove(item);
+			item.remove();
+		});
+		displays.values().forEach(Entity::remove);
+		displays.clear();
+		powerupTasks.clear();
+	}
 
 
 	public void loadAllPowerUps(JsonObject powerUpSettings)
@@ -72,6 +86,7 @@ public class PowerUpManager
 		namePlate.setAI(false);
 		namePlate.setCustomName("30");
 		namePlate.setCustomNameVisible(true);
+		displays.put(droppedItem, namePlate);
 		currentPowerUps.add(droppedItem);
 		int id = COMZombies.scheduleTask(0, 20, new Runnable()
 		{
@@ -83,7 +98,8 @@ public class PowerUpManager
 				if(!currentPowerUps.contains(droppedItem))
 				{
 					namePlate.remove();
-					Bukkit.getScheduler().cancelTask(powerupTasks.get(droppedItem));
+					Bukkit.getScheduler().cancelTask(powerupTasks.remove(droppedItem));
+					displays.remove(droppedItem);
 					return;
 				}
 
@@ -94,7 +110,8 @@ public class PowerUpManager
 					namePlate.remove();
 					droppedItem.remove();
 					currentPowerUps.remove(droppedItem);
-					Bukkit.getScheduler().cancelTask(powerupTasks.get(droppedItem));
+					Bukkit.getScheduler().cancelTask(powerupTasks.remove(droppedItem));
+					displays.remove(droppedItem);
 				}
 			}
 		});

@@ -33,6 +33,14 @@ public class GameManager
 
 	public void removeGame(Game game)
 	{
+		if(game.isInstance())
+			throw new IllegalArgumentException("Runtime instances cannot be removed individually; change the template pool size.");
+		for(Game copy : new ArrayList<>(games))
+			if(copy.isInstance() && copy.getTemplateName().equals(game.getName()))
+			{
+				copy.endGame();
+				games.remove(copy);
+			}
 		this.games.remove(game);
 	}
 
@@ -53,6 +61,9 @@ public class GameManager
 
 	public void loadAllGames()
 	{
+		endAll();
+		games.forEach(Game::retire);
+		ArenaInstances.INSTANCE.shutdown();
 		games.clear();
 		JsonElement jsonElement = ConfigManager.getConfig(COMZConfig.ARENAS).getJson();
 		if(jsonElement.isJsonNull())
@@ -69,6 +80,7 @@ public class GameManager
 			else
 				COMZombies.log.log(Level.SEVERE, "Failed to load arena " + arena.getKey() + "!");
 		}
+		ArenaInstances.INSTANCE.loadPools();
 		Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + " Done loading arenas!");
 	}
 
@@ -76,7 +88,8 @@ public class GameManager
 	{
 		JsonObject arenasSave = new JsonObject();
 		for(Game game : games)
-			arenasSave.add(game.getName(), game.saveGame());
+			if(!game.isInstance())
+				arenasSave.add(game.getName(), game.saveGame());
 		ConfigManager.getConfig(COMZConfig.ARENAS).saveConfig(arenasSave);
 	}
 
@@ -108,7 +121,10 @@ public class GameManager
 	public Game getGame(Player player)
 	{
 		for(Game game : games)
-			if(game.isPlayerPlaying(player) || game.isPlayerSpectating(player) || game.wasDisconnected(player))
+			if(game.isPlayerPlaying(player) || game.isPlayerSpectating(player))
+				return game;
+		for(Game game : games)
+			if(game.wasDisconnected(player))
 				return game;
 		return null;
 	}
@@ -195,5 +211,28 @@ public class GameManager
 	public List<String> getArenas()
 	{
 		return games.stream().map(Game::getName).collect(Collectors.toList());
+	}
+
+	public Game findJoinable(String template)
+	{
+		return games.stream()
+				.filter(g -> !g.isTemplate() && (template == null || g.getTemplateName().equalsIgnoreCase(template)))
+				.filter(g -> g.getStatus() == GameStatus.WAITING || g.getStatus() == GameStatus.STARTING)
+				.filter(g -> !g.spawnManager.getPoints().isEmpty() && g.getPlayersInGame().size() < g.maxPlayers)
+				.max(java.util.Comparator.comparingInt(g -> g.getPlayersInGame().size())).orElse(null);
+	}
+
+	/** Preserve other matches' visibility when one match finishes. */
+	public void refreshVisibility()
+	{
+		for(Player viewer : Bukkit.getOnlinePlayers())
+			for(Player other : Bukkit.getOnlinePlayers())
+			{
+				Game match = isPlayerInGame(viewer) ? getGame(viewer) : null;
+				if(match != null && !match.getPlayersAndSpectators().contains(other))
+					viewer.hidePlayer(COMZombies.getPlugin(), other);
+				else
+					viewer.showPlayer(COMZombies.getPlugin(), other);
+			}
 	}
 }

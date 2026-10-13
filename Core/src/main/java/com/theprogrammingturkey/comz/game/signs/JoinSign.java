@@ -86,6 +86,20 @@ public class JoinSign implements IGameSign
 		values.put("max", String.valueOf(game.maxPlayers));
 		values.put("alive", String.valueOf(game.getPlayersInGame().size()));
 		values.put("wave", String.valueOf(game.getWave()));
+		if(game.isTemplate())
+		{
+			int players = 0;
+			int capacity = 0;
+			for(Game match : GameManager.INSTANCE.getGames())
+				if(match.isInstance() && match.getTemplateName().equals(game.getName()))
+				{
+					players += match.getPlayersInGame().size();
+					capacity += match.maxPlayers;
+				}
+			values.put("players", String.valueOf(players));
+			values.put("max", String.valueOf(capacity));
+			values.put("alive", String.valueOf(players));
+		}
 
 		switch(game.getStatus())
 		{

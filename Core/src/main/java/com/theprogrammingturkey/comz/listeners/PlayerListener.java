@@ -53,6 +53,7 @@ public class PlayerListener implements Listener
 	@EventHandler
 	public void onPlayerLeave(PlayerQuitEvent event)
 	{
+		com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.cancelQueue(event.getPlayer().getUniqueId());
 		Player player = event.getPlayer();
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{

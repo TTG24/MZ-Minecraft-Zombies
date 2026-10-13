@@ -233,7 +233,7 @@ public class SpawnManager
 
 		if(mobs.size() >= ConfigManager.getMainConfig().maxZombies)
 		{
-			COMZombies.scheduleTask((int) spawnInterval * 20L, () -> smartSpawn(wave));
+			game.scheduleMatchTask((int) spawnInterval * 20L, () -> smartSpawn(wave));
 			return;
 		}
 
@@ -264,7 +264,7 @@ public class SpawnManager
 		}
 
 		final SpawnPoint finalPoint = selectPoint;
-		COMZombies.scheduleTask((int) spawnInterval * 20L, () ->
+		game.scheduleMatchTask((int) spawnInterval * 20L, () ->
 		{
 			if(!this.canSpawn || wave != game.getWave())
 				return;
@@ -283,7 +283,7 @@ public class SpawnManager
 
 	public void update()
 	{
-		COMZombies.scheduleTask(10, () ->
+		game.scheduleMatchTask(10, () ->
 		{
 			if(game.getStatus() != GameStatus.INGAME)
 				return;

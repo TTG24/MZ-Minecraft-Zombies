@@ -34,6 +34,7 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 public class RandomBox
 {
 	public static Map<RandomBox, Integer> boxes = new HashMap<>();
+	private int teddyVelocityTask = -1;
 	private final Location boxLoc;
 	private final BlockFace facing;
 	private Location chestLocation = null;
@@ -143,13 +144,12 @@ public class RandomBox
 							item.setCustomNameVisible(true);
 							isTeddyBear = true;
 
-							COMZombies.scheduleTask(40, () ->
+							boxGame.scheduleMatchTask(40, () ->
 							{
-								int velTask = COMZombies.scheduleTask(0, 5, () -> item.setVelocity(new Vector(0, 0.1, 0)));
+								teddyVelocityTask = COMZombies.scheduleTask(0, 5, () -> item.setVelocity(new Vector(0, 0.1, 0)));
 
-								COMZombies.scheduleTask(60, () ->
+								boxGame.scheduleMatchTask(60, () ->
 								{
-									Bukkit.getScheduler().cancelTask(velTask);
 									boxGame.boxManager.teddyBear();
 									PointManager.INSTANCE.addPoints(player, pointsNeeded);
 									reset();
@@ -197,6 +197,8 @@ public class RandomBox
 
 	public void reset()
 	{
+		if(teddyVelocityTask != -1) Bukkit.getScheduler().cancelTask(teddyVelocityTask);
+		teddyVelocityTask = -1;
 		gunSelected = false;
 		isTeddyBear = false;
 		if(item != null)

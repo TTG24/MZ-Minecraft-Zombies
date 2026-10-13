@@ -1,4 +1,7 @@
 config:
+  instances:
+    #Maximum volume of the two-corner map snapshot (including air), captured once per template.
+    maxCopyBlocks: 5000000
   perks:
     maxPerks: 4
     #Juggernog health multiplier (2.5 -> 250 equivalent of COD)

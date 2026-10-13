@@ -191,6 +191,8 @@ public class COMZombies extends JavaPlugin
 		reloadConfig();
 		DoorProximityManager.INSTANCE.stop();
 		GameManager.INSTANCE.endAll();
+		GameManager.INSTANCE.getGames().forEach(com.theprogrammingturkey.comz.game.Game::retire);
+		com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.shutdown();
 		log.info(COMZombies.CONSOLE_PREFIX + "has been disabled!");
 	}
 

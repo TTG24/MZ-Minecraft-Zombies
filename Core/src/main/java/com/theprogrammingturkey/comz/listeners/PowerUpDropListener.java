@@ -72,7 +72,7 @@ public class PowerUpDropListener implements Listener
 						break;
 					game.setInstaKill(true);
 					duration = ConfigManager.getMainConfig().instaKillTimer * 20;
-					COMZombies.scheduleTask(duration, () -> game.setInstaKill(false));
+					game.scheduleMatchTask(duration, () -> game.setInstaKill(false));
 					break;
 				case CARPENTER:
 					for(Barrier barrier : game.barrierManager.getBarriers())
@@ -94,7 +94,7 @@ public class PowerUpDropListener implements Listener
 						break;
 					game.setDoublePoints(true);
 					duration = ConfigManager.getMainConfig().doublePointsTimer * 20;
-					COMZombies.scheduleTask(duration, () -> game.setDoublePoints(false));
+					game.scheduleMatchTask(duration, () -> game.setDoublePoints(false));
 					break;
 				case FIRE_SALE:
 					if(game.isFireSale())
@@ -102,7 +102,7 @@ public class PowerUpDropListener implements Listener
 					game.setFireSale(true);
 					game.boxManager.FireSale();
 					duration = ConfigManager.getMainConfig().fireSaleTimer * 20;
-					COMZombies.scheduleTask(duration, () ->
+					game.scheduleMatchTask(duration, () ->
 					{
 						game.setFireSale(false);
 						game.boxManager.FireSale();

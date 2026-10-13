@@ -21,6 +21,7 @@ dependencies {
     compileOnly "com.github.MilkBowl:VaultAPI:1.7.1"
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
+    testImplementation 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
     implementation group: 'org.spigotmc', name: 'spigot-api', version: '26.3-R0.1-SNAPSHOT'
     implementation 'me.clip:placeholderapi:2.11.6'
 }
@@ -29,6 +30,37 @@ jar {
     from project(":API").sourceSets.main.output.classesDirs
     from project(":Compat").sourceSets.main.output.classesDirs
 }
+
+tasks.register('instanceWorldTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.theprogrammingturkey.comz.game.InstanceWorldFilesTest'
+    args layout.buildDirectory.get().asFile.absolutePath
+}
+
+check.dependsOn instanceWorldTest
+
+tasks.register('worldGuardInstanceTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.theprogrammingturkey.comz.game.WorldGuardInstancesTest'
+}
+check.dependsOn worldGuardInstanceTest
+
+tasks.register('gameRuleCompatTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.theprogrammingturkey.comz.game.GameRuleCompatTest'
+    args layout.buildDirectory.get().asFile.absolutePath
+}
+check.dependsOn gameRuleCompatTest
+
+tasks.register('arenaSelectionCopyTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.theprogrammingturkey.comz.game.ArenaSelectionCopyTest'
+}
+check.dependsOn arenaSelectionCopyTest
 
 processResources {
     inputs.property 'version', project.version

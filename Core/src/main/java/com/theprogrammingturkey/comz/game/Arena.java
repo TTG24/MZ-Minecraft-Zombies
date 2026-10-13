@@ -175,6 +175,16 @@ public class Arena
 		return false;
 	}
 
+	/** The physical map copy always uses the two corners, independently of WorldGuard containment. */
+	public boolean containsCopySelection(Location location)
+	{
+		if(location == null || location.getWorld() != world || min == null || max == null) return false;
+		int x = location.getBlockX(), y = location.getBlockY(), z = location.getBlockZ();
+		return x >= Math.min(min.getBlockX(), max.getBlockX()) && x <= Math.max(min.getBlockX(), max.getBlockX())
+				&& y >= Math.min(min.getBlockY(), max.getBlockY()) && y <= Math.max(min.getBlockY(), max.getBlockY())
+				&& z >= Math.min(min.getBlockZ(), max.getBlockZ()) && z <= Math.max(min.getBlockZ(), max.getBlockZ());
+	}
+
 	/**
 	 * Attempts to check containment using a WorldGuard region by ID.
 	 * Returns the result if WorldGuard is installed and the region exists,

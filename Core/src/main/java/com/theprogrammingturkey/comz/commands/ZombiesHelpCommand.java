@@ -31,6 +31,7 @@ public class ZombiesHelpCommand
 		{
 			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "---------" + ChatColor.RED + " MinecraftZombies Admin Help - Page " + page + " " + ChatColor.DARK_GREEN + "--------");
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies createarena [arena]" + ChatColor.GRAY + " - Creates a new arena with a given name.");
+			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies instances [arena] [0-16]" + ChatColor.GRAY + " - Sets the number of map copies; apply with restart/reload.");
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies removearena [arena]" + ChatColor.GRAY + " - Removes the arena given.");
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies kick [player] [arena]" + ChatColor.GRAY + " - Kicks the given player from the given arena.");
 			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies forcestart [arena]" + ChatColor.GRAY + " - Force starts the given arena.");

@@ -101,7 +101,33 @@ public class Game
 	/**
 	 * If insta kill is active.
 	 */
-	private static boolean instaKill = false;
+	private boolean instaKill = false;
+
+	// Only templates are persisted. Runtime copies have their own managers and match state.
+	private String templateName;
+	private int instanceCount;
+	private boolean templateMode;
+	private long matchGeneration;
+	private boolean retired;
+
+	public void retire() { retired = true; matchGeneration++; starter.endTimer(); powerUpManager.clear(); }
+
+	/** Discard delayed work from a finished match or an arena replaced by reload. */
+	public int scheduleMatchTask(long delay, Runnable action)
+	{
+		long generation = matchGeneration;
+		return COMZombies.scheduleTask(delay, () ->
+		{
+			if(!retired && generation == matchGeneration) action.run();
+		});
+	}
+
+	public boolean isInstance() { return templateName != null; }
+	public String getTemplateName() { return isInstance() ? templateName : getName(); }
+	public void setTemplateName(String name) { templateName = name; }
+	public int getInstanceCount() { return instanceCount; }
+	public void setInstanceCount(int count) { instanceCount = count; }
+	public boolean isTemplate() { return !isInstance() && templateMode; }
 
 	/**
 	 * If the power is on
@@ -378,6 +404,7 @@ public class Game
 	 */
 	public void setStarting(boolean forced)
 	{
+		if(isTemplate()) return;
 		if(status != GameStatus.WAITING && status != GameStatus.STARTING)
 			return;
 
@@ -407,6 +434,7 @@ public class Game
 	 */
 	public void startArena()
 	{
+		if(isTemplate()) return;
 		if(status == GameStatus.INGAME)
 			return;
 
@@ -519,7 +547,7 @@ public class Game
 
 		RoundSpawnType spawnType = spawnManager.nextWave(waveNumber, getPlayersInGame());
 
-		COMZombies.scheduleTask(delay, () ->
+		scheduleMatchTask(delay, () ->
 		{
 			for(Player pl : getPlayersAndSpectators())
 			{
@@ -591,6 +619,8 @@ public class Game
 	 */
 	public void addPlayer(Player player)
 	{
+		if(isTemplate())
+			return;
 		if(status == GameStatus.WAITING || status == GameStatus.STARTING)
 		{
 			gamePlayers.put(player, new GamePlayer(player));
@@ -710,6 +740,7 @@ public class Game
 			gamePlayers.remove(player);
 			CachedPlayerInfo.restorePlayerInfo(player);
 			scoreboard.removePlayer(player);
+			GameManager.INSTANCE.refreshVisibility();
 		}
 	}
 
@@ -820,6 +851,9 @@ public class Game
 	 */
 	public void setDisabled()
 	{
+		if(isTemplate())
+			for(Game copy : GameManager.INSTANCE.getGames())
+				if(copy.isInstance() && copy.getTemplateName().equals(getName())) copy.setDisabled();
 		endGame();
 		status = GameStatus.DISABLED;
 	}
@@ -829,6 +863,9 @@ public class Game
 	 */
 	public void setEnabled()
 	{
+		if(isTemplate())
+			for(Game copy : GameManager.INSTANCE.getGames())
+				if(copy.isInstance() && copy.getTemplateName().equals(getName())) copy.setEnabled();
 		resetSpawnLocationBlocks();
 		if(status == GameStatus.INGAME)
 			return;
@@ -842,8 +879,12 @@ public class Game
 	 */
 	public void endGame()
 	{
-		if(this.status == GameStatus.WAITING)
+		if(this.status == GameStatus.WAITING && gamePlayers.isEmpty())
 			return;
+		starter.endTimer();
+		starter = new AutoStart(this, 60);
+		matchGeneration++;
+		powerUpManager.clear();
 
 		this.status = GameStatus.WAITING;
 
@@ -870,27 +911,21 @@ public class Game
 		perkManager.clearPerks();
 		downedPlayerManager.clearDownedPlayers();
 		turnOffPower();
+		isFireSale = false;
 		boxManager.loadAllBoxes();
 		barrierManager.unloadAllBarriers();
 		gamePlayers.clear();
 		scoreboard = new GameScoreboard(this);
 		instaKill = false;
 		doublePoints = false;
+		isFireSale = false;
 		waveNumber = 0;
 		changingRound = false;
 		clearArena();
 		clearArenaItems();
 		PointManager.INSTANCE.clearGamePoints(this);
 
-		COMZombies plugin = COMZombies.getPlugin();
-		for(Player pl : Bukkit.getOnlinePlayers())
-		{
-			for(Player p : Bukkit.getOnlinePlayers())
-			{
-				p.showPlayer(plugin, pl);
-				pl.showPlayer(plugin, p);
-			}
-		}
+		GameManager.INSTANCE.refreshVisibility();
 
 		signManager.updateGame();
 	}
@@ -921,6 +956,8 @@ public class Game
 		}
 
 		powerSetup = CustomConfig.getBoolean(arenaSaveJson, "power_setup", false);
+		instanceCount = Math.max(0, Math.min(16, CustomConfig.getInt(arenaSettingsJson, "instance_count", 0)));
+		templateMode = instanceCount > 0;
 		minPlayers = CustomConfig.getInt(arenaSettingsJson, "min_players", 1);
 		maxPlayers = CustomConfig.getInt(arenaSettingsJson, "max_players", 8);
 		teddyBearPercent = CustomConfig.getInt(arenaSettingsJson, "teddy_bear_chance", 100);
@@ -929,10 +966,9 @@ public class Game
 		maxAmmoReplishClip = CustomConfig.getBoolean(arenaSettingsJson, "max_ammo_replenish_clip", false);
 
 		forceNight = CustomConfig.getBoolean(arenaSettingsJson, "force_night", false);
-		if(forceNight)
-			forceNight();
-
 		arena.loadArena(arenaSaveJson, world);
+		if(forceNight && !isTemplate())
+			forceNight();
 		status = GameStatus.WAITING;
 
 		if(arenaSettingsJson.has("powerup_settings"))
@@ -967,6 +1003,7 @@ public class Game
 		gamejson.add("settings", arenaSettingsJson);
 
 		arenaSettingsJson.addProperty("min_players", minPlayers);
+		arenaSettingsJson.addProperty("instance_count", instanceCount);
 		arenaSettingsJson.addProperty("max_players", maxPlayers);
 		arenaSettingsJson.addProperty("teddy_bear_chance", teddyBearPercent);
 		arenaSettingsJson.addProperty("StartingGun", startingGun);

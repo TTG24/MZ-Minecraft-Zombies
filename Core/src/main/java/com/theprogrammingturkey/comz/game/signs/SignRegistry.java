@@ -25,6 +25,28 @@ public class SignRegistry
 	public static final SignRegistry INSTANCE = new SignRegistry();
 
 	private final Map<Location, Entry> signs = new HashMap<>();
+	private final java.util.Set<org.bukkit.World> instanceWorlds = new java.util.HashSet<>();
+
+	public void copyToInstance(com.theprogrammingturkey.comz.game.Game template, com.theprogrammingturkey.comz.game.Game match)
+	{
+		instanceWorlds.add(match.getWorld());
+		for(Map.Entry<Location, Entry> entry : getAll().entrySet())
+		{
+			if(!template.arena.containsCopySelection(entry.getKey())) continue;
+			Location loc = entry.getKey().clone();
+			loc.setWorld(match.getWorld());
+			Map<String, String> data = new HashMap<>(entry.getValue().data);
+			if(template.getName().equalsIgnoreCase(data.get("arena")))
+				data.put("arena", match.getName());
+			signs.put(loc, new Entry(entry.getValue().type, data));
+		}
+	}
+
+	public void removeInstanceWorld(org.bukkit.World world)
+	{
+		signs.keySet().removeIf(loc -> world.equals(loc.getWorld()));
+		instanceWorlds.remove(world);
+	}
 	// Signs in worlds that aren't loaded. Kept as-is so saving doesn't drop them.
 	private final List<JsonObject> unloadedSigns = new ArrayList<>();
 
@@ -75,6 +97,7 @@ public class SignRegistry
 		JsonArray signsJson = new JsonArray();
 		for(Map.Entry<Location, Entry> sign : signs.entrySet())
 		{
+			if(instanceWorlds.contains(sign.getKey().getWorld())) continue;
 			JsonObject signJson = new JsonObject();
 			signJson.add("location", CustomConfig.locationToJson(sign.getKey()));
 			signJson.addProperty("type", sign.getValue().type);

@@ -3,7 +3,15 @@ A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
 Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
-## Release 1.1.2
+## Release 1.2
+
+Host independent matches from one arena template, with automatic instance selection and queues.
+Each instance copies the arena's two-corner box into a void world using WorldEdit or FAWE,
+while WorldGuard supplies its gameplay boundary and protections. Setting the count to `0`
+removes owned instance folders on restart/reload. See [instance setup](#multiple-matches-on-one-arena-template)
+and [release notes](RELEASE_NOTES.md).
+
+### Previous release 1.1.2
 
 Fixed arena zombies targeting players and reaching barriers on Peaceful. Game, lobby, and spectator warps now preserve position and facing direction after a restart.
 See [the 1.1.2 release notes](RELEASE_NOTES.md) for details and upgrade instructions, including re-setting existing warps once.
@@ -51,6 +59,58 @@ Customize `config.interaction.key` for the displayed key label. Players change t
 Minecraft Controls → Swap Item With Offhand. Each new machine type under `config.interaction` has its own
 `enabled`, `radius` (default 3 blocks), and `tooltip` settings. Machine messages support `{key}`, `{price}`,
 `{missing}`, and `{perk}` for perk names. Existing door/barrier prompt settings still work.
+
+## Multiple matches on one arena template
+
+Configure an arena normally, then use `/zombies instances Hospital 3` (requires
+`zombies.createarena`). Restart or run `/zombies reload` **between games** to prepare
+three independent copies. Players use `/zombies join Hospital`; existing join signs
+for Hospital also route to the copies. Busy pools queue players in join order;
+`/zombies leave` cancels a queue. Joining another match cancels the old queue.
+Queues are cleared on reload/restart. Instances inherit the template's join permission.
+
+Each copy has its own rounds, players, mobs, points, power and machines. The original
+arena becomes a setup template and cannot host matches while its pool is enabled.
+Copies appear as `Hospital~1`, `Hospital~2`, etc. Administrators can target these names
+with the existing start/end commands. Disabling/enabling Hospital affects its whole pool.
+Configure and edit the original arena; apply changes with restart/reload. Runtime copies
+are excluded from `arenas.json`. Set the count to `0` and reload to return to a normal arena.
+
+Instances require **WorldEdit or FastAsyncWorldEdit**. Each copy is a blank void world containing
+only the arena's inclusive **two-corner box**, at its original coordinates. The snapshot includes
+blocks, block entities (such as containers), entities and biomes. No terrain or structures generate
+outside the selection, including in Nether/End instances. Difficulty, time and game rules come
+from the template world. Ordinary arenas without instances do not require WorldEdit.
+
+Include the arena's floor, walls, warps, spawn points, doors and machines within the two corners.
+Configured arena locations outside the box cause preparation to fail with a console explanation.
+The map is captured once per template and pasted into each slot at startup/reload. The default
+volume limit is 5,000,000 blocks, including air; adjust `config.instances.maxCopyBlocks` if needed.
+Preparation runs on the server thread, so large selections or many slots can still cause a pause.
+Start with a few copies and measure server load; the allowed range is 0–16 per template.
+
+WorldGuard is optional. When installed, each instance receives an independent copy of all
+regions in the template world: cuboids, polygons, global regions, priorities, owners, members,
+parent relationships and flags. Link your arena normally with
+`/zombies setregion Hospital hospital_region`, then configure the instance count. Region IDs
+and coordinates stay the same in each copy, so the linked shape controls arena containment.
+The two-corner box controls which map blocks are copied, independently of the linked region.
+Teleport/spawn flag destinations inside the template world are remapped to the instance;
+destinations in other worlds stay unchanged. Changes to a template's regions are applied on
+restart/reload. Existing instance region data is replaced during preparation. If a linked
+region is missing or WorldGuard region copying fails, affected copies are unavailable and
+the server logs explain why. WorldGuard must remain enabled for linked instance arenas.
+WorldGuard's per-world configuration files and other plugins' world settings are not copied.
+
+Between matches the plugin performs its normal door/barrier/mob/machine reset and reuses
+the same world. The selected map is restored on startup/reload, not after every match;
+arbitrary terrain changes from other plugins are not undone between matches. Instance world
+directories named `mz_instance_*` are plugin-owned disposable copies. They are unloaded on
+shutdown and rebuilt on next use from an empty directory and the selected map snapshot.
+Only copies carrying the matching ownership marker can be replaced or deleted. Setting the count
+to `0` removes all owned slots, including older staging directories, on the next restart/reload.
+Loaded worlds are kept if unloading fails; check the console and retry after restart. Reducing
+the count to a nonzero value leaves unused directories on disk.
 
 ## Building
 

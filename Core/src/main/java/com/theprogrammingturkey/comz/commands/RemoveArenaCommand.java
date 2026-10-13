@@ -31,6 +31,11 @@ public class RemoveArenaCommand extends SubCommand
 		if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
 			Game game = GameManager.INSTANCE.getGame(args[1]);
+			if(game.isInstance() || game.isTemplate())
+			{
+				CommandUtil.sendMessageToPlayer(player, "Set the template's instance count to 0 and reload before removing this arena.");
+				return true;
+			}
 			game.signManager.removeAllSigns();
 			game.endGame();
 			GameManager.INSTANCE.removeGame(game);

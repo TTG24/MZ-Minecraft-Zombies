@@ -1,3 +1,49 @@
+# MinecraftZombies 1.2
+
+## Arena instances
+
+- Configure one arena with `/zombies instances <arena> <0-16>` and host independent matches on
+  reusable copies. Each has its own rounds, players, mobs, points, power and machines.
+- `/zombies join <arena>` selects an available copy or queues the player; `/zombies leave`
+  cancels the queue. The original arena becomes an editing template while instances are enabled.
+- Copies contain only the inclusive two-corner arena box, at its original coordinates, in a
+  blank void world. WorldEdit or FastAsyncWorldEdit snapshots blocks, block entities, entities
+  and biomes once per template and pastes them into each slot at startup/reload.
+- WorldGuard regions are independently copied, including polygons, parents, priorities,
+  membership and flags. The linked region controls gameplay containment and protection;
+  the two-corner box controls the map copy. Template-world teleport flags point to each copy.
+- Setting the count to `0` deletes the arena's owned instance world folders on the next
+  restart/reload after unloading, including legacy staging folders. The original arena is kept.
+  Loaded worlds and folders without a matching ownership marker are preserved.
+
+## Compatibility and configuration
+
+- Supports legacy world folders and Paper/Purpur 26.x unified dimension storage, with independent
+  world identities and runtime-compatible game rule lookup.
+- Pooled arenas require WorldEdit or FAWE; ordinary arenas without instances do not.
+  Linked WorldGuard arenas also require WorldGuard to remain enabled.
+- Include all floors, walls, warps, spawns and machines inside the two corners. Configured arena
+  locations outside the box fail preparation with a console explanation.
+- `config.instances.maxCopyBlocks` defaults to 5,000,000 blocks, including air. Preparation runs
+  on the server thread; large selections or many slots can pause startup/reload.
+- Between matches, the existing door/barrier/mob/machine reset reuses the world. The selection
+  is pasted again on startup/reload, rather than after every match.
+
+## Upgrade
+
+Stop the server, replace the previous plugin JAR with **MinecraftZombies-1.2.jar**, and restart.
+Keep only one MinecraftZombies JAR installed. Existing arena settings remain; missing configuration
+settings are added automatically. Apply instance counts and map edits with a restart or
+`/zombies reload` between games; reload ends active games.
+
+## Validation
+
+The full Gradle build and automated checks pass for exact selection boundaries, negative
+coordinates, external-location rejection, void generation, ownership and deletion guards,
+legacy/unified storage, WorldGuard region copying and game rule compatibility.
+Arena selection copies and WorldGuard gameplay were confirmed working in-game by the server owner.
+The latest zero-count folder cleanup passes regression checks; live server verification remains.
+
 # MinecraftZombies 1.1.2
 
 ## Fixed

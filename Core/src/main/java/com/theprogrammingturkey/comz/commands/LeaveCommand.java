@@ -17,6 +17,11 @@ public class LeaveCommand extends SubCommand
 	@Override
 	public boolean onCommand(Player player, String[] args)
 	{
+		if(com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.cancelQueue(player.getUniqueId()))
+		{
+			CommandUtil.sendMessageToPlayer(player, "You left the arena queue.");
+			return true;
+		}
 		Game game = GameManager.INSTANCE.getGame(player);
 
 		if(game == null)
