@@ -3,7 +3,41 @@ A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
 Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
-## Release 1.2.1
+## Release 1.3
+
+**Round music.** A bundled server resource pack (source in the repo's `resourcepack/` folder)
+plays a stinger when each round starts and ends. Point your `server.properties` at the pack and
+tune `config.gameSettings.roundMusicVolume` (`0` disables it). Clients without the pack hear
+nothing — the built-in round sounds still play — so it is optional on the server side too.
+Replace the default stingers with your own `.ogg` files; `resourcepack/README.md` covers the
+full procedure, including encoding from mp3.
+
+**Configurable barrier sounds.** `config.gameSettings.barrierSounds` sets the zombie damage
+sound (a list, cycled in order for variety), the break sound and the player repair sound. Any
+valid Minecraft sound name works, an empty value mutes that sound, and invalid names fall back
+to the defaults with a console warning. Re-read on `/zombies reload`.
+
+**Solo arenas.** `/zombies solo <arena>` (or `/zombies js <arena>`) creates a private,
+one-player copy of any fully-configured arena and drops you in with an instant start. The copy
+is destroyed automatically the moment the arena empties (you die and leave, quit, or the match
+ends), so nothing is left behind. Dying only sends you to the spectate area. Toggle with
+`config.instances.soloInstances`; requires FastAsyncWorldEdit or WorldEdit.
+
+**Late joins for lobby-less arenas.** `config.gameSettings.lateJoinRound` (default `5`) lets
+players join a running instant-start match with `/zombies join` or a join sign while the round
+is below that number — they spawn in with the same 3-second freeze and fading blindness.
+After the limit they spectate as before; set `0` to disable.
+
+**Fading blindness.** The 3-second spawn freeze now starts with a full-strength blindness
+overlay that fades away in steps and is removed exactly when the freeze ends. Applies to
+instant-start arena openings and to late joiners.
+
+**Instance decorations.** Instance copies now include decorative entities from the template —
+armor stands, paintings, item frames, boats, minecarts and passive mobs — and those
+decorations are protected from damage and right-click interaction in instance worlds. Live
+zombies, dropped items, XP orbs and projectiles are never copied.
+
+### Previous release 1.2.1
 
 **Configurable starting armor.** `config.gameSettings.startingArmor` (default `true`) controls
 whether players join wearing the default unbreakable leather armor. Set it to `false` to let

@@ -14,8 +14,8 @@ import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
-import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.util.Colors;
+import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class CommandManager implements TabExecutor
 {
@@ -85,6 +85,13 @@ public class CommandManager implements TabExecutor
 		commandList.put("join", new JoinCommand(COMZPermission.JOIN_ARENA));
 		commandList.put("j", commandList.get("join"));
 		commandList.put("joinarena", commandList.get("join"));
+
+		// Spins up a private single-player copy of an arena and drops you in:
+		// Perm
+		// - zombies.solo
+		// - zombies.user
+		commandList.put("solo", new JoinSoloCommand(COMZPermission.SOLO_ARENA));
+		commandList.put("js", commandList.get("solo"));
 
 		// Base leaderboard command:
 		// Perm

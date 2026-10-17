@@ -8,6 +8,7 @@ public enum COMZPermission
 {
 	JOIN_ARENA(true, "zombies.join", "zombies.join.%%"),
 	REJOIN_ARENA(true, "zombies.rejoin", "zombies.rejoin.%%"),
+	SOLO_ARENA(true, "zombies.solo", "zombies.solo.%%"),
 	KIT(true, "zombies.kit", "zombies.kit.%%"),
 	SPECTATE(true, "zombies.spectate"),
 	LIST_ARENAS(true, "zombies.listarenas"),

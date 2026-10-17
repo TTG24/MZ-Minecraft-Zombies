@@ -1,0 +1,18 @@
+{
+  "round_start": {
+    "sounds": [
+      {
+        "name": "mz:round_start",
+        "volume": 1.0
+      }
+    ]
+  },
+  "round_end": {
+    "sounds": [
+      {
+        "name": "mz:round_end",
+        "volume": 1.0
+      }
+    ]
+  }
+}

@@ -1,7 +1,12 @@
 package com.theprogrammingturkey.comz.game;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 
 /** File operations limited to marked instance directories, with no symbolic-link traversal. */
@@ -50,6 +55,32 @@ final class InstanceWorldFiles
 		Files.createDirectory(destination);
 		Files.writeString(destination.resolve(MARKER), owner);
 		if(copyFiles) copyFiles(source.toRealPath(), destination);
+	}
+
+	/**
+	 * Best-effort removal of a known instance directory (by world name) from both the
+	 * current and legacy storage locations. Never throws; failures are only logged by the caller.
+	 */
+	static void deleteOwnedQuietly(String worldName)
+	{
+		try
+		{
+			org.bukkit.World primary = org.bukkit.Bukkit.getWorlds().getFirst();
+			Path container = org.bukkit.Bukkit.getWorldContainer().toPath().toRealPath();
+			Path destination = destination(container, primary.getWorldFolder().toPath(), worldName);
+			Path legacy = container.resolve(worldName);
+			for(Path path : new java.util.LinkedHashSet<>(java.util.List.of(destination, legacy)))
+			{
+				if(!Files.exists(path, LinkOption.NOFOLLOW_LINKS) || !Files.isRegularFile(path.resolve(MARKER), LinkOption.NOFOLLOW_LINKS))
+					continue;
+				String owner = Files.readString(path.resolve(MARKER));
+				deleteOwned(primary.getWorldFolder().toPath(), path, owner);
+			}
+		}
+		catch(IOException | RuntimeException failure)
+		{
+			com.theprogrammingturkey.comz.COMZombies.log.log(java.util.logging.Level.WARNING, "Could not remove instance folder for " + worldName, failure);
+		}
 	}
 
 	/** Only called for unloaded slots at known instance storage locations. */

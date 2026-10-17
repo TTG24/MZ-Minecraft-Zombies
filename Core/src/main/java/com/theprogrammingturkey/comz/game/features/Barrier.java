@@ -10,6 +10,7 @@ import java.util.Set;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
@@ -17,6 +18,7 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 
 import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.config.ConfigManager;
 import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
@@ -48,6 +50,11 @@ public class Barrier
 
 	private int reward;
 
+	// Track which of the configured damage sounds to play next so repeated hits don't sound identical
+	private int damageSoundIndex = 0;
+	private int repairVariant = 0;
+	private final java.util.Random random = new java.util.Random();
+
 	private final List<Entity> ents = new ArrayList<>();
 	// Zombies from this barrier's spawns that are free to chase players
 	private final Set<Entity> releasedZombies = new HashSet<>();
@@ -73,10 +80,15 @@ public class Barrier
 		{
 			for(Block b : blocks.keySet())
 				BlockUtils.setBlockToAir(b);
+			playAtBarrier(ConfigManager.getMainConfig().barrierBreakSound, 1f);
 			return true;
 		}
 		else
 		{
+			// Cycle through the configured damage sounds for variety
+			List<Sound> sounds = ConfigManager.getMainConfig().barrierDamageSounds;
+			if(sounds != null && !sounds.isEmpty())
+				playAtBarrier(sounds.get(damageSoundIndex++ % sounds.size()), 1f);
 			return false;
 		}
 	}
@@ -109,7 +121,23 @@ public class Barrier
 		for(Block b : blocks.keySet())
 			if(game.getWorld().getBlockAt(b.getLocation()).getType().equals(Material.AIR))
 				BlockUtils.setBlockTypeHelper(game.getWorld().getBlockAt(b.getLocation()), blocks.get(b));
+		// Alternate between two bone block break pitches so consecutive repairs don't sound the same
+		float pitch = ((repairVariant ^= 1) == 0) ? 0.85f : 1.2f;
+		playAtBarrier(ConfigManager.getMainConfig().barrierRepairSound, pitch);
 		return stage <= -1;
+	}
+
+	/**
+	 * Plays a sound at a random barrier block so it's heard near the barrier itself.
+	 * A null sound (empty config value) mutes the barrier.
+	 */
+	private void playAtBarrier(Sound sound, float pitch)
+	{
+		if(sound == null || blocks.isEmpty())
+			return;
+		List<Block> list = new ArrayList<>(blocks.keySet());
+		Block b = list.get(random.nextInt(list.size()));
+		game.getWorld().playSound(b.getLocation().add(0.5, 0.5, 0.5), sound, 1f, pitch);
 	}
 
 	public void repairFull()

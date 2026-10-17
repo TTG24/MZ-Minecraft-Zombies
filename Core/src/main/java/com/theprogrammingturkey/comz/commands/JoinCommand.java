@@ -1,15 +1,16 @@
 package com.theprogrammingturkey.comz.commands;
 
+import java.util.Map;
+
+import org.bukkit.entity.Player;
+
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.Game.GameStatus;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.GamePlayer;
 import com.theprogrammingturkey.comz.util.COMZPermission;
-import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.util.Colors;
-import org.bukkit.entity.Player;
-
-import java.util.Map;
+import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class JoinCommand extends SubCommand
 {
@@ -42,7 +43,7 @@ public class JoinCommand extends SubCommand
 			{
 				if(game.isTemplate()) continue;
 				if(game.isInstance() && com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.hasQueue(game.getTemplateName())) continue;
-				if(game.getStatus() != GameStatus.DISABLED && game.getStatus() != GameStatus.INGAME)
+				if(game.getStatus() != GameStatus.DISABLED && (game.getStatus() != GameStatus.INGAME || game.canLateJoin()))
 				{
 					if(game.spawnManager.getPoints().isEmpty())
 						continue;
@@ -90,7 +91,7 @@ public class JoinCommand extends SubCommand
 					}
 					game = available;
 				}
-				if(game.getStatus() != GameStatus.DISABLED && game.getStatus() != GameStatus.INGAME)
+				if(game.getStatus() != GameStatus.DISABLED && (game.getStatus() != GameStatus.INGAME || game.canLateJoin()))
 				{
 					if(game.spawnManager.getPoints().isEmpty())
 					{

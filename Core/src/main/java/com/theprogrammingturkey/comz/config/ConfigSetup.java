@@ -1,5 +1,11 @@
 package com.theprogrammingturkey.comz.config;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+
+import org.bukkit.Sound;
+
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.leaderboards.Leaderboard;
 
@@ -29,6 +35,10 @@ public class ConfigSetup
 	 * Starting armor material for the boots slot ("none" leaves the slot empty).
 	 */
 	public String startingArmorBoots;
+	/**
+	 * Last round a new player may join a running lobby-less match (0 disables late joins).
+	 */
+	public int lateJoinRound;
 	/**
 	 * Default points when a player shoots a zombie.
 	 */
@@ -94,11 +104,29 @@ public class ConfigSetup
 
 	public float roundSoundVolume;
 
+	/**
+	 * Volume for the bundled round start/end music; 0 disables it.
+	 */
+	public float roundMusicVolume;
+
 	public double zombieDamage;
 
 	public double juggernogHealth;
 
 	public double healTime;
+
+	/**
+	 * Sounds cycled through in order while zombies break a barrier.
+	 */
+	public List<Sound> barrierDamageSounds;
+	/**
+	 * Sound when a barrier is fully broken (null mutes it).
+	 */
+	public Sound barrierBreakSound;
+	/**
+	 * Sound when a player repairs a barrier, played with alternating pitch (null mutes it).
+	 */
+	public Sound barrierRepairSound;
 
 	/**
 	 * Main method to assign values to every field.
@@ -117,6 +145,7 @@ public class ConfigSetup
 		startingArmorChestplate = plugin.getConfig().getString("config.gameSettings.startingArmorMaterials.chestplate", "LEATHER_CHESTPLATE");
 		startingArmorLeggings = plugin.getConfig().getString("config.gameSettings.startingArmorMaterials.leggings", "LEATHER_LEGGINGS");
 		startingArmorBoots = plugin.getConfig().getString("config.gameSettings.startingArmorMaterials.boots", "LEATHER_BOOTS");
+		lateJoinRound = Math.max(0, plugin.getConfig().getInt("config.gameSettings.lateJoinRound", 5));
 		pointsOnHit = plugin.getConfig().getInt("config.gameSettings.defaultPointsOnHit");
 		pointsOnKill = plugin.getConfig().getInt("config.gameSettings.defaultPointsOnKill");
 		maxWave = plugin.getConfig().getInt("config.gameSettings.maxWave");
@@ -126,6 +155,7 @@ public class ConfigSetup
 		configVersion = plugin.getConfig().getString("vID");
 		reloadTime = plugin.getConfig().getInt("config.gameSettings.reloadTime");
 		roundSoundVolume = (float) plugin.getConfig().getDouble("config.gameSettings.roundSoundVolume");
+		roundMusicVolume = (float) plugin.getConfig().getDouble("config.gameSettings.roundMusicVolume", 1.0);
 
 		arenaStartTime = plugin.getConfig().getInt("config.gameSettings.arenaStartTime");
 		// We only have a max of 4 inventory slots for perks
@@ -136,6 +166,45 @@ public class ConfigSetup
 		juggernogHealth = plugin.getConfig().getDouble("config.perks.juggernogHealth", 2.5);
 		healTime = plugin.getConfig().getDouble("config.gameSettings.healTime", 5);
 
+		barrierDamageSounds = parseBarrierSounds(plugin.getConfig().getStringList("config.gameSettings.barrierSounds.zombieDamage"),
+				List.of(Sound.ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR, Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR));
+		barrierBreakSound = parseBarrierSound(plugin.getConfig().getString("config.gameSettings.barrierSounds.zombieBreak"), Sound.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR);
+		barrierRepairSound = parseBarrierSound(plugin.getConfig().getString("config.gameSettings.barrierSounds.playerRepair"), Sound.BLOCK_BONE_BLOCK_BREAK);
+
 		Leaderboard.loadLeaderboard();
+	}
+
+	private static Sound parseBarrierSound(String name, Sound fallback)
+	{
+		if(name == null)
+			return fallback;
+		name = name.trim();
+		if(name.isEmpty())
+			return null;
+		Sound sound = com.theprogrammingturkey.comz.util.ApiCompat.getSound(name);
+		if(sound != null)
+			return sound;
+		final String soundName = name;
+		COMZombies.log.log(Level.WARNING, () -> "Invalid barrier sound \"" + soundName + "\" in config.yml, using the default instead.");
+		return fallback;
+	}
+
+	private static List<Sound> parseBarrierSounds(List<String> names, List<Sound> fallback)
+	{
+		List<Sound> sounds = new ArrayList<>();
+		for(String name : names)
+		{
+			if(name == null || name.isBlank())
+				continue;
+			Sound sound = com.theprogrammingturkey.comz.util.ApiCompat.getSound(name);
+			if(sound == null)
+			{
+				final String soundName = name;
+				COMZombies.log.log(Level.WARNING, () -> "Invalid barrier sound \"" + soundName + "\" in config.yml, ignoring it.");
+				continue;
+			}
+			sounds.add(sound);
+		}
+		return sounds.isEmpty() ? fallback : sounds;
 	}
 }

@@ -130,6 +130,8 @@ public class Game
 	private String templateName;
 	private int instanceCount;
 	private boolean templateMode;
+	/** Ephemeral single-player match spun up on demand; the whole instance is destroyed when it empties. */
+	private boolean soloInstance;
 	private long matchGeneration;
 	private boolean retired;
 
@@ -153,6 +155,8 @@ public class Game
 	public void setTemplateName(String name) { templateName = name; }
 	public int getInstanceCount() { return instanceCount; }
 	public void setInstanceCount(int count) { instanceCount = count; }
+	public boolean isSoloInstance() { return soloInstance; }
+	public void setSoloInstance(boolean solo) { soloInstance = solo; }
 	public boolean isTemplate() { return !isInstance() && templateMode; }
 
 	/**
@@ -551,14 +555,23 @@ public class Game
 
 	/**
 	 * One tick of the spawn freeze; re-schedules itself until 60 ticks elapse.
+	 * A blindness overlay is applied on top and fades away step by step over
+	 * the 3 seconds, easing players into the match once it lifts.
 	 */
 	private void freezePlayersTick(int tick)
 	{
 		if(tick >= 60)
 		{
 			frozenPlayers.clear();
+			for(Player player : gamePlayers.keySet())
+				if(player.isOnline())
+					player.removePotionEffect(PotionEffectType.BLINDNESS);
 			return;
 		}
+
+		// Blindness fades from level 5 to 1 over the freeze window (one step
+		// down every 12 ticks) and is removed outright when the freeze ends.
+		int blindAmp = 5 - (tick / 12);
 
 		for(Player player : getPlayersInGame())
 			if(player.isOnline())
@@ -566,6 +579,7 @@ public class Game
 				frozenPlayers.putIfAbsent(player, player.getLocation().clone());
 				// Keep them from dashing far in a single tick before the pin pulls them back.
 				player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 128, false, true, false));
+				player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, blindAmp, false, false, false));
 			}
 
 		for(Map.Entry<Player, Location> entry : frozenPlayers.entrySet())
@@ -581,6 +595,53 @@ public class Game
 		}
 
 		scheduleMatchTask(1, () -> freezePlayersTick(tick + 1));
+	}
+
+	/**
+	 * Whether a brand-new player may join this running match instead of
+	 * spectating: only lobby-less arenas, only while the late-join round
+	 * limit allows it.
+	 */
+	public boolean canLateJoin()
+	{
+		return !isTemplate() && status == GameStatus.INGAME && !arena.hasLobbyLocation()
+				&& ConfigManager.getMainConfig().lateJoinRound > 0;
+	}
+
+	/**
+	 * One tick of a late joiner's personal spawn freeze; re-schedules itself
+	 * until 60 ticks elapse. Same 3-second pin plus fading blindness as the
+	 * match-start freeze, but only affects this one player.
+	 *
+	 * @param player the late joiner
+	 * @param tick   current tick of the 60-tick window
+	 */
+	private void freezeLateJoiner(Player player, int tick)
+	{
+		if(tick >= 60)
+		{
+			frozenPlayers.remove(player);
+			if(player.isOnline())
+				player.removePotionEffect(PotionEffectType.BLINDNESS);
+			return;
+		}
+
+		if(player.isOnline() && gamePlayers.containsKey(player))
+		{
+			// Blindness fades from level 5 to 1 over the freeze window.
+			int blindAmp = 5 - (tick / 12);
+			frozenPlayers.putIfAbsent(player, player.getLocation().clone());
+			player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 128, false, true, false));
+			player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, blindAmp, false, false, false));
+
+			Location anchor = frozenPlayers.get(player);
+			Location cur = player.getLocation();
+			if(cur.getX() != anchor.getX() || cur.getY() != anchor.getY() || cur.getZ() != anchor.getZ())
+				// Keep them at the spawn point until the freeze lifts.
+				player.teleport(new Location(anchor.getWorld(), anchor.getX(), anchor.getY(), anchor.getZ(), cur.getYaw(), cur.getPitch()));
+		}
+
+		scheduleMatchTask(1, () -> freezeLateJoiner(player, tick + 1));
 	}
 
 	/**
@@ -600,6 +661,11 @@ public class Game
 			return;
 
 		changingRound = true;
+
+		// A wave is only requested again once the previous one was cleared, so the end
+		// stinger plays then. The first wave follows the arena start, so nothing ends.
+		if(waveNumber > 0)
+			playRoundMusic("round_end");
 
 		COMZombies plugin = COMZombies.getPlugin();
 		for(Player pl : getPlayersInGame())
@@ -636,6 +702,9 @@ public class Game
 
 		scheduleMatchTask(delay, () ->
 		{
+			// The wave is actually starting now, so this also covers the first round
+			// right after the arena (or the lobby-less instant start) begins.
+			playRoundMusic("round_start");
 			for(Player pl : getPlayersAndSpectators())
 			{
 				pl.showTitle(Title.title(Colors.legacy(Colors.RED + "Round " + waveNumber), Component.empty(), 10, 60, 10));
@@ -653,6 +722,22 @@ public class Game
 		});
 
 	}
+
+	/**
+	 * Plays one of the bundled round music sounds (mz:round_start / mz:round_end) for
+	 * everyone in the match. The sounds ship in the plugin's resource pack; clients
+	 * without it hear nothing, so the built-in round sounds stay as the fallback.
+	 */
+	private void playRoundMusic(String file)
+	{
+		float volume = ConfigManager.getMainConfig().roundMusicVolume;
+		if(volume <= 0)
+			return;
+
+		for(Player pl : getPlayersAndSpectators())
+			pl.playSound(pl.getLocation(), "mz:" + file, volume, 1f);
+	}
+
 
 	private void internalAddPlayer(Player player, int points)
 	{
@@ -737,6 +822,15 @@ public class Game
 
 					sendMessageToPlayers(player.getName() + " can play again!");
 				}
+				else if(canLateJoin() && waveNumber < ConfigManager.getMainConfig().lateJoinRound)
+				{
+					gamePlayers.put(player, new GamePlayer(player));
+					internalAddPlayer(player, 500 * waveNumber);
+					freezeLateJoiner(player, 0);
+
+					sendMessageToPlayers(player.getName() + " joined in round " + waveNumber + "!");
+					player.sendRawMessage(COMZombies.PREFIX + "You joined in round " + waveNumber + "!");
+				}
 				else
 				{
 					gamePlayers.put(player, new GamePlayer(player));
@@ -778,6 +872,14 @@ public class Game
 	{
 		if(downedPlayerManager.isDownedPlayer(player))
 			setDead(player);
+		if(soloInstance)
+		{
+			// Mark them out of the match (even if dead) so the solo match can end, then let
+			// the instance manager kick them out of the world and tear it down when empty.
+			if(gamePlayers.containsKey(player))
+				gamePlayers.get(player).setState(PlayerState.LEFT_GAME);
+			ArenaInstances.INSTANCE.onSoloPlayerRemoved(this, player);
+		}
 		else if(gamePlayers.containsKey(player))
 			gamePlayers.get(player).setState(PlayerState.LEFT_GAME);
 
@@ -1013,6 +1115,9 @@ public class Game
 		clearArenaItems();
 		PointManager.INSTANCE.clearGamePoints(this);
 
+		if(soloInstance)
+			// A finished solo match is torn down once nobody is still inside it.
+			ArenaInstances.INSTANCE.onSoloMatchEnded(this);
 		GameManager.INSTANCE.refreshVisibility();
 
 		signManager.updateGame();
@@ -1410,6 +1515,16 @@ public class Game
 			return;
 
 		player.setFireTicks(0);
+
+		if(soloInstance)
+		{
+			// A solo player has no teammate to revive them, so instead of ending the
+			// match when everyone is down, send them to the spectate area and keep the
+			// instance alive until they rejoin, leave, or the match ends on its own.
+			setDead(player);
+			ArenaInstances.INSTANCE.onSoloPlayerDowned(this, player);
+			return;
+		}
 
 		if(downedPlayerManager.numDownedPlayers() + 1 == getPlayersInGame().size())
 			endGame();

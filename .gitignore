@@ -19,3 +19,6 @@ Core/bin/*
 .vscode/
 release/
 .project
+
+# Built resource pack archives; commit the source (pack.mcmeta, assets/) only.
+resourcepack/*.zip

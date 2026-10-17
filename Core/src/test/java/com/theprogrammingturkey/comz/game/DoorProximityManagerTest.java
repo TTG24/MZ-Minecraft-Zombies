@@ -35,14 +35,14 @@ class DoorProximityManagerTest
 		return (World) Proxy.newProxyInstance(World.class.getClassLoader(), new Class<?>[]{World.class},
 				(proxyObj, method, values) ->
 				{
-					switch(method.getName())
+					return switch(method.getName())
 					{
-						case "getName": return name;
+						case "getName" -> name;
 						// Identity semantics so equals()/hashCode() behave like real server worlds.
-						case "equals": return proxyObj == values[0];
-						case "hashCode": return System.identityHashCode(proxyObj);
-						default: return null;
-					}
+						case "equals" -> proxyObj == values[0];
+						case "hashCode" -> System.identityHashCode(proxyObj);
+						default -> null;
+					};
 				});
 	}
 

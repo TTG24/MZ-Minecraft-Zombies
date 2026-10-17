@@ -1,3 +1,96 @@
+# MinecraftZombies 1.3
+
+## Round music resource pack
+
+- Two round stingers now play for everyone in the match: one when a round starts and one when
+  a round ends. They are delivered through a server resource pack (the default pack source
+  lives in the repository's `resourcepack/` folder; your server can force it via the
+  `resource-pack` settings in `server.properties`, e.g. an mcpacks.net URL).
+- The pack ships `mz:round_start.ogg` and `mz:round_end.ogg` under the `mz` namespace, mapped
+  to the events `mz:round_start` and `mz:round_end` in `assets/mz/sounds.json`. Clients without
+  the pack simply hear nothing; the built-in round sounds keep playing as before, so nothing
+  breaks on servers that don't offer the pack.
+- New `config.gameSettings.roundMusicVolume` (default `1.0`) sets the volume; `0` disables the
+  music. The setting is re-read on `/zombies reload`.
+- **Making your own stingers:** encode two audio files to `.ogg` (Vorbis), for example
+  `ffmpeg -i my_start.mp3 -c:a libvorbis -ar 44100 round_start.ogg`, replace
+  `resourcepack/assets/mz/sounds/round_start.ogg` and `round_end.ogg` (keep the file names, the
+  event names are fixed), rebuild the zip with `tar -a -c -f MZ-RoundMusic-1.21.zip pack.mcmeta assets`
+  (never Windows' Compress-Archive, which writes backslash zip entries Minecraft rejects), and
+  re-upload the pack, updating the SHA1 in `server.properties`. See `resourcepack/README.md`
+  for the full procedure, including the `sounds.json` namespace gotchas.
+
+## Configurable barrier sounds
+
+- New `config.gameSettings.barrierSounds` section replaces the hard-coded barrier sounds:
+  - `zombieDamage` (list, cycled in order so consecutive hits don't sound identical),
+  - `zombieBreak` (played once when the barrier breaks), and
+  - `playerRepair` (played per repair stage, alternating between two pitches so it doesn't drone).
+- Any valid Minecraft sound name works (for example `ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR` or
+  `BLOCK_BONE_BLOCK_BREAK`). An empty value mutes that sound, and an invalid name logs a
+  warning on startup and falls back to the previous default. The setting is re-read on
+  `/zombies reload`.
+
+## Solo arenas
+
+- New `/zombies solo <arena>` (alias `/zombies js <arena>`) spins up a **private, one-player
+  copy** of any fully-configured arena, drops you straight in, and auto-starts the match.
+- The copy is created on demand and is **removed the moment it empties** — when you die and
+  leave, when you quit, or when the match ends on its own. The world is unloaded and its
+  folder deleted, so nothing is left behind. Dying only drops you to the spectate area; the
+  arena stays alive so you can `/zombies rejoin` or keep spectating.
+- Solo copies reuse the same arena-copy machinery as the arena instance pools (FastAsyncWorldEdit
+  or WorldEdit required). New `config.instances.soloInstances` (default `true`) can disable the
+  command. Permission: `zombies.solo` (or `zombies.solo.<arena>`).
+
+## Late joins for lobby-less arenas
+
+- New `config.gameSettings.lateJoinRound` (default `5`) lets players join an instant-start
+  (lobby-less) match after it has begun. While the running round is below that number,
+  `/zombies join` and join signs drop new players into the match at the spawn point with a
+  fresh 3-second spawn freeze and fading blindness, the same way the match start does.
+- Once the limit is reached, new joiners become spectators as before. Arenas with a lobby are
+  unaffected, and setting the value to `0` disables late joins entirely. The setting is
+  re-read on `/zombies reload`.
+
+## Fading blindness
+
+- The spawn freeze of instant-start arenas (and the personal freeze of late joiners) is now
+  paired with a blindness overlay that starts at full strength and fades away in steps, being
+  removed exactly when the freeze ends, easing players into the match.
+
+## Instance decorations
+
+- Instance snapshots now copy decorative entities from the template — armor stands, paintings,
+  item frames, boats, minecarts and passive mobs — so every instance looks like the original
+  arena. Live zombies, projectiles, dropped items, XP orbs and players are excluded. Entities
+  that WorldEdit/FAWE cannot serialize are skipped with a console warning instead of breaking
+  the copy.
+- Copied decorations are protected in instance worlds: damage to, and right-click interaction
+  with, armor stands, paintings and item frames is cancelled, so they persist for the life of
+  the instance.
+
+## Internal
+
+- Removed all remaining Java deprecation warnings against Paper 26.3 (WorldEdit/FAWE location
+  accessors, `Sound.valueOf` lookups, legacy switch statements in the help command, test
+  proxies), and the build now compiles warning-free.
+
+## Upgrade
+
+Stop the server, replace the previous plugin JAR with **MinecraftZombies-1.3.jar**, and restart.
+Keep only one MinecraftZombies JAR installed. Existing arena settings remain; the new settings
+(`roundMusicVolume`, `barrierSounds`, `lateJoinRound`, `soloInstances`) are added automatically.
+For round music, install the bundled resource pack (see `resourcepack/README.md`) and point
+`server.properties` at it. Apply instance counts and map edits with a restart or `/zombies reload`
+between games; reload ends active games.
+
+## Validation
+
+The full Gradle build and automated checks pass with zero deprecation warnings. Solo arenas,
+late joins, fading blindness, barrier sounds and the round music pack were verified in-game by
+the server owner.
+
 # MinecraftZombies 1.2.1
 
 ## Configurable starting armor

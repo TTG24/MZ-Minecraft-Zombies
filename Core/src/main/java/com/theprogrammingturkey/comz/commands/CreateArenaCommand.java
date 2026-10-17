@@ -16,7 +16,8 @@ public class CreateArenaCommand extends SubCommand
 	{
 		super(permission);
 	}
-	
+
+	@Override
 	public boolean onCommand(Player player, String[] args)
 	{
 		if(!COMZPermission.CREATE_ARENA.hasPerm(player))

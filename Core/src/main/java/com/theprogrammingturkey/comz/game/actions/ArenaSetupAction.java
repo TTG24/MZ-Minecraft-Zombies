@@ -29,9 +29,13 @@ public class ArenaSetupAction extends BaseAction
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type cancel to cancel this operation.");
 		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type done when all points have been set where you want them.");
 
-		updateBoxParticles();
+		// Arena points are not set yet, so this is a no-op call kept for clarity;
+		// the box is first drawn once p1/p2 are entered via chat.
+		// Deferred to a scheduled task because updateBoxParticles() is overridable.
+		COMZombies.scheduleTask(1, () -> updateBoxParticles());
 	}
 
+	@Override
 	public void cancelAction()
 	{
 		if(runOnce)

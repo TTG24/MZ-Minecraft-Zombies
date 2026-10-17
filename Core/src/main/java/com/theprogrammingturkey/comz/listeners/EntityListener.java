@@ -1,17 +1,17 @@
 package com.theprogrammingturkey.comz.listeners;
 
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.config.ConfigManager;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.game.features.PerkType;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.Sound;
-import com.theprogrammingturkey.comz.util.ApiCompat;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Mob;
+import org.bukkit.entity.Painting;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -22,10 +22,16 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.config.ConfigManager;
+import com.theprogrammingturkey.comz.game.ArenaInstances;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
+import com.theprogrammingturkey.comz.game.features.PerkType;
+import com.theprogrammingturkey.comz.util.ApiCompat;
 
 public class EntityListener implements Listener
 {
@@ -127,6 +133,31 @@ public class EntityListener implements Listener
 			}
 			e.setCancelled(true);
 		}
+	}
+
+	@EventHandler
+	public void protectInstanceDecorations(EntityDamageEvent e)
+	{
+		// Decorative entities copied from the arena template (armor stands, paintings,
+		// item frames) should persist for the life of an instance world.
+		if(isInstanceDecoration(e.getEntity()))
+			e.setCancelled(true);
+	}
+
+	@EventHandler
+	public void interactInstanceDecorations(PlayerInteractEntityEvent e)
+	{
+		// Also block right-click interactions (renaming armor stands, swapping armor,
+		// rotating item frames, ...), not just damage.
+		if(isInstanceDecoration(e.getRightClicked()))
+			e.setCancelled(true);
+	}
+
+	private boolean isInstanceDecoration(Entity entity)
+	{
+		if(!(entity instanceof ArmorStand || entity instanceof Painting || entity instanceof ItemFrame))
+			return false;
+		return ArenaInstances.INSTANCE.isInstanceWorld(entity.getWorld());
 	}
 
 	@EventHandler

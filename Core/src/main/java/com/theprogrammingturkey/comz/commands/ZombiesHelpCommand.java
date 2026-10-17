@@ -1,8 +1,8 @@
 package com.theprogrammingturkey.comz.commands;
 
-import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
+import com.theprogrammingturkey.comz.util.Colors;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class ZombiesHelpCommand
@@ -27,38 +27,36 @@ public class ZombiesHelpCommand
 
 	public void playerAdminHelp()
 	{
-		if(page == 1)
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies Admin Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
+		switch(page)
 		{
-			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies Admin Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies createarena [arena]" + Colors.GRAY + " - Creates a new arena with a given name.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies instances [arena] [0-16]" + Colors.GRAY + " - Sets the number of map copies; apply with restart/reload.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removearena [arena]" + Colors.GRAY + " - Removes the arena given.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies kick [player] [arena]" + Colors.GRAY + " - Kicks the given player from the given arena.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies forcestart [arena]" + Colors.GRAY + " - Force starts the given arena.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 2 - Type this for the next page of admin help!");
-		}
-		else if(page == 2)
-		{
-			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies Admin Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies editspawns [arena]" + Colors.GRAY + " - Enables Zombie spawn editing for the given arena.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies edit [arena]" + Colors.GRAY + " - Puts you in arena creation mode for an old arena.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies enable [arena]" + Colors.GRAY + " - Enables the given arena.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 3 - Type this for the next page of admin help!");
-		}
-		else if(page == 3)
-		{
-			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies Admin Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies disable [arena]" + Colors.GRAY + " - Disables the given arena.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies addBarrier [arena]" + Colors.GRAY + " - Begins the creation of a barrier.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removeBarrier [arena]" + Colors.GRAY + " - Begins the process to remove a barrier.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies addDoor [arena]" + Colors.GRAY + " - Begins the creation of a door.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removeDoor [arena]" + Colors.GRAY + " - Begins the process to remove a door.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies setregion [arena] [region|none]" + Colors.GRAY + " - Links an arena to a WorldGuard region for custom containment.");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 4 - Type this for the next page of admin help!");
-		}
-		else
-		{
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No page " + page + "!");
+			case 1 ->
+			{
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies createarena [arena]" + Colors.GRAY + " - Creates a new arena with a given name.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies instances [arena] [0-16]" + Colors.GRAY + " - Sets the number of map copies; apply with restart/reload.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removearena [arena]" + Colors.GRAY + " - Removes the arena given.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies kick [player] [arena]" + Colors.GRAY + " - Kicks the given player from the given arena.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies forcestart [arena]" + Colors.GRAY + " - Force starts the given arena.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 2 - Type this for the next page of admin help!");
+			}
+			case 2 ->
+			{
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies editspawns [arena]" + Colors.GRAY + " - Enables Zombie spawn editing for the given arena.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies edit [arena]" + Colors.GRAY + " - Puts you in arena creation mode for an old arena.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies enable [arena]" + Colors.GRAY + " - Enables the given arena.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 3 - Type this for the next page of admin help!");
+			}
+			case 3 ->
+			{
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies disable [arena]" + Colors.GRAY + " - Disables the given arena.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies addBarrier [arena]" + Colors.GRAY + " - Begins the creation of a barrier.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removeBarrier [arena]" + Colors.GRAY + " - Begins the process to remove a barrier.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies addDoor [arena]" + Colors.GRAY + " - Begins the creation of a door.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removeDoor [arena]" + Colors.GRAY + " - Begins the process to remove a door.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies setregion [arena] [region|none]" + Colors.GRAY + " - Links an arena to a WorldGuard region for custom containment.");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 4 - Type this for the next page of admin help!");
+			}
+			default -> CommandUtil.sendMessageToPlayer(player, Colors.RED + "No page " + page + "!");
 		}
 	}
 
@@ -67,6 +65,7 @@ public class ZombiesHelpCommand
 		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies User Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies join" + Colors.GRAY + " - Puts you in the next available arena.");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies join [arena]" + Colors.GRAY + " - Join a specific arena.");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies solo [arena]" + Colors.GRAY + " - Start a private one-player copy of an arena (auto-removed when you leave).");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies leave" + Colors.GRAY + " - Leave the game you're currently in.");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies listarenas" + Colors.GRAY + " - Shows a list of all the games.");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies perks" + Colors.GRAY + " - Shows the list of available perks.");
@@ -113,46 +112,22 @@ public class ZombiesHelpCommand
 		}
 		if(args[1].equalsIgnoreCase("admin"))
 		{
-			try
-			{
-				page = Integer.parseInt(args[2]);
-			} catch(Exception e)
-			{
-				page = 1;
-			}
+			page = parsePage(args, 2);
 			playerAdminHelp();
 		}
 		else if(args[1].equalsIgnoreCase("user"))
 		{
-			try
-			{
-				page = Integer.parseInt(args[2]);
-			} catch(Exception e)
-			{
-				page = 1;
-			}
+			page = parsePage(args, 2);
 			playerUserHelp();
 		}
 		else if(args[1].equalsIgnoreCase("signs") || args[1].equalsIgnoreCase("sign"))
 		{
-			try
-			{
-				page = Integer.parseInt(args[2]);
-			} catch(Exception e)
-			{
-				page = 1;
-			}
+			page = parsePage(args, 2);
 			playerSignHelp();
 		}
 		else if(args[1].equalsIgnoreCase("info"))
 		{
-			try
-			{
-				page = Integer.parseInt(args[2]);
-			} catch(Exception e)
-			{
-				page = 1;
-			}
+			page = parsePage(args, 2);
 			playerInfoHelp();
 		}
 		else
@@ -160,10 +135,26 @@ public class ZombiesHelpCommand
 			try
 			{
 				page = Integer.parseInt(args[1]);
-			} catch(Exception e)
+			}
+			catch(NumberFormatException e)
 			{
 				playerBaseHelp();
 			}
+		}
+	}
+
+	/** Parses a help page number from the given argument index, defaulting to 1 when missing or invalid. */
+	private int parsePage(String[] args, int index)
+	{
+		if(index >= args.length)
+			return 1;
+		try
+		{
+			return Integer.parseInt(args[index]);
+		}
+		catch(NumberFormatException e)
+		{
+			return 1;
 		}
 	}
 }

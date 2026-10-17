@@ -2,6 +2,9 @@ config:
   instances:
     #Maximum volume of the two-corner map snapshot (including air), captured once per template.
     maxCopyBlocks: 5000000
+    #Allow players to spin up a private single-player arena with /zombies solo <arena>.
+    #The copy is created on demand and destroyed the moment nobody is left in it.
+    soloInstances: true
   perks:
     maxPerks: 4
     #Juggernog health multiplier (2.5 -> 250 equivalent of COD)
@@ -25,6 +28,9 @@ config:
     startingPoints: 500
     #Whether players join a game wearing starting armor
     startingArmor: true
+    #Last round a new player may join a running lobby-less (instant start) match, so late
+    #arrivals can drop in instead of waiting for the next match. 0 disables late joins.
+    lateJoinRound: 5
     #Armor material for each slot when startingArmor is true. Set a slot to "none" for no armor there.
     #Any valid armor material works (e.g. CHAINMAIL_BOOTS, IRON_LEGGINGS, TURTLE_HELMET, DIAMOND_CHESTPLATE, NETHERITE_BOOTS).
     startingArmorMaterials:
@@ -48,6 +54,10 @@ config:
     ZoomTexture: false
     #Change the volume of the round sound
     roundSoundVolume: 0.2
+    #Volume for the bundled round music stingers (mz:round_start / mz:round_end), which are
+    #delivered through a server resource pack - see the resourcepack/ folder and README.
+    #0 disables the music.
+    roundMusicVolume: 1.0
     #The amount of damage zombies do, 9 is the equivalent 3 hits down, juggernog after the 5th hit down
     zombieDamage: 9
     #Keep arena zombies alive on Peaceful without changing world difficulty.
@@ -55,6 +65,13 @@ config:
     zombiesInPeaceful: true
     #The amount of seconds after being hit to be healed (standard 5)
     healTime: 5
+    #Sounds the barrier plays. zombieDamage is cycled through in order; playerRepair
+    #alternates pitch between hits; empty values mute a sound. Invalid names log a
+    #warning and fall back to the defaults.
+    barrierSounds:
+      zombieDamage: [ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR, ENTITY_ZOMBIE_ATTACK_IRON_DOOR]
+      zombieBreak: ENTITY_ZOMBIE_BREAK_WOODEN_DOOR
+      playerRepair: BLOCK_BONE_BLOCK_BREAK
   #Lets players buy a nearby door using Swap Item With Offhand (F by default).
   doorProximity:
     enabled: true

@@ -1,6 +1,7 @@
 package com.theprogrammingturkey.comz.game;
 
 import java.io.IOException;
+import java.util.Set;
 
 import org.bukkit.World;
 
@@ -8,6 +9,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldedit.entity.BaseEntity;
+import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
@@ -18,6 +21,41 @@ import com.sk89q.worldedit.regions.CuboidRegion;
 /** One live map snapshot per template, reused for every slot. Requires WorldEdit or FAWE. */
 public final class ArenaSelectionCopy implements AutoCloseable
 {
+	/**
+	 * Entity types never copied into instances: players, dropped items and XP orbs,
+	 * projectiles, falling blocks, and the hostile mobs that can be alive in a running
+	 * arena. Decor entities (armor stands, item frames, paintings, boats, minecarts,
+	 * passive mobs) are snapshotted as-is so they appear in every instance.
+	 */
+	private static final Set<String> EXCLUDED_ENTITIES = Set.of(
+			"player", "falling_block",
+			"item", "xp_orb",
+			"arrow", "spectral_arrow", "snowball", "egg",
+			"fireball", "small_fireball", "dragon_fireball",
+			"trident", "wind_charge", "lightning_bolt",
+			"shulker_bullet", "evoker_fangs",
+			"zombie", "zombie_villager", "husk", "drowned",
+			"skeleton", "stray", "wither_skeleton", "creeper",
+			"spider", "cave_spider", "enderman", "witch",
+			"blaze", "wither", "phantom", "slime",
+			"magma_cube", "guardian", "elder_guardian",
+			"pillager", "vindicator", "evoker", "ravager",
+			"piglin", "piglin_brute", "hoglin", "zoglin",
+			"zombified_piglin", "zombified_piglin_brute", "warden",
+			"breeze", "bogged", "vex");
+
+	/** True when the entity type should never be snapshotted into instances. */
+	private static boolean isExcluded(Entity entity)
+	{
+		var type = entity.getType();
+		if(type == null)
+			return true; // Unknown type; safer to leave it out than to bake it into every copy.
+		String name = type.getName();
+		int ns = name.indexOf(':');
+		String entityName = ns >= 0 ? name.substring(ns + 1) : name;
+		return EXCLUDED_ENTITIES.contains(entityName);
+	}
+
 	private final Clipboard clipboard;
 	private ArenaSelectionCopy(Clipboard clipboard) { this.clipboard = clipboard; }
 
@@ -47,9 +85,43 @@ public final class ArenaSelectionCopy implements AutoCloseable
 			captured = new ArenaSelectionCopy(snapshot);
 			snapshot.setOrigin(region.getMinimumPoint());
 			ForwardExtentCopy copy = new ForwardExtentCopy(BukkitAdapter.adapt(template.getWorld()), region, snapshot, region.getMinimumPoint());
-			copy.setCopyingEntities(true);
+			// Blocks+biomes come from the ForwardExtentCopy. Entities are snapshotted separately
+			// below instead: running FAWE's own entity retrieval against a raw BukkitWorld warns
+			// about a missing IQueueExtent and only sees loaded chunks, while collecting them
+			// explicitly lets us filter out live mobs, items and projectiles.
+			copy.setCopyingEntities(false);
 			copy.setCopyingBiomes(true);
 			Operations.complete(copy);
+			int skipped = 0;
+			for(Entity entity : BukkitAdapter.adapt(template.getWorld()).getEntities(region))
+			{
+				if(isExcluded(entity))
+					continue;
+				// FAWE's adapter wraps a live entity in a lazy BaseEntity whose NBT is only
+				// computed on first getNbt() call, via a version-specific NMS bridge that can
+				// fail silently and yield null. Resolve it now, while the entity is live: an
+				// entity we cannot serialize is skipped instead of crashing every paste.
+				BaseEntity state = entity.getState();
+				if(state == null || state.getNbt() == null)
+				{
+					skipped++;
+					continue;
+				}
+				// ClipboardEntity requires the location's world to be the clipboard itself,
+				// so re-anchor the entity's (WorldEdit-space) coordinates on the snapshot.
+				var loc = entity.getLocation();
+				((BlockArrayClipboard) snapshot).createEntity(
+						new com.sk89q.worldedit.util.Location(snapshot, loc.x(), loc.y(), loc.z(), loc.getYaw(), loc.getPitch()),
+						state);
+			}
+			if(skipped > 0)
+			{
+				final int skippedCount = skipped;
+				final String templateName = template.getName();
+				com.theprogrammingturkey.comz.COMZombies.log.log(java.util.logging.Level.WARNING,
+						() -> "Instance snapshot: skipped " + skippedCount + " entity(ies) in " + templateName
+								+ " that could not be serialized by WorldEdit/FAWE (e.g. unsupported on this server version).");
+			}
 			return captured;
 		}
 		catch(Exception | LinkageError failure)
@@ -91,6 +163,9 @@ public final class ArenaSelectionCopy implements AutoCloseable
 		try(var session = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(destination)))
 		{
 			ForwardExtentCopy copy = new ForwardExtentCopy(clipboard, clipboard.getRegion(), session, clipboard.getOrigin());
+			// Entity copying is safe here: the source is the clipboard (which FAWE never warns
+			// about) and it already holds exactly the entities capture() snapshotted, so this
+			// does not depend on which chunks are loaded when the instance is pasted.
 			copy.setCopyingEntities(true);
 			copy.setCopyingBiomes(true);
 			Operations.complete(copy);
