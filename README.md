@@ -53,20 +53,6 @@ players have joined, skipping the start countdown. At the start, players are fro
 for 3 seconds: they can look around, but movement and jumping snap them back to their spawn
 spot. Arenas with a lobby are unaffected.
 
-### Previous release 1.2
-
-Host independent matches from one arena template, with automatic instance selection and queues.
-Each instance copies the arena's two-corner box into a void world using FastAsyncWorldEdit
-(recommended) or WorldEdit (synchronous fallback),
-while WorldGuard supplies its gameplay boundary and protections. Setting the count to `0`
-removes owned instance folders on restart/reload. See [instance setup](#multiple-matches-on-one-arena-template)
-and [release notes](RELEASE_NOTES.md).
-
-### Previous release 1.1.2
-
-Fixed arena zombies targeting players and reaching barriers on Peaceful. Game, lobby, and spectator warps now preserve position and facing direction after a restart.
-See [the 1.1.2 release notes](RELEASE_NOTES.md) for details and upgrade instructions, including re-setting existing warps once.
-
 ## What this fork changes
 
 - **One jar for 1.21 and newer.** The per-version NMS modules are replaced by a single module that only uses the
