@@ -3,7 +3,23 @@ A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
 Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
-## Release 1.2
+## Release 1.2.1
+
+**Configurable starting armor.** `config.gameSettings.startingArmor` (default `true`) controls
+whether players join wearing the default unbreakable leather armor. Set it to `false` to let
+players start with no armor. Re-read on `/zombies reload`.
+
+**Optional lobby warp.** The lobby warp (`lw`) is no longer required when setting up an arena —
+only the game warp (`gw`) and spectator warp (`sw`) are. Without a lobby, players wait at the
+game warp before the match. Type `rlw` during arena setup to remove a lobby from an existing
+arena.
+
+**Instant start with spawn freeze.** Arenas without a lobby start immediately once enough
+players have joined, skipping the start countdown. At the start, players are frozen in place
+for 3 seconds: they can look around, but movement and jumping snap them back to their spawn
+spot. Arenas with a lobby are unaffected.
+
+### Previous release 1.2
 
 Host independent matches from one arena template, with automatic instance selection and queues.
 Each instance copies the arena's two-corner box into a void world using FastAsyncWorldEdit
@@ -124,12 +140,16 @@ the count to a nonzero value leaves unused directories on disk.
 
 ## Building
 
-Requires JDK 21. From the project folder run `./gradlew build` (`.\gradlew.bat build` on Windows). The plugin jar is
+From the project folder run `./gradlew build` (`.\gradlew.bat build` on Windows). The plugin jar is
 created in `Core/build/libs`. No BuildTools run is needed.
 
-Servers need Java 21 for 1.21.x, or Java 25 for 26.x.
+The Gradle daemon runs on JDK 21; the Java 25 toolchain required by the Paper 26.x API is
+picked up automatically. If neither JDK 21 nor JDK 25 is installed locally, Gradle downloads
+a Temurin toolchain on the first build (Foojay resolver in `settings.gradle`).
 
 ## Server software
+
+Servers need Java 21 for 1.21.x, or Java 25 for 26.x.
 
 Arena zombies can survive Peaceful on Paper/Purpur with the per-mob Peaceful override, including 26.3.
 This is enabled by `config.gameSettings.zombiesInPeaceful` and only affects arena zombies. The world's
