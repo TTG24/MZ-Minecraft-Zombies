@@ -7,13 +7,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -120,7 +121,7 @@ public class Door
 		World world = game.getWorld();
 		if(!blocks.isEmpty())
 		{
-			Block b = blocks.keySet().toArray(new Block[0])[0];
+			Block b = blocks.keySet().iterator().next();
 			world.playSound(b.getLocation(), Sound.BLOCK_WOODEN_DOOR_OPEN, 1L, 1L);
 		}
 	}
@@ -140,16 +141,17 @@ public class Door
 				{
 					Sign sign = (Sign) block.getState();
 					// Older saves only stored the price on the sign, usually on line 4 but sometimes line 3
-					String costLine = ChatColor.stripColor(sign.getLine(3));
+					org.bukkit.block.sign.SignSide front = sign.getSide(Side.FRONT);
+					String costLine = Colors.plain(front.line(3)).trim();
 					if(!costLine.matches("[0-9]{1,9}"))
-						costLine = ChatColor.stripColor(sign.getLine(2));
+						costLine = Colors.plain(front.line(2)).trim();
 					price = costLine.matches("[0-9]{1,9}") ? Integer.parseInt(costLine) : 750;
 					this.signsLocations.add(loc);
 				}
 			}
 			else
 			{
-				COMZombies.log.log(Level.WARNING, "Failed to load in location for door sign! Json: " + signJson.toString());
+				COMZombies.log.log(Level.WARNING, () -> "Failed to load in location for door sign! Json: " + signJson.toString());
 			}
 
 		}
@@ -252,7 +254,7 @@ public class Door
 			}
 			else
 			{
-				COMZombies.log.log(Level.WARNING, "Failed to load in location for door block! Json: " + blockJson.toString());
+				COMZombies.log.log(Level.WARNING, () -> "Failed to load in location for door block! Json: " + blockJson.toString());
 			}
 		}
 	}

@@ -1,6 +1,6 @@
 package com.theprogrammingturkey.comz.game.signs;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.block.BlockFace;
@@ -41,7 +41,7 @@ public class MysteryBoxSign implements IGameSign
 		BlockFace facing = ((Directional) location.getBlock().getBlockData()).getFacing();
 		RandomBox box = new RandomBox(location, facing, game, game.boxManager.getNextBoxName(), Integer.parseInt(data.get("price")));
 		game.boxManager.addBox(box);
-		player.sendMessage(ChatColor.DARK_GREEN + "Random Weapon Box Created!");
+		player.sendMessage(Colors.DARK_GREEN + "Random Weapon Box Created!");
 	}
 
 	@Override
@@ -71,7 +71,7 @@ public class MysteryBoxSign implements IGameSign
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have enough points!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You don't have enough points!");
 			}
 		}
 		else if(box.canPickWeapon(player))

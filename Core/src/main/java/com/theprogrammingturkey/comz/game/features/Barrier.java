@@ -353,8 +353,8 @@ public class Barrier
 		if(!breaking || loopId != breakingLoopId)
 			return;
 
-		ents.removeIf(Entity::isDead);
-		releasedZombies.removeIf(Entity::isDead);
+		ents.removeIf(entity -> entity == null || entity.isDead());
+		releasedZombies.removeIf(entity -> entity == null || entity.isDead());
 		if(ents.isEmpty())
 		{
 			breaking = false;

@@ -4,7 +4,7 @@ import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.actions.ArenaSetupAction;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 import com.theprogrammingturkey.comz.COMZombies;
@@ -32,7 +32,7 @@ public class EditCommand extends SubCommand
 		}
 		else if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena to edit!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please specify an arena to edit!");
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
@@ -42,7 +42,7 @@ public class EditCommand extends SubCommand
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + args[1] + " is not a valid arena!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + args[1] + " is not a valid arena!");
 		}
 		return true;
 	}

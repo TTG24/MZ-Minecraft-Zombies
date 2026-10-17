@@ -1,6 +1,6 @@
 package com.theprogrammingturkey.comz.commands;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 import com.theprogrammingturkey.comz.COMZombies;
@@ -20,7 +20,7 @@ public class ReloadCommand extends SubCommand
 	{
 		if(!COMZPermission.RELOAD.hasPerm(player))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You do not have permission to reload MinecraftZombies!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You do not have permission to reload MinecraftZombies!");
 			return true;
 		}
 
@@ -39,7 +39,7 @@ public class ReloadCommand extends SubCommand
 
 		int signsRefreshed = com.theprogrammingturkey.comz.game.signs.SignRegistry.INSTANCE.refreshAllText();
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "MinecraftZombies has been reloaded! (" + signsRefreshed + " sign" + (signsRefreshed == 1 ? "" : "s") + " refreshed.)");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "MinecraftZombies has been reloaded! (" + signsRefreshed + " sign" + (signsRefreshed == 1 ? "" : "s") + " refreshed.)");
 		return true;
 	}
 }

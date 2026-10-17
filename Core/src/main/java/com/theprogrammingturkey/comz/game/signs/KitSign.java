@@ -5,7 +5,7 @@ import com.theprogrammingturkey.comz.kits.Kit;
 import com.theprogrammingturkey.comz.kits.KitManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -26,7 +26,7 @@ public class KitSign implements IGameSign
 		// getKit returns a placeholder kit rather than null for unknown names
 		Kit kit = KitManager.getKit(lines[2]);
 		if(kit == null || !kit.getName().equalsIgnoreCase(lines[2]))
-			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "Kit name is", ChatColor.RED + "" + ChatColor.BOLD + "not a valid", ChatColor.RED + "" + ChatColor.BOLD + "kit!");
+			throw new SignParseException(Colors.RED + "" + Colors.BOLD + "Kit name is", Colors.RED + "" + Colors.BOLD + "not a valid", Colors.RED + "" + Colors.BOLD + "kit!");
 
 		Map<String, String> data = new HashMap<>();
 		data.put("kit", kit.getName());
@@ -40,11 +40,11 @@ public class KitSign implements IGameSign
 		if(COMZPermission.KIT.hasPerm(player, kit.getName()))
 		{
 			KitManager.addPlayersSelectedKit(player, kit);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You have selected the " + kit.getName() + " kit!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You have selected the " + kit.getName() + " kit!");
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have permission to use that kit!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You don't have permission to use that kit!");
 		}
 	}
 

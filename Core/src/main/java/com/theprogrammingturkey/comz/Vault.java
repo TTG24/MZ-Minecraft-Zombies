@@ -1,13 +1,14 @@
 package com.theprogrammingturkey.comz;
 
-import net.milkbowl.vault.economy.Economy;
-import net.milkbowl.vault.permission.Permission;
+import java.util.logging.Level;
+
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
-import java.util.logging.Level;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.permission.Permission;
 
 public class Vault
 {
@@ -134,13 +135,21 @@ public class Vault
 		if(!enabled)
 			return "";
 
-		int i = this.permission.getPlayerGroups(player).length - 1;
-		return this.permission.getPlayerGroups(player)[i];
+		String[] groups = this.permission.getPlayerGroups(player);
+		if(groups.length == 0)
+			return "";
+		return groups[groups.length - 1];
 	}
 
 	public String getGroup(Player player, int group)
 	{
-		return enabled ? this.permission.getPlayerGroups(player)[group] : "";
+		if(!enabled)
+			return "";
+
+		String[] groups = this.permission.getPlayerGroups(player);
+		if(group < 0 || group >= groups.length)
+			return "";
+		return groups[group];
 	}
 
 	public int amountOfGroups(Player player)

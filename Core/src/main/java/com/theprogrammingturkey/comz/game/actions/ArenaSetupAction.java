@@ -1,16 +1,17 @@
 package com.theprogrammingturkey.comz.game.actions;
 
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
+import com.theprogrammingturkey.comz.util.Colors;
+import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class ArenaSetupAction extends BaseAction
 {
@@ -21,11 +22,12 @@ public class ArenaSetupAction extends BaseAction
 	{
 		super(player, game);
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "------------" + ChatColor.RED + "Arena Setup" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "------------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type p1 for point one, and p2 for point two.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type gw for game warp, lw for lobby warp, and sw for spectator warp.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel to cancel this operation.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type done when all points have been set where you want them.");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "" + Colors.STRIKETHROUGH + "------------" + Colors.RED + "Arena Setup" + Colors.DARK_GREEN + "" + Colors.STRIKETHROUGH + "------------");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type p1 for point one, and p2 for point two.");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type gw for game warp, lw for lobby warp (optional), and sw for spectator warp.");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type rlw to remove a lobby warp; players will then wait at the game warp.");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type cancel to cancel this operation.");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type done when all points have been set where you want them.");
 
 		updateBoxParticles();
 	}
@@ -37,7 +39,7 @@ public class ArenaSetupAction extends BaseAction
 		if(!game.arena.isSetupComplete())
 			GameManager.INSTANCE.removeGame(game);
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Arena setup operation canceled!");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Arena setup operation canceled!");
 	}
 
 	@Override
@@ -46,7 +48,7 @@ public class ArenaSetupAction extends BaseAction
 		if(message.equalsIgnoreCase("p1"))
 		{
 			game.addPointOne(player.getLocation());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Point p1 set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Point p1 set for arena : " + game.getName());
 			updateBoxParticles();
 		}
 		else if(message.equalsIgnoreCase("p2"))
@@ -56,23 +58,28 @@ public class ArenaSetupAction extends BaseAction
 				CommandUtil.sendMessageToPlayer(player, "Type p1 before p2!");
 				return;
 			}
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Point p2 set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Point p2 set for arena : " + game.getName());
 			updateBoxParticles();
 		}
 		else if(message.equalsIgnoreCase("gw"))
 		{
 			game.setPlayerTPLocation(player.getLocation());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Player location set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Player location set for arena : " + game.getName());
 		}
 		else if(message.equalsIgnoreCase("sw"))
 		{
 			game.setSpectateLocation(player.getLocation());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spectator location set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Spectator location set for arena : " + game.getName());
 		}
 		else if(message.equalsIgnoreCase("lw"))
 		{
 			game.setLobbySpawn(player.getLocation());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Lobby location set for arena : " + game.getName());
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Lobby location set for arena : " + game.getName());
+		}
+		else if(message.equalsIgnoreCase("rlw"))
+		{
+			game.removeLobbySpawn();
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Lobby location removed for arena : " + game.getName() + ". Players will now wait at the game warp.");
 		}
 		else if(message.equalsIgnoreCase("done"))
 		{

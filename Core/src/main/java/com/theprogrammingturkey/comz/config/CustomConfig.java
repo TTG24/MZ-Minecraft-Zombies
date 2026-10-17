@@ -1,16 +1,5 @@
 package com.theprogrammingturkey.comz.config;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.theprogrammingturkey.comz.COMZombies;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -25,9 +14,20 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.theprogrammingturkey.comz.COMZombies;
+
 public class CustomConfig
 {
-	private static final JsonParser JSON_PARSER = new JsonParser();
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	private File file;
@@ -54,7 +54,7 @@ public class CustomConfig
 			{
 				if(!file.exists() && !file.createNewFile())
 				{
-					COMZombies.log.log(Level.SEVERE, "FAILED TO CONVERT A LEGACY FILE! " + config.getLegacyFileName());
+					COMZombies.log.log(Level.SEVERE, "FAILED TO CONVERT A LEGACY FILE! {0}", new Object[]{config.getLegacyFileName()});
 					return;
 				}
 				LegacyConfig.convertLegacyConfig(legacyFile, this);
@@ -63,7 +63,7 @@ public class CustomConfig
 					Files.move(Paths.get(legacyFile.getAbsolutePath()), Paths.get(new File(legacyCacheFolder, config.getLegacyFileName()).getAbsolutePath()));
 			} catch(IOException e)
 			{
-				e.printStackTrace();
+				COMZombies.log.log(Level.SEVERE, COMZombies.CONSOLE_PREFIX + "Failed to convert legacy " + config.getLegacyFileName() + "!", e);
 			}
 		}
 
@@ -72,31 +72,29 @@ public class CustomConfig
 			try
 			{
 				file.createNewFile();
-				Reader defConfigStream = new InputStreamReader(plugin.getResource(config.getFileName()), StandardCharsets.UTF_8);
-				BufferedWriter writter = new BufferedWriter(new FileWriter(file.getAbsolutePath()));
-				BufferedReader reader = new BufferedReader(defConfigStream);
-				String line;
-				while((line = reader.readLine()) != null)
-					writter.write(line + "\n");
-
-				reader.close();
-				writter.close();
+				try(Reader defConfigStream = new InputStreamReader(plugin.getResource(config.getFileName()), StandardCharsets.UTF_8);
+				    BufferedReader reader = new BufferedReader(defConfigStream);
+				    BufferedWriter writer = new BufferedWriter(new FileWriter(file.getAbsolutePath())))
+				{
+					String line;
+					while((line = reader.readLine()) != null)
+						writer.write(line + "\n");
+				}
 			} catch(IOException e)
 			{
-				COMZombies.log.log(Level.SEVERE, COMZombies.CONSOLE_PREFIX + "Unable to load the default " + config.getFileName() + " config!");
-				e.printStackTrace();
+				COMZombies.log.log(Level.SEVERE, COMZombies.CONSOLE_PREFIX + "Unable to load the default " + config.getFileName() + " config!", e);
 			}
 		}
 	}
 
 	public JsonElement getJson()
 	{
-		try
+		try(FileReader reader = new FileReader(file))
 		{
-			return JSON_PARSER.parse(new FileReader(file));
+			return JsonParser.parseReader(reader);
 		} catch(IOException e)
 		{
-			e.printStackTrace();
+			COMZombies.log.log(Level.SEVERE, COMZombies.CONSOLE_PREFIX + "Unable to read " + config.getFileName() + "!", e);
 		}
 		return JsonNull.INSTANCE;
 	}
@@ -108,7 +106,7 @@ public class CustomConfig
 			GSON.toJson(json, writer);
 		} catch(IOException e)
 		{
-			e.printStackTrace();
+			COMZombies.log.log(Level.SEVERE, COMZombies.CONSOLE_PREFIX + "Unable to save " + config.getFileName() + "!", e);
 		}
 	}
 
@@ -183,7 +181,7 @@ public class CustomConfig
 		World world = Bukkit.getWorld(worldName);
 		if(world == null)
 		{
-			COMZombies.log.log(Level.CONFIG, "Failed to find world: " + worldName + "! And thus could not get the location!");
+			COMZombies.log.log(Level.CONFIG, "Failed to find world: {0}! And thus could not get the location!", new Object[]{worldName});
 			return null;
 		}
 		return readLocation(locationJson, world);

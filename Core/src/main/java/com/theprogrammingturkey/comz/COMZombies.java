@@ -9,7 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
@@ -50,6 +50,11 @@ public class COMZombies extends JavaPlugin
 {
 	public static final Random rand = new Random();
 	/**
+	 * Matches the "(MC: x.y)" segment in a Bukkit server-version string.
+	 * Group 1 is the version number only (the trailing parenthesis is not captured).
+	 */
+	static final Pattern VERSION_PATTERN = Pattern.compile("\\(MC: (\\d+(?:\\.\\d+)*)\\)");
+	/**
 	 * Default plugin logger.
 	 */
 	public static final Logger log = Logger.getLogger("MinecraftZombies");
@@ -76,7 +81,7 @@ public class COMZombies extends JavaPlugin
 	}
 
 	public static final String CONSOLE_PREFIX = "";
-	public static final String PREFIX = ChatColor.DARK_GREEN + "[ " + ChatColor.RED + "MinecraftZombies" + ChatColor.DARK_GREEN + " ]" + ChatColor.GRAY + " ";
+	public static final String PREFIX = Colors.DARK_GREEN + "[ " + Colors.RED + "MinecraftZombies" + Colors.DARK_GREEN + " ]" + Colors.GRAY + " ";
 
 	public static INMSUtil nmsUtil;
 
@@ -99,11 +104,12 @@ public class COMZombies extends JavaPlugin
 			return;
 
 		if(oldFolder.renameTo(getDataFolder()))
-			log.info("Moved the old COM_Zombies data folder to " + getDataFolder().getName());
+			log.log(Level.INFO, "Moved the old COM_Zombies data folder to {0}", getDataFolder().getName());
 		else
-			log.log(Level.SEVERE, "Could not move the old COM_Zombies data folder to " + getDataFolder().getName() + "! Move it yourself while the server is off.");
+			log.log(Level.SEVERE, "Could not move the old COM_Zombies data folder to {0}! Move it yourself while the server is off.", getDataFolder().getName());
 	}
 
+	@Override
 	public void onEnable()
 	{
 		loadVersionSpecificCode();
@@ -132,7 +138,6 @@ public class COMZombies extends JavaPlugin
 		ConfigManager.loadFiles();
 		WeaponManager.loadGuns();
 		KitManager.loadKits();
-		PointManager.INSTANCE.saveAll();
 	}
 
 	private void loadVersionSpecificCode()
@@ -141,7 +146,8 @@ public class COMZombies extends JavaPlugin
 		if(version == null)
 			throw new IllegalStateException("Sorry, MinecraftZombies does not currently support server version " + Bukkit.getVersion());
 
-		log.info(COMZombies.CONSOLE_PREFIX + "Version info | MC: " + version + " | Bukkit: " + Bukkit.getVersion() + " & " + Bukkit.getBukkitVersion() + " | CB: " + Bukkit.getServer().getClass().getPackage().getName());
+		log.log(Level.INFO, COMZombies.CONSOLE_PREFIX + "Version info | MC: {0} | Bukkit: {1} & {2} | CB: {3}",
+				new Object[] {version, Bukkit.getVersion(), Bukkit.getBukkitVersion(), Bukkit.getServer().getClass().getPackage().getName()});
 
 		if(!isSupportedVersion(version))
 			throw new IllegalStateException("Sorry, MinecraftZombies does not currently support server version " + version);
@@ -155,10 +161,18 @@ public class COMZombies extends JavaPlugin
 	 */
 	private static boolean isSupportedVersion(String version)
 	{
-		String[] parts = version.split("\\.");
-		int major = Integer.parseInt(parts[0]);
-		int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
-		return major > 1 || minor >= 21;
+		try
+		{
+			String[] parts = version.split("\\.");
+			int major = Integer.parseInt(parts[0]);
+			int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+			return major > 1 || minor >= 21;
+		}
+		catch(NumberFormatException e)
+		{
+			log.log(Level.WARNING, COMZombies.CONSOLE_PREFIX + "Could not parse server version \"{0}\" as a supported version.", version);
+			return false;
+		}
 	}
 
 	/**
@@ -184,14 +198,16 @@ public class COMZombies extends JavaPlugin
 	}
 
 	/**
-	 * Disables the plugin
+	 * Disables the plugin.
 	 */
+	@Override
 	public void onDisable()
 	{
-		reloadConfig();
+		// Persist current session points before endAll() clears them from the map.
+		PointManager.INSTANCE.saveAll();
 		DoorProximityManager.INSTANCE.stop();
 		GameManager.INSTANCE.endAll();
-		GameManager.INSTANCE.getGames().forEach(com.theprogrammingturkey.comz.game.Game::retire);
+		GameManager.INSTANCE.getGames().forEach(game -> game.retire());
 		com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.shutdown();
 		log.info(COMZombies.CONSOLE_PREFIX + "has been disabled!");
 	}
@@ -222,9 +238,21 @@ public class COMZombies extends JavaPlugin
 
 	public static String getMinecraftVersion()
 	{
-		Matcher matcher = Pattern.compile("(\\(MC: )([\\d.]+)(\\))").matcher(Bukkit.getVersion());
+		return extractVersion(Bukkit.getVersion());
+	}
+
+	/**
+	 * Extracts the Minecraft version from a Bukkit server-version string, e.g.
+	 * "26.3-2647-4cd2cf6 (MC: 26.3)". Returns the version ("26.3") or null if absent.
+	 * Package-private for unit testing without a running server.
+	 */
+	static String extractVersion(String bukkitVersion)
+	{
+		if(bukkitVersion == null)
+			return null;
+		Matcher matcher = VERSION_PATTERN.matcher(bukkitVersion);
 		if(matcher.find())
-			return matcher.group(2);
+			return matcher.group(1);
 		return null;
 	}
 }

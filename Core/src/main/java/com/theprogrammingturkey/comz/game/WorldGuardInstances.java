@@ -1,5 +1,14 @@
 package com.theprogrammingturkey.comz.game;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.world.World;
@@ -7,10 +16,10 @@ import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.flags.Flags;
 import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.sk89q.worldguard.protection.regions.*;
-
-import java.io.IOException;
-import java.util.*;
+import com.sk89q.worldguard.protection.regions.GlobalProtectedRegion;
+import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
+import com.sk89q.worldguard.protection.regions.ProtectedPolygonalRegion;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 /** Loaded only when WorldGuard is enabled. Region objects must never be shared across worlds. */
 public final class WorldGuardInstances
@@ -45,9 +54,9 @@ public final class WorldGuardInstances
 				copy = new ProtectedCuboidRegion(region.getId(), region.getMinimumPoint(), region.getMaximumPoint());
 			else if(region instanceof ProtectedPolygonalRegion)
 				copy = new ProtectedPolygonalRegion(region.getId(), new ArrayList<>(region.getPoints()),
-						region.getMinimumPoint().getBlockY(), region.getMaximumPoint().getBlockY());
+							region.getMinimumPoint().y(), region.getMaximumPoint().y());
 			else
-				throw new IOException("Unsupported WorldGuard region type: " + region.getClass().getName());
+				throw new IOException("Unsupported WorldGuard region type: " + region.getClass().getSimpleName());
 			copy.setPriority(region.getPriority());
 			copy.setOwners(new DefaultDomain(region.getOwners()));
 			copy.setMembers(new DefaultDomain(region.getMembers()));
@@ -57,13 +66,15 @@ public final class WorldGuardInstances
 			copies.put(copy.getId(), copy);
 		}
 		for(ProtectedRegion region : originals.values())
-			if(region.getParent() != null)
-			{
-				ProtectedRegion parent = copies.get(region.getParent().getId());
-				if(parent == null) throw new IOException("Missing WorldGuard parent: " + region.getParent().getId());
-				try { copies.get(region.getId()).setParent(parent); }
-				catch(ProtectedRegion.CircularInheritanceException failure) { throw new IOException("Invalid WorldGuard parent hierarchy", failure); }
-			}
+		{
+			ProtectedRegion originalParent = region.getParent();
+			if(originalParent == null)
+				continue;
+			ProtectedRegion parent = copies.get(originalParent.getId());
+			if(parent == null) throw new IOException("Missing WorldGuard parent: " + originalParent.getId());
+			try { copies.get(region.getId()).setParent(parent); }
+			catch(ProtectedRegion.CircularInheritanceException failure) { throw new IOException("Invalid WorldGuard parent hierarchy", failure); }
+		}
 		return copies;
 	}
 

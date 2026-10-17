@@ -1,6 +1,6 @@
 package com.theprogrammingturkey.comz.commands;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 import com.theprogrammingturkey.comz.util.CommandUtil;
@@ -18,75 +18,75 @@ public class ZombiesHelpCommand
 
 	public void playerBaseHelp()
 	{
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "-------- ======== " + ChatColor.RED + "[ MinecraftZombies ]" + ChatColor.DARK_GREEN + " ======== --------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "        /zombies help admin  - Admin help page!");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "        /zombies help user - Displays the user help page!");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "        /zombies help signs - Displays the signs information!");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "        /zombies help info - Displays plugin information!");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "-------- ======== " + Colors.RED + "[ MinecraftZombies ]" + Colors.DARK_GREEN + " ======== --------");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "        /zombies help admin  - Admin help page!");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "        /zombies help user - Displays the user help page!");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "        /zombies help signs - Displays the signs information!");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "        /zombies help info - Displays plugin information!");
 	}
 
 	public void playerAdminHelp()
 	{
 		if(page == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "---------" + ChatColor.RED + " MinecraftZombies Admin Help - Page " + page + " " + ChatColor.DARK_GREEN + "--------");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies createarena [arena]" + ChatColor.GRAY + " - Creates a new arena with a given name.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies instances [arena] [0-16]" + ChatColor.GRAY + " - Sets the number of map copies; apply with restart/reload.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies removearena [arena]" + ChatColor.GRAY + " - Removes the arena given.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies kick [player] [arena]" + ChatColor.GRAY + " - Kicks the given player from the given arena.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies forcestart [arena]" + ChatColor.GRAY + " - Force starts the given arena.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies help admin 2 - Type this for the next page of admin help!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies Admin Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies createarena [arena]" + Colors.GRAY + " - Creates a new arena with a given name.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies instances [arena] [0-16]" + Colors.GRAY + " - Sets the number of map copies; apply with restart/reload.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removearena [arena]" + Colors.GRAY + " - Removes the arena given.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies kick [player] [arena]" + Colors.GRAY + " - Kicks the given player from the given arena.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies forcestart [arena]" + Colors.GRAY + " - Force starts the given arena.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 2 - Type this for the next page of admin help!");
 		}
 		else if(page == 2)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "---------" + ChatColor.RED + " MinecraftZombies Admin Help - Page " + page + " " + ChatColor.DARK_GREEN + "--------");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies editspawns [arena]" + ChatColor.GRAY + " - Enables Zombie spawn editing for the given arena.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies edit [arena]" + ChatColor.GRAY + " - Puts you in arena creation mode for an old arena.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies enable [arena]" + ChatColor.GRAY + " - Enables the given arena.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies help admin 3 - Type this for the next page of admin help!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies Admin Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies editspawns [arena]" + Colors.GRAY + " - Enables Zombie spawn editing for the given arena.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies edit [arena]" + Colors.GRAY + " - Puts you in arena creation mode for an old arena.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies enable [arena]" + Colors.GRAY + " - Enables the given arena.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 3 - Type this for the next page of admin help!");
 		}
 		else if(page == 3)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "---------" + ChatColor.RED + " MinecraftZombies Admin Help - Page " + page + " " + ChatColor.DARK_GREEN + "--------");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies disable [arena]" + ChatColor.GRAY + " - Disables the given arena.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies addBarrier [arena]" + ChatColor.GRAY + " - Begins the creation of a barrier.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies removeBarrier [arena]" + ChatColor.GRAY + " - Begins the process to remove a barrier.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies addDoor [arena]" + ChatColor.GRAY + " - Begins the creation of a door.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies removeDoor [arena]" + ChatColor.GRAY + " - Begins the process to remove a door.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies setregion [arena] [region|none]" + ChatColor.GRAY + " - Links an arena to a WorldGuard region for custom containment.");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies help admin 4 - Type this for the next page of admin help!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies Admin Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies disable [arena]" + Colors.GRAY + " - Disables the given arena.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies addBarrier [arena]" + Colors.GRAY + " - Begins the creation of a barrier.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removeBarrier [arena]" + Colors.GRAY + " - Begins the process to remove a barrier.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies addDoor [arena]" + Colors.GRAY + " - Begins the creation of a door.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies removeDoor [arena]" + Colors.GRAY + " - Begins the process to remove a door.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies setregion [arena] [region|none]" + Colors.GRAY + " - Links an arena to a WorldGuard region for custom containment.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies help admin 4 - Type this for the next page of admin help!");
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No page " + page + "!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No page " + page + "!");
 		}
 	}
 
 	public void playerUserHelp()
 	{
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "---------" + ChatColor.RED + " MinecraftZombies User Help - Page " + page + " " + ChatColor.DARK_GREEN + "--------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies join" + ChatColor.GRAY + " - Puts you in the next available arena.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies join [arena]" + ChatColor.GRAY + " - Join a specific arena.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies leave" + ChatColor.GRAY + " - Leave the game you're currently in.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies listarenas" + ChatColor.GRAY + " - Shows a list of all the games.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "/zombies perks" + ChatColor.GRAY + " - Shows the list of available perks.");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies User Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies join" + Colors.GRAY + " - Puts you in the next available arena.");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies join [arena]" + Colors.GRAY + " - Join a specific arena.");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies leave" + Colors.GRAY + " - Leave the game you're currently in.");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies listarenas" + Colors.GRAY + " - Shows a list of all the games.");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies perks" + Colors.GRAY + " - Shows the list of available perks.");
 	}
 
 	public void playerSignHelp()
 	{
 		if(page == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "----------" + ChatColor.RED + " Sign Help - Page " + page + " " + ChatColor.DARK_GREEN + "----------");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Signs always need [Zombies] on the first line!");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "MysteryBox" + ChatColor.GRAY + " - second line = box |third line (Box Price) | fourth line is empty!");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Wall gun" + ChatColor.GRAY + " - second line = gun | third line = (gun name) | fourth line = (gun price / ammo price)");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Perk" + ChatColor.GRAY + " - second line = perk | third line = (Perk Name) | fourth line is (Perk Price)!");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Pack-A-Punch" + ChatColor.GRAY + " - second line = pack | third line = (Price to Pack-A-Punch) | fourth line is Empty!");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "teleporter" + ChatColor.GRAY + " - second line = teleporter | third line = (teleporter name) | fourth line is (teleporter Price)!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "----------" + Colors.RED + " Sign Help - Page " + page + " " + Colors.DARK_GREEN + "----------");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Signs always need [Zombies] on the first line!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "MysteryBox" + Colors.GRAY + " - second line = box |third line (Box Price) | fourth line is empty!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Wall gun" + Colors.GRAY + " - second line = gun | third line = (gun name) | fourth line = (gun price / ammo price)");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Perk" + Colors.GRAY + " - second line = perk | third line = (Perk Name) | fourth line is (Perk Price)!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Pack-A-Punch" + Colors.GRAY + " - second line = pack | third line = (Price to Pack-A-Punch) | fourth line is Empty!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "teleporter" + Colors.GRAY + " - second line = teleporter | third line = (teleporter name) | fourth line is (teleporter Price)!");
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No page " + page + "!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No page " + page + "!");
 		}
 	}
 
@@ -94,13 +94,13 @@ public class ZombiesHelpCommand
 	{
 		if(page == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "----------" + ChatColor.RED + " Plugin Information - Page " + page + " " + ChatColor.DARK_GREEN + "----------");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "MinecraftZombies" + ChatColor.GRAY + " is a multi-arena zombies plugin inspired by Call of Duty© Zombies, made by " + ChatColor.RED + "TTG24" + ChatColor.GRAY + ". It is based on Call of Minecraft: Zombies, programmed by " + ChatColor.RED + "IModZombies4Fun and TurkeyDev" + ChatColor.GRAY + ".");
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "------------------------------------");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "----------" + Colors.RED + " Plugin Information - Page " + page + " " + Colors.DARK_GREEN + "----------");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "MinecraftZombies" + Colors.GRAY + " is a multi-arena zombies plugin inspired by Call of Duty© Zombies, made by " + Colors.RED + "TTG24" + Colors.GRAY + ". It is based on Call of Minecraft: Zombies, programmed by " + Colors.RED + "IModZombies4Fun and TurkeyDev" + Colors.GRAY + ".");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "------------------------------------");
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No page " + page + "!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No page " + page + "!");
 		}
 	}
 

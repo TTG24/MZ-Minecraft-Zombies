@@ -21,6 +21,17 @@ config:
     perkLife: 15
     #Gun Reload time in seconds
     reloadTime: 3
+    #Points a player starts with when they join a game
+    startingPoints: 500
+    #Whether players join a game wearing starting armor
+    startingArmor: true
+    #Armor material for each slot when startingArmor is true. Set a slot to "none" for no armor there.
+    #Any valid armor material works (e.g. CHAINMAIL_BOOTS, IRON_LEGGINGS, TURTLE_HELMET, DIAMOND_CHESTPLATE, NETHERITE_BOOTS).
+    startingArmorMaterials:
+      helmet: LEATHER_HELMET
+      chestplate: LEATHER_CHESTPLATE
+      leggings: LEATHER_LEGGINGS
+      boots: LEATHER_BOOTS
     #Default points when you hit a zombie, value * 2 on double points
     defaultPointsOnHit: 10
     #Default points when you kill a zombie, value * 2 on double points

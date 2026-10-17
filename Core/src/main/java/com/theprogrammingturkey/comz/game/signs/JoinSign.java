@@ -4,7 +4,7 @@ import com.theprogrammingturkey.comz.commands.CommandManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -25,7 +25,7 @@ public class JoinSign implements IGameSign
 	{
 		Game arena = GameManager.INSTANCE.isValidArena(lines[2]) ? GameManager.INSTANCE.getGame(lines[2]) : null;
 		if(arena == null)
-			throw new SignParseException(ChatColor.DARK_RED + "No such", ChatColor.DARK_RED + "game!");
+			throw new SignParseException(Colors.DARK_RED + "No such", Colors.DARK_RED + "game!");
 
 		Map<String, String> data = new HashMap<>();
 		data.put("arena", arena.getName());
@@ -64,7 +64,7 @@ public class JoinSign implements IGameSign
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "There is no arena called " + ChatColor.GRAY + data.get("arena") + ChatColor.RED + "! Contact an admin to fix this issue!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "There is no arena called " + Colors.GRAY + data.get("arena") + Colors.RED + "! Contact an admin to fix this issue!");
 		}
 	}
 

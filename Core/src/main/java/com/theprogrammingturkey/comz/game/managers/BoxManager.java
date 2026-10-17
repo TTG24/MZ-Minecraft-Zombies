@@ -10,7 +10,7 @@ import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.features.RandomBox;
 import com.theprogrammingturkey.comz.util.BlockUtils;
 import com.theprogrammingturkey.comz.util.Util;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -105,7 +105,7 @@ public class BoxManager
 	{
 		if(boxes.contains(box))
 		{
-			player.sendMessage(ChatColor.DARK_GREEN + "MysteryBox removed!");
+			player.sendMessage(Colors.DARK_GREEN + "MysteryBox removed!");
 			BlockUtils.setBlockToAir(box.getLocation());
 			boxes.remove(box);
 			GameManager.INSTANCE.saveAllGames();

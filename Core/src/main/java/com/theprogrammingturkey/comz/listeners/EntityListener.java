@@ -6,8 +6,9 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.features.PerkType;
 import org.bukkit.Bukkit;
-import org.bukkit.Effect;
 import org.bukkit.Material;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.Sound;
 import com.theprogrammingturkey.comz.util.ApiCompat;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mob;
@@ -65,52 +66,47 @@ public class EntityListener implements Listener
 	@EventHandler
 	public void damage(EntityDamageByEntityEvent e)
 	{
-		if(e.getEntity() instanceof Player)
+		if(e.getEntity() instanceof Player player && GameManager.INSTANCE.isPlayerInGame(player))
 		{
-			if(GameManager.INSTANCE.isPlayerInGame((Player) e.getEntity()))
+			if(e.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK)
 			{
-				if(e.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK)
+				Entity damager = e.getDamager();
+				if(damager instanceof Player || !GameManager.INSTANCE.isEntityInGame(damager))
 				{
-					Entity damager = e.getDamager();
-					if(damager instanceof Player || !GameManager.INSTANCE.isEntityInGame(damager))
-					{
-						e.setCancelled(true);
-						return;
-					}
-
-					final Player player = (Player) e.getEntity();
-					Game game = GameManager.INSTANCE.getGame(player);
-					if(game.downedPlayerManager.isDownedPlayer(player))
-					{
-						e.setCancelled(true);
-						return;
-					}
-
-					float damage = (float) ConfigManager.getMainConfig().zombieDamage;
-
-					if(game.perkManager.getPlayersPerks(player).contains(PerkType.JUGGERNOG))
-						damage = damage / (float) ConfigManager.getMainConfig().juggernogHealth;
-
-					damage = game.damagePlayer(player, damage);
-					e.setDamage(damage);
-
-					//heal system
-					resetHealingTimer(player);
-
-					if(damage == 0)
-						e.setCancelled(true);
+					e.setCancelled(true);
+					return;
 				}
+
+				Game game = GameManager.INSTANCE.getGame(player);
+				if(game.downedPlayerManager.isDownedPlayer(player))
+				{
+					e.setCancelled(true);
+					return;
+				}
+
+				float damage = (float) ConfigManager.getMainConfig().zombieDamage;
+
+				if(game.perkManager.getPlayersPerks(player).contains(PerkType.JUGGERNOG))
+					damage = damage / (float) ConfigManager.getMainConfig().juggernogHealth;
+
+				damage = game.damagePlayer(player, damage);
+				e.setDamage(damage);
+
+				//heal system
+				resetHealingTimer(player);
+
+				if(damage == 0)
+					e.setCancelled(true);
 			}
 		}
-		else if(e.getEntity() instanceof Mob)
+		else if(e.getEntity() instanceof Mob mob)
 		{
-			Entity entity = e.getEntity();
-			Game game = GameManager.INSTANCE.getGame(entity);
+			Game game = GameManager.INSTANCE.getGame(mob);
 
 			if(game == null)
 				return;
 
-			if(e.getDamager() instanceof Player)
+			if(e.getDamager() instanceof Player player)
 			{
 				if(e.getCause().equals(EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK))
 				{
@@ -118,15 +114,14 @@ public class EntityListener implements Listener
 					return;
 				}
 
-				Player player = (Player) e.getDamager();
 				if(player.getInventory().getItemInMainHand().getType().equals(Material.IRON_SWORD))
 				{
 					if(game.getPlayersInGame().contains(player))
 					{
-						Mob mob = (Mob) entity;
 						double dist = mob.getLocation().distance(player.getLocation());
-						if(dist <= ConfigManager.getMainConfig().meleeRange)
-							game.damageMob(mob, player, (float) (mob.getAttribute(ApiCompat.MAX_HEALTH).getValue() / game.getWave()));
+						AttributeInstance maxHealth = mob.getAttribute(ApiCompat.MAX_HEALTH);
+						if(dist <= ConfigManager.getMainConfig().meleeRange && maxHealth != null)
+							game.damageMob(mob, player, (float) (maxHealth.getValue() / game.getWave()));
 					}
 				}
 			}
@@ -140,9 +135,8 @@ public class EntityListener implements Listener
 		if(!GameManager.INSTANCE.isEntityInGame(e.getEntity()))
 			return;
 
-		if(e.getEntity() instanceof Player)
+		if(e.getEntity() instanceof Player player)
 		{
-			Player player = (Player) e.getEntity();
 			Game game = GameManager.INSTANCE.getGame(player);
 
 			if(game.downedPlayerManager.isDownedPlayer(player))
@@ -159,7 +153,7 @@ public class EntityListener implements Listener
 					e.setCancelled(true);
 			}
 
-			player.getLocation().getWorld().playEffect(player.getLocation().add(0, 1, 0), Effect.STEP_SOUND, 152);
+			player.getLocation().getWorld().playSound(player.getLocation().add(0, 1, 0), Sound.BLOCK_STONE_STEP, 1f, 1f);
 		}
 		else if(e.getCause().equals(EntityDamageEvent.DamageCause.LAVA) && e.getEntity() instanceof Mob)
 		{

@@ -2,6 +2,7 @@ package com.theprogrammingturkey.comz.leaderboards;
 
 import com.google.gson.JsonObject;
 import com.theprogrammingturkey.comz.config.CustomConfig;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -51,25 +52,17 @@ public class PlayerStats
 
 	public int getStat(StatsCategory cat)
 	{
-		switch(cat)
+		return switch(cat)
 		{
-			case KILLS:
-				return kills;
-			case REVIVES:
-				return revives;
-			case DEATHS:
-				return deaths;
-			case DOWNS:
-				return downs;
-			case GAMES_PLAYED:
-				return gamesPlayed;
-			case HIGHEST_ROUND:
-				return highestRound;
-			case MOST_POINTS:
-				return mostPoints;
-			default:
-				return 0;
-		}
+			case KILLS -> kills;
+			case REVIVES -> revives;
+			case DEATHS -> deaths;
+			case DOWNS -> downs;
+			case GAMES_PLAYED -> gamesPlayed;
+			case HIGHEST_ROUND -> highestRound;
+			case MOST_POINTS -> mostPoints;
+			default -> 0;
+		};
 	}
 
 	public int getKills()
@@ -170,7 +163,7 @@ public class PlayerStats
 
 	public static PlayerStats initPlayerStats(Player player)
 	{
-		PlayerStats playerStats = new PlayerStats(player.getUniqueId().toString(), player.getDisplayName(), new JsonObject());
+		PlayerStats playerStats = new PlayerStats(player.getUniqueId().toString(), Colors.serialize(player.displayName()), new JsonObject());
 		Leaderboard.saveLeaderboard();
 		return playerStats;
 	}

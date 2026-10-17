@@ -1,17 +1,5 @@
 package com.theprogrammingturkey.comz.config;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.game.features.PowerUp;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,28 +8,33 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.game.features.PowerUp;
+
 public class LegacyConfig
 {
 	public static void convertLegacyConfig(File oldFile, CustomConfig config)
 	{
-		COMZombies.log.log(Level.INFO, "Converting legacy file " + config.getConfig().getLegacyFileName());
+		COMZombies.log.log(Level.INFO, () -> "Converting legacy file " + config.getConfig().getLegacyFileName());
 		switch(config.getConfig())
 		{
-			case ARENAS:
-				convertArenasConfig(oldFile, config);
-				break;
-			case GUNS:
-				convertGunsConfig(oldFile, config);
-				break;
-			case STATS:
-				convertStatsConfig(oldFile, config);
-				break;
-			case SIGNS:
-				convertSignsConfig(oldFile, config);
-				break;
-			case KITS:
-				convertKitsConfig(oldFile, config);
-				break;
+			case ARENAS -> convertArenasConfig(oldFile, config);
+			case GUNS -> convertGunsConfig(oldFile, config);
+			case STATS -> convertStatsConfig(oldFile, config);
+			case SIGNS -> convertSignsConfig(oldFile, config);
+			// No legacy equivalent for the new per-arena sign registry.
+			case GAME_SIGNS -> {}
+			case KITS -> convertKitsConfig(oldFile, config);
 		}
 	}
 
@@ -53,34 +46,41 @@ public class LegacyConfig
 		Map<String, JsonObject> packAPunchGuns = new HashMap<>();
 
 		JsonObject gunsJson = new JsonObject();
-		for(String group : oldConfig.getConfigurationSection("Guns").getKeys(false))
+		ConfigurationSection gunsSec = oldConfig.getConfigurationSection("Guns");
+		if(gunsSec != null)
 		{
-			JsonObject gunGroup = new JsonObject();
-			JsonArray gunGroupGuns = new JsonArray();
-			for(String gun : oldConfig.getConfigurationSection("Guns." + group).getKeys(false))
+			for(String group : gunsSec.getKeys(false))
 			{
-				JsonObject gunJson = new JsonObject();
-				gunJson.addProperty("name", gun);
-				gunJson.addProperty("clip_ammo", oldConfig.getInt("Guns." + group + "." + gun + ".ClipAmmo", 1));
-				gunJson.addProperty("total_ammo", oldConfig.getInt("Guns." + group + "." + gun + ".TotalAmmo", 1));
-				gunJson.addProperty("damage", oldConfig.getInt("Guns." + group + "." + gun + ".Damage"));
-				gunJson.addProperty("fire_delay", oldConfig.getInt("Guns." + group + "." + gun + ".FireDelay"));
-				gunJson.addProperty("max_distance", oldConfig.getDouble("Guns." + group + "." + gun + ".MaxDistance", 30));
-				gunJson.addProperty("particle_color", oldConfig.getString("Guns." + group + "." + gun + ".particleColor", "808080"));
-				gunJson.addProperty("multi_hit", oldConfig.getBoolean("Guns." + group + "." + gun + ".multiHit", false));
+				JsonObject gunGroup = new JsonObject();
+				JsonArray gunGroupGuns = new JsonArray();
+				ConfigurationSection gunSec = oldConfig.getConfigurationSection("Guns." + group);
+				if(gunSec == null)
+					continue;
+				for(String gun : gunSec.getKeys(false))
+				{
+					JsonObject gunJson = new JsonObject();
+					gunJson.addProperty("name", gun);
+					gunJson.addProperty("clip_ammo", oldConfig.getInt("Guns." + group + "." + gun + ".ClipAmmo", 1));
+					gunJson.addProperty("total_ammo", oldConfig.getInt("Guns." + group + "." + gun + ".TotalAmmo", 1));
+					gunJson.addProperty("damage", oldConfig.getInt("Guns." + group + "." + gun + ".Damage"));
+					gunJson.addProperty("fire_delay", oldConfig.getInt("Guns." + group + "." + gun + ".FireDelay"));
+					gunJson.addProperty("max_distance", oldConfig.getDouble("Guns." + group + "." + gun + ".MaxDistance", 30));
+					gunJson.addProperty("particle_color", oldConfig.getString("Guns." + group + "." + gun + ".particleColor", "808080"));
+					gunJson.addProperty("multi_hit", oldConfig.getBoolean("Guns." + group + "." + gun + ".multiHit", false));
 
-				if(oldConfig.getBoolean("Guns." + group + "." + gun + ".isPackAPunchGun", false))
-				{
-					packAPunchGuns.put(gunJson.get("name").getAsString(), gunJson);
+					if(oldConfig.getBoolean("Guns." + group + "." + gun + ".isPackAPunchGun", false))
+					{
+						packAPunchGuns.put(gunJson.get("name").getAsString(), gunJson);
+					}
+					else
+					{
+						gunGroupGuns.add(gunJson);
+						packAPunchGunsMap.add(new GunWrapper(gunJson, oldConfig.getString("Guns." + group + "." + gun + ".PackAPunchGun")));
+					}
 				}
-				else
-				{
-					gunGroupGuns.add(gunJson);
-					packAPunchGunsMap.add(new GunWrapper(gunJson, oldConfig.getString("Guns." + group + "." + gun + ".PackAPunchGun")));
-				}
+				gunGroup.add("guns", gunGroupGuns);
+				gunsJson.add(group, gunGroup);
 			}
-			gunGroup.add("guns", gunGroupGuns);
-			gunsJson.add(group, gunGroup);
 		}
 		gunsJsonObj.add("guns", gunsJson);
 
@@ -95,8 +95,10 @@ public class LegacyConfig
 		JsonObject arenasJsonObj = new JsonObject();
 		FileConfiguration oldConfig = YamlConfiguration.loadConfiguration(oldFile);
 
-
-		for(String key : oldConfig.getConfigurationSection("").getKeys(false))
+		ConfigurationSection arenasSec = oldConfig.getConfigurationSection("");
+		if(arenasSec == null)
+			return;
+		for(String key : arenasSec.getKeys(false))
 		{
 			JsonObject arenaJson = new JsonObject();
 			JsonObject arenaSettingsJson = new JsonObject();
@@ -158,7 +160,7 @@ public class LegacyConfig
 
 			if(sec != null)
 			{
-				for(String spawnID : oldConfig.getConfigurationSection(key + ".ZombieSpawns").getKeys(false))
+				for(String spawnID : sec.getKeys(false))
 				{
 					JsonObject spawnJson = new JsonObject();
 					spawnJson.addProperty("x", oldConfig.getDouble(key + ".ZombieSpawns." + spawnID + ".x"));
@@ -213,22 +215,27 @@ public class LegacyConfig
 
 					JsonArray barrierBlocks = new JsonArray();
 					ConfigurationSection barrierBlocksSec = oldConfig.getConfigurationSection(key + ".Barriers." + number + ".barrierblocks");
-					for(String bkey : barrierBlocksSec.getKeys(false))
+					if(loc != null && barrierBlocksSec != null)
 					{
-						JsonObject bJson = new JsonObject();
-						JsonObject barrierLocJson = new JsonObject();
-						barrierLocJson.addProperty("x", loc.getBlockX());
-						barrierLocJson.addProperty("y", loc.getBlockY());
-						barrierLocJson.addProperty("z", loc.getBlockZ());
-						bJson.add("location", barrierLocJson);
-						bJson.addProperty("material", oldConfig.getString(key + ".Barriers." + number + ".barriermats." + bkey));
-						barrierBlocks.add(bJson);
+						for(String bkey : barrierBlocksSec.getKeys(false))
+						{
+							JsonObject bJson = new JsonObject();
+							JsonObject barrierLocJson = new JsonObject();
+							barrierLocJson.addProperty("x", loc.getBlockX());
+							barrierLocJson.addProperty("y", loc.getBlockY());
+							barrierLocJson.addProperty("z", loc.getBlockZ());
+							bJson.add("location", barrierLocJson);
+							bJson.addProperty("material", oldConfig.getString(key + ".Barriers." + number + ".barriermats." + bkey));
+							barrierBlocks.add(bJson);
+						}
 					}
 					barrierJson.add("blocks", barrierBlocks);
 
 					JsonArray spawnPoints = new JsonArray();
-					for(String spawnPoint : oldConfig.getStringList(key + ".Barriers." + number + ".SpawnPoints"))
-						spawnPoints.add(Integer.parseInt(spawnPoint));
+					oldConfig.getStringList(key + ".Barriers." + number + ".SpawnPoints")
+						.stream()
+						.map(Integer::parseInt)
+						.forEach(spawnPoints::add);
 					barrierJson.add("spawns", spawnPoints);
 					barrierJson.addProperty("reward", oldConfig.getInt(key + ".Barriers." + number + ".reward"));
 
@@ -251,29 +258,37 @@ public class LegacyConfig
 					doorJson.addProperty("id", doorID);
 
 					JsonArray blocks = new JsonArray();
-					for(String blockID : oldConfig.getConfigurationSection(key + ".Doors.door" + doorID + ".Blocks").getKeys(false))
+					ConfigurationSection blocksSec = oldConfig.getConfigurationSection(key + ".Doors.door" + doorID + ".Blocks");
+					if(blocksSec != null)
 					{
-						JsonObject blockJson = new JsonObject();
-						blockJson.addProperty("x", oldConfig.getInt(key + ".Doors.door" + doorID + ".Blocks." + blockID + ".x"));
-						blockJson.addProperty("y", oldConfig.getInt(key + ".Doors.door" + doorID + ".Blocks." + blockID + ".y"));
-						blockJson.addProperty("z", oldConfig.getInt(key + ".Doors.door" + doorID + ".Blocks." + blockID + ".z"));
-						blockJson.addProperty("material", oldConfig.getInt(key + ".Doors.door" + doorID + ".Blocks." + blockID + ".mat"));
-						blocks.add(blockJson);
+						for(String blockID : blocksSec.getKeys(false))
+						{
+							JsonObject blockJson = new JsonObject();
+							blockJson.addProperty("x", oldConfig.getInt(key + ".Doors.door" + doorID + ".Blocks." + blockID + ".x"));
+							blockJson.addProperty("y", oldConfig.getInt(key + ".Doors.door" + doorID + ".Blocks." + blockID + ".y"));
+							blockJson.addProperty("z", oldConfig.getInt(key + ".Doors.door" + doorID + ".Blocks." + blockID + ".z"));
+							blockJson.addProperty("material", oldConfig.getInt(key + ".Doors.door" + doorID + ".Blocks." + blockID + ".mat"));
+							blocks.add(blockJson);
+						}
 					}
 					doorJson.add("blocks", blocks);
 
 
 					JsonArray signs = new JsonArray();
-					for(String signID : oldConfig.getConfigurationSection(key + ".Doors.door" + doorID + ".Signs").getKeys(false))
+					ConfigurationSection signsSec = oldConfig.getConfigurationSection(key + ".Doors.door" + doorID + ".Signs");
+					if(signsSec != null)
 					{
-						Location loc = oldConfig.getLocation(key + ".Doors.door" + doorID + ".Signs." + signID);
-						if(loc != null)
+						for(String signID : signsSec.getKeys(false))
 						{
-							JsonObject signJson = new JsonObject();
-							signJson.addProperty("x", loc.getBlockX());
-							signJson.addProperty("y", loc.getBlockY());
-							signJson.addProperty("z", loc.getBlockZ());
-							signs.add(signJson);
+							Location loc = oldConfig.getLocation(key + ".Doors.door" + doorID + ".Signs." + signID);
+							if(loc != null)
+							{
+								JsonObject signJson = new JsonObject();
+								signJson.addProperty("x", loc.getBlockX());
+								signJson.addProperty("y", loc.getBlockY());
+								signJson.addProperty("z", loc.getBlockZ());
+								signs.add(signJson);
+							}
 						}
 					}
 					doorJson.add("signs", signs);
@@ -319,13 +334,19 @@ public class LegacyConfig
 		JsonObject kitsJsonObj = new JsonObject();
 		FileConfiguration oldConfig = YamlConfiguration.loadConfiguration(oldFile);
 
-		for(String kitName : oldConfig.getConfigurationSection("").getKeys(false))
+		ConfigurationSection kitsSec = oldConfig.getConfigurationSection("");
+		if(kitsSec == null)
+			return;
+		for(String kitName : kitsSec.getKeys(false))
 		{
 			JsonObject kitJson = new JsonObject();
 			kitsJsonObj.add(kitName, kitJson);
 			JsonArray kitWeaponsJson = new JsonArray();
 			kitJson.add("weapons", kitWeaponsJson);
-			for(String weaponName : oldConfig.getString(kitName + ".Weapons", "").split(","))
+			String weaponsString = oldConfig.getString(kitName + ".Weapons", "");
+			if(weaponsString == null)
+				weaponsString = "";
+			for(String weaponName : weaponsString.split(","))
 			{
 				JsonObject weaponJson = new JsonObject();
 				weaponJson.addProperty("weapon_name", weaponName);
@@ -334,7 +355,10 @@ public class LegacyConfig
 
 			JsonArray kitPerksJson = new JsonArray();
 			kitJson.add("perks", kitPerksJson);
-			for(String perkName : oldConfig.getString(kitName + ".Perks", "").split(","))
+			String perksString = oldConfig.getString(kitName + ".Perks", "");
+			if(perksString == null)
+				perksString = "";
+			for(String perkName : perksString.split(","))
 			{
 				JsonObject perkJson = new JsonObject();
 				perkJson.addProperty("perk_name", perkName);
@@ -405,7 +429,10 @@ public class LegacyConfig
 						int x = oldConfig.getInt("signs." + gameName + "." + s + ".x");
 						int y = oldConfig.getInt("signs." + gameName + "." + s + ".y");
 						int z = oldConfig.getInt("signs." + gameName + "." + s + ".z");
-						World world = Bukkit.getWorld(oldConfig.getString("signs." + gameName + "." + s + ".world"));
+						String worldName = oldConfig.getString("signs." + gameName + "." + s + ".world");
+						if(worldName == null)
+							continue;
+						World world = Bukkit.getWorld(worldName);
 
 						if(world == null)
 							continue;
@@ -424,13 +451,16 @@ public class LegacyConfig
 		JsonObject statsJsonObj = new JsonObject();
 		FileConfiguration oldConfig = YamlConfiguration.loadConfiguration(oldFile);
 
-		if(oldConfig.getConfigurationSection("stats") != null)
+		ConfigurationSection statsSec = oldConfig.getConfigurationSection("stats");
+		if(statsSec != null)
 		{
-			for(String playerUUID : oldConfig.getConfigurationSection("stats").getKeys(false))
+			for(String playerUUID : statsSec.getKeys(false))
 			{
 				JsonObject playerStats = new JsonObject();
 				statsJsonObj.add(playerUUID, playerStats);
 				ConfigurationSection sec = oldConfig.getConfigurationSection("stats." + playerUUID);
+				if(sec == null)
+					continue;
 
 				playerStats.addProperty("kills", sec.getInt("kills"));
 				playerStats.addProperty("revives", sec.getInt("revives"));

@@ -2,8 +2,9 @@ package com.theprogrammingturkey.comz.game;
 
 import com.theprogrammingturkey.comz.economy.PointManager;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
@@ -30,14 +31,14 @@ public class GameScoreboard
 		this.game = game;
 		board = manager.getNewScoreboard();
 		team = board.registerNewTeam(game.getName());
-		team.setDisplayName(ChatColor.RED + game.getName());
+		team.displayName(Colors.legacy(Colors.RED + game.getName()));
 		team.setCanSeeFriendlyInvisibles(true);
 		team.setAllowFriendlyFire(false);
-		objective = board.registerNewObjective(this.game.getName(), "dummy", ChatColor.RED + this.game.getName());
+		objective = board.registerNewObjective(this.game.getName(), Criteria.DUMMY, Colors.legacy(Colors.RED + this.game.getName()));
 		objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-		round = objective.getScore(ChatColor.RED + "Round");
+		round = objective.getScore(Colors.RED + "Round");
 		round.setScore(0);
-		zombiesLeft = objective.getScore(ChatColor.RED + "Zombies Left");
+		zombiesLeft = objective.getScore(Colors.RED + "Zombies Left");
 		zombiesLeft.setScore(0);
 	}
 

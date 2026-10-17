@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 import com.theprogrammingturkey.comz.game.Game;
@@ -45,20 +45,20 @@ public class SetRegionCommand extends SubCommand
 			Game game = GameManager.INSTANCE.getGame(args[1]);
 			if(game == null)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + args[1] + " is not a valid arena!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + args[1] + " is not a valid arena!");
 				return true;
 			}
 			String region = game.arena.getWorldGuardRegionId();
 			if(region == null)
 			{
 				CommandUtil.sendMessageToPlayer(player,
-						ChatColor.YELLOW + "Arena " + game.getName() + " is not linked to a WorldGuard region (using the min/max box).");
+						Colors.YELLOW + "Arena " + game.getName() + " is not linked to a WorldGuard region (using the min/max box).");
 			}
 			else
 			{
 				CommandUtil.sendMessageToPlayer(player,
-						ChatColor.YELLOW + "Arena " + game.getName() + " is linked to WorldGuard region "
-								+ ChatColor.WHITE + region + ChatColor.YELLOW + ".");
+						Colors.YELLOW + "Arena " + game.getName() + " is linked to WorldGuard region "
+								+ Colors.WHITE + region + Colors.YELLOW + ".");
 			}
 			return true;
 		}
@@ -68,7 +68,7 @@ public class SetRegionCommand extends SubCommand
 		{
 			if(!GameManager.INSTANCE.isValidArena(args[1]))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + args[1] + " is not a valid arena!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + args[1] + " is not a valid arena!");
 				return true;
 			}
 			Game game = GameManager.INSTANCE.getGame(args[1]);
@@ -79,8 +79,8 @@ public class SetRegionCommand extends SubCommand
 				game.arena.setWorldGuardRegionId(null);
 				GameManager.INSTANCE.saveAllGames();
 				CommandUtil.sendMessageToPlayer(player,
-						ChatColor.DARK_GREEN + "Cleared the WorldGuard region link for arena "
-								+ ChatColor.RED + game.getName() + ChatColor.DARK_GREEN + ". Containment now uses the min/max box.");
+						Colors.DARK_GREEN + "Cleared the WorldGuard region link for arena "
+								+ Colors.RED + game.getName() + Colors.DARK_GREEN + ". Containment now uses the min/max box.");
 				return true;
 			}
 
@@ -91,29 +91,29 @@ public class SetRegionCommand extends SubCommand
 				if(!isWorldGuardInstalled())
 				{
 					CommandUtil.sendMessageToPlayer(player,
-							ChatColor.YELLOW + "WorldGuard is not installed on this server. Region " + regionId
+							Colors.YELLOW + "WorldGuard is not installed on this server. Region " + regionId
 									+ " was saved, but containment will fall back to the min/max box until WorldGuard is present.");
 				}
 				else
 				{
 					CommandUtil.sendMessageToPlayer(player,
-							ChatColor.YELLOW + "Could not find WorldGuard region " + ChatColor.WHITE + regionId
-									+ ChatColor.YELLOW + " in world " + game.getWorld().getName()
-									+ ChatColor.YELLOW + ". Saved anyway - make sure the region exists when the arena is used.");
+							Colors.YELLOW + "Could not find WorldGuard region " + Colors.WHITE + regionId
+									+ Colors.YELLOW + " in world " + game.getWorld().getName()
+									+ Colors.YELLOW + ". Saved anyway - make sure the region exists when the arena is used.");
 				}
 			}
 
 			game.arena.setWorldGuardRegionId(regionId);
 			GameManager.INSTANCE.saveAllGames();
 			CommandUtil.sendMessageToPlayer(player,
-					ChatColor.DARK_GREEN + "Linked arena " + ChatColor.RED + game.getName()
-							+ ChatColor.DARK_GREEN + " to WorldGuard region " + ChatColor.WHITE + regionId
-							+ ChatColor.DARK_GREEN + ". Spawns, hounds, and player containment now use this region.");
+					Colors.DARK_GREEN + "Linked arena " + Colors.RED + game.getName()
+							+ Colors.DARK_GREEN + " to WorldGuard region " + Colors.WHITE + regionId
+							+ Colors.DARK_GREEN + ". Spawns, hounds, and player containment now use this region.");
 			return true;
 		}
 
 		CommandUtil.sendMessageToPlayer(player,
-				ChatColor.RED + "Usage: /zombies setregion <arena> [regionId|none]");
+				Colors.RED + "Usage: /zombies setregion <arena> [regionId|none]");
 		return true;
 	}
 

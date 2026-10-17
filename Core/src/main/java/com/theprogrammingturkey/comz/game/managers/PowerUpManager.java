@@ -1,12 +1,13 @@
 package com.theprogrammingturkey.comz.game.managers;
 
-import com.google.gson.JsonObject;
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.config.CustomConfig;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.game.features.PowerUp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.bukkit.Bukkit;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -15,15 +16,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import com.google.gson.JsonObject;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.config.CustomConfig;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
+import com.theprogrammingturkey.comz.game.features.PowerUp;
 
 public class PowerUpManager
 {
-	public static List<Entity> currentPowerUps = new ArrayList<>();
+	private final List<Entity> currentPowerUps = new ArrayList<>();
 
 	private int dropChance = 0;
 	private final Map<PowerUp, Boolean> powerups = new HashMap<>();
@@ -38,9 +40,18 @@ public class PowerUpManager
 			currentPowerUps.remove(item);
 			item.remove();
 		});
-		displays.values().forEach(Entity::remove);
+		displays.values().forEach(display -> display.remove());
 		displays.clear();
 		powerupTasks.clear();
+	}
+
+	/**
+	 * The power-up items currently dropped in this game. Per-game, so instances
+	 * do not share dropped items.
+	 */
+	public List<Entity> getCurrentPowerUps()
+	{
+		return currentPowerUps;
 	}
 
 
@@ -84,7 +95,7 @@ public class PowerUpManager
 		namePlate.setVisible(false);
 		namePlate.setGravity(false);
 		namePlate.setAI(false);
-		namePlate.setCustomName("30");
+		namePlate.customName(Colors.legacy("30"));
 		namePlate.setCustomNameVisible(true);
 		displays.put(droppedItem, namePlate);
 		currentPowerUps.add(droppedItem);
@@ -104,7 +115,7 @@ public class PowerUpManager
 				}
 
 				time--;
-				namePlate.setCustomName(String.valueOf(time));
+				namePlate.customName(Colors.legacy(String.valueOf(time)));
 				if(time == 0)
 				{
 					namePlate.remove();

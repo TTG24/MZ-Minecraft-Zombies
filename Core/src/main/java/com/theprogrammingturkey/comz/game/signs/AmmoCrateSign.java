@@ -1,6 +1,6 @@
 package com.theprogrammingturkey.comz.game.signs;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -26,7 +26,7 @@ public class AmmoCrateSign implements IGameSign
 	{
 		String cost = lines[2].trim();
 		if(!cost.matches("[0-9]+"))
-			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "Invalid cost?");
+			throw new SignParseException(Colors.RED + "" + Colors.BOLD + "Invalid cost?");
 
 		Map<String, String> data = new HashMap<>();
 		data.put("price", cost);

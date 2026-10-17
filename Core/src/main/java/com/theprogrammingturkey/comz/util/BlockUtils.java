@@ -1,8 +1,5 @@
 package com.theprogrammingturkey.comz.util;
 
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.GameManager;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -12,7 +9,11 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.block.data.type.Sign;
 import org.bukkit.block.data.type.WallSign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.entity.Player;
+
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
 
 public class BlockUtils
 {
@@ -39,7 +40,7 @@ public class BlockUtils
 	public static boolean isZombiesSign(Block block)
 	{
 		return isSign(block) &&
-				ChatColor.stripColor(((org.bukkit.block.Sign) block.getState()).getLine(0)).equalsIgnoreCase("[Zombies]");
+				Colors.plain(((org.bukkit.block.Sign) block.getState()).getSide(Side.FRONT).line(0)).equalsIgnoreCase("[Zombies]");
 	}
 
 	/**
@@ -70,10 +71,9 @@ public class BlockUtils
 	{
 		block.setType(type);
 		BlockData data = block.getBlockData();
-		if(data instanceof MultipleFacing)
+		if(data instanceof MultipleFacing dataFace)
 		{
 			Location loc = block.getLocation();
-			MultipleFacing dataFace = (MultipleFacing) data;
 			dataFace.setFace(BlockFace.NORTH, !loc.add(0, 0, -1).getBlock().isPassable());
 			dataFace.setFace(BlockFace.EAST, !loc.add(1, 0, 1).getBlock().isPassable());
 			dataFace.setFace(BlockFace.SOUTH, !loc.add(-1, 0, 1).getBlock().isPassable());

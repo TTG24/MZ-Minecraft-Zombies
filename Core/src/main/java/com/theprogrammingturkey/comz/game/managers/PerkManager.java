@@ -5,7 +5,7 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.features.PerkType;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -47,13 +47,13 @@ public class PerkManager
 
 		if(playerPerks.contains(type))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You already have " + type + "!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You already have " + type + "!");
 			return false;
 		}
 
 		if(playerPerks.size() >= ConfigManager.getMainConfig().maxPerks)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You can only have " + ConfigManager.getMainConfig().maxPerks + " perks!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You can only have " + ConfigManager.getMainConfig().maxPerks + " perks!");
 			return false;
 		}
 		playerPerks.add(type);

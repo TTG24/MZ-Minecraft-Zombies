@@ -1,5 +1,14 @@
 package com.theprogrammingturkey.comz.game.managers;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.logging.Level;
+
+import org.bukkit.Location;
+import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
+import org.bukkit.block.sign.SignSide;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -12,12 +21,6 @@ import com.theprogrammingturkey.comz.game.signs.JoinSign;
 import com.theprogrammingturkey.comz.game.signs.SignRegistry;
 import com.theprogrammingturkey.comz.game.signs.SignText;
 import com.theprogrammingturkey.comz.util.BlockUtils;
-import org.bukkit.Location;
-import org.bukkit.block.Sign;
-
-import java.util.HashSet;
-import java.util.Set;
-import java.util.logging.Level;
 
 public class SignManager
 {
@@ -32,7 +35,7 @@ public class SignManager
 		JsonElement jsonElement = ConfigManager.getConfig(COMZConfig.SIGNS).getJson();
 		if(jsonElement.isJsonNull())
 		{
-			COMZombies.log.log(Level.SEVERE, "Failed to load in the signs for the arena: " + game.getName());
+			COMZombies.log.log(Level.SEVERE, () -> "Failed to load in the signs for the arena: " + game.getName());
 			return;
 		}
 		JsonObject jsonObject = jsonElement.getAsJsonObject();
@@ -51,7 +54,7 @@ public class SignManager
 
 			if(loc == null)
 			{
-				COMZombies.log.log(Level.SEVERE, "Could not load the sign with json: " + signJson.toString());
+				COMZombies.log.log(Level.SEVERE, () -> "Could not load the sign with json: " + signJson.toString());
 				continue;
 			}
 			gameSigns.add(loc);
@@ -66,7 +69,7 @@ public class SignManager
 		JsonElement jsonElement = config.getJson();
 		if(jsonElement.isJsonNull())
 		{
-			COMZombies.log.log(Level.SEVERE, "Failed to save in the signs for the arena: " + game.getName());
+			COMZombies.log.log(Level.SEVERE, () -> "Failed to save in the signs for the arena: " + game.getName());
 			return;
 		}
 		JsonObject jsonObject = jsonElement.getAsJsonObject();
@@ -128,10 +131,9 @@ public class SignManager
 				continue;
 			Sign sign = (Sign) loc.getBlock().getState();
 			SignRegistry.INSTANCE.remove(loc);
-			sign.setLine(0, "");
-			sign.setLine(1, "");
-			sign.setLine(2, "");
-			sign.setLine(3, "");
+			SignSide front = sign.getSide(Side.FRONT);
+			for(int i = 0; i < 4; i++)
+				front.line(i, net.kyori.adventure.text.Component.empty());
 			sign.update();
 		}
 		gameSigns.clear();

@@ -1,5 +1,6 @@
 package com.theprogrammingturkey.comz.economy;
 
+import com.theprogrammingturkey.comz.config.ConfigManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import org.bukkit.entity.Player;
@@ -18,7 +19,7 @@ public class PointManager
 
 	public void initalizePlayer(Player player)
 	{
-		playersPoints.put(player, new PlayerPoints(player, 500));
+		playersPoints.put(player, new PlayerPoints(player, startingPoints()));
 	}
 
 	public boolean canBuy(Player player, int required)
@@ -71,7 +72,15 @@ public class PointManager
 
 	public int getPlayersPoints(Player player)
 	{
-		return playersPoints.computeIfAbsent(player, k -> new PlayerPoints(k, 500)).getPoints();
+		return playersPoints.computeIfAbsent(player, k -> new PlayerPoints(k, startingPoints())).getPoints();
+	}
+
+	/**
+	 * Starting points from config (default 500).
+	 */
+	private static int startingPoints()
+	{
+		return ConfigManager.getMainConfig().startingPoints;
 	}
 
 	public void saveAll()

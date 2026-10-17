@@ -5,7 +5,7 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.Game.GameStatus;
 import com.theprogrammingturkey.comz.game.GameManager;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class EndCommand extends SubCommand
@@ -32,11 +32,11 @@ public class EndCommand extends SubCommand
 				if(game.getStatus() == GameStatus.INGAME)
 					game.endGame();
 				else
-					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Game is not currently in progress!");
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + "Game is not currently in progress!");
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must either be waiting in a game or specify a game! /z end [arena]");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You must either be waiting in a game or specify a game! /z end [arena]");
 			}
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
@@ -45,11 +45,11 @@ public class EndCommand extends SubCommand
 			if(game.getStatus() == GameStatus.INGAME)
 				game.endGame();
 			else
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Game is not currently in progress!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Game is not currently in progress!");
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No such game!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No such game!");
 		}
 		return true;
 	}

@@ -14,7 +14,7 @@ import com.theprogrammingturkey.comz.game.managers.WeaponManager;
 import com.theprogrammingturkey.comz.game.weapons.Weapon;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ public class Kit
 			Weapon weapon = WeaponManager.getGun(weaponName);
 			if(weapon == null)
 			{
-				Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit weapon: " + weaponName + " is an invalid gun name!");
+				Bukkit.broadcast(Colors.legacy(COMZombies.PREFIX + Colors.RED + "Kit weapon: " + weaponName + " is an invalid gun name!"));
 				continue;
 			}
 			this.weapons.add(weapon);
@@ -65,7 +65,7 @@ public class Kit
 			PerkType perk = PerkType.getPerkType(perkName);
 			if(perk == null)
 			{
-				Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit perk: " + perkName + " is an invalid perk name!");
+				Bukkit.broadcast(Colors.legacy(COMZombies.PREFIX + Colors.RED + "Kit perk: " + perkName + " is an invalid perk name!"));
 				continue;
 			}
 			if(perks.size() < 4)
@@ -80,7 +80,7 @@ public class Kit
 			if(!roundRewardElem.isJsonObject())
 				continue;
 			JsonObject roundRewardJson = roundRewardElem.getAsJsonObject();
-			List<Weapon> weapons = new ArrayList<>();
+			List<Weapon> rewardWeapons = new ArrayList<>();
 			for(JsonElement weaponElem : roundRewardJson.getAsJsonArray("weapons"))
 			{
 				if(!weaponElem.isJsonObject())
@@ -90,13 +90,13 @@ public class Kit
 				Weapon weapon = WeaponManager.getWeapon(weaponName);
 				if(weapon == null)
 				{
-					Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit round reward weapon: " + weaponName + " is an invalid weapon name!");
+					Bukkit.broadcast(Colors.legacy(COMZombies.PREFIX + Colors.RED + "Kit round reward weapon: " + weaponName + " is an invalid weapon name!"));
 					continue;
 				}
-				weapons.add(weapon);
+				rewardWeapons.add(weapon);
 			}
 
-			List<PerkType> perks = new ArrayList<>();
+			List<PerkType> rewardPerks = new ArrayList<>();
 			for(JsonElement perkElem : roundRewardJson.getAsJsonArray("perks"))
 			{
 				if(!perkElem.isJsonObject())
@@ -106,16 +106,16 @@ public class Kit
 				PerkType perk = PerkType.getPerkType(perkName);
 				if(perk == null)
 				{
-					Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + "Kit round reward perk: " + perkName + " is an invalid perk name!");
+					Bukkit.broadcast(Colors.legacy(COMZombies.PREFIX + Colors.RED + "Kit round reward perk: " + perkName + " is an invalid perk name!"));
 					continue;
 				}
-				perks.add(perk);
+				rewardPerks.add(perk);
 			}
 
-			int points = CustomConfig.getInt(roundRewardJson, "points", 0);
+			int rewardPoints = CustomConfig.getInt(roundRewardJson, "points", 0);
 			int roundEnd = CustomConfig.getInt(roundRewardJson, "after_round", 0);
 
-			roundRewards.add(new RoundReward(roundEnd, points, weapons, perks));
+			roundRewards.add(new RoundReward(roundEnd, rewardPoints, rewardWeapons, rewardPerks));
 		}
 	}
 

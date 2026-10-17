@@ -1,10 +1,9 @@
 package com.theprogrammingturkey.comz.game;
 
 import com.theprogrammingturkey.comz.COMZombies;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 /**
@@ -111,7 +110,12 @@ public class AutoStart
 			}
 
 			for(Player player : game.getPlayersInGame())
-				player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(ChatColor.RED + "Starting in: " + remain));
+			{
+				// Translate the legacy ChatColor string to an Adventure component; the String
+				// overload of sendActionBar is deprecated on Paper in favour of the Component one.
+				player.sendActionBar(LegacyComponentSerializer.legacySection()
+						.deserialize(Colors.RED + "Starting in: " + remain));
+			}
 
 			countdownTaskId = COMZombies.scheduleTask(20, this);
 		}

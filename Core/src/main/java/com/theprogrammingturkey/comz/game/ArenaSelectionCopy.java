@@ -1,6 +1,11 @@
 package com.theprogrammingturkey.comz.game;
 
-import com.google.gson.*;
+import java.io.IOException;
+
+import org.bukkit.World;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
@@ -9,9 +14,6 @@ import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
-import com.sk89q.worldedit.session.ClipboardHolder;
-import org.bukkit.World;
-import java.io.IOException;
 
 /** One live map snapshot per template, reused for every slot. Requires WorldEdit or FAWE. */
 public final class ArenaSelectionCopy implements AutoCloseable
@@ -24,7 +26,7 @@ public final class ArenaSelectionCopy implements AutoCloseable
 		// FAWE may back a clipboard with temporary files; ordinary WorldEdit needs no cleanup.
 		if(clipboard instanceof AutoCloseable resource)
 			try { resource.close(); }
-			catch(Exception failure) { com.theprogrammingturkey.comz.COMZombies.log.warning("Could not close arena clipboard: " + failure.getMessage()); }
+			catch(Exception failure) { com.theprogrammingturkey.comz.COMZombies.log.log(java.util.logging.Level.WARNING, () -> "Could not close arena clipboard: " + failure.getMessage()); }
 	}
 
 	public static ArenaSelectionCopy capture(Game template) throws IOException
@@ -80,10 +82,18 @@ public final class ArenaSelectionCopy implements AutoCloseable
 
 	public void paste(World destination) throws IOException
 	{
+		// Pasting with a direct ForwardExtentCopy (clipboard -> world) instead of a
+		// ClipboardHolder is deliberate. A ClipboardHolder is Closeable, and closing it
+		// would call Clipboard.close() on the shared snapshot, releasing FAWE's disk-backed
+		// buffer. This snapshot is pasted once per instance slot, so it must stay open
+		// until every slot is done; only the EditSession is closed here, and the single
+		// shared clipboard is closed exactly once by the caller (ArenaInstances).
 		try(var session = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(destination)))
 		{
-			Operations.complete(new ClipboardHolder(clipboard).createPaste(session)
-					.to(clipboard.getOrigin()).ignoreAirBlocks(false).copyEntities(true).copyBiomes(true).build());
+			ForwardExtentCopy copy = new ForwardExtentCopy(clipboard, clipboard.getRegion(), session, clipboard.getOrigin());
+			copy.setCopyingEntities(true);
+			copy.setCopyingBiomes(true);
+			Operations.complete(copy);
 		}
 		catch(Exception failure) { throw new IOException("Could not paste arena selection", failure); }
 	}

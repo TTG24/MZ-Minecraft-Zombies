@@ -1,10 +1,34 @@
 package com.theprogrammingturkey.comz.config;
 
-import com.theprogrammingturkey.comz.leaderboards.Leaderboard;
 import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.leaderboards.Leaderboard;
 
 public class ConfigSetup
 {
+	/**
+	 * Points a player starts with when they join a game.
+	 */
+	public int startingPoints;
+	/**
+	 * Whether players join a game wearing starting armor.
+	 */
+	public boolean startingArmor;
+	/**
+	 * Starting armor material for the helmet slot ("none" leaves the slot empty).
+	 */
+	public String startingArmorHelmet;
+	/**
+	 * Starting armor material for the chestplate slot ("none" leaves the slot empty).
+	 */
+	public String startingArmorChestplate;
+	/**
+	 * Starting armor material for the leggings slot ("none" leaves the slot empty).
+	 */
+	public String startingArmorLeggings;
+	/**
+	 * Starting armor material for the boots slot ("none" leaves the slot empty).
+	 */
+	public String startingArmorBoots;
 	/**
 	 * Default points when a player shoots a zombie.
 	 */
@@ -87,6 +111,12 @@ public class ConfigSetup
 		fireSaleTimer = plugin.getConfig().getInt("config.gameSettings.fireSaleTimer");
 		maxZombies = (int) plugin.getConfig().getDouble("config.gameSettings.maxZombies");
 		waveSpawnInterval = plugin.getConfig().getInt("config.gameSettings.waveSpawnInterval");
+		startingPoints = plugin.getConfig().getInt("config.gameSettings.startingPoints", 500);
+		startingArmor = plugin.getConfig().getBoolean("config.gameSettings.startingArmor", true);
+		startingArmorHelmet = plugin.getConfig().getString("config.gameSettings.startingArmorMaterials.helmet", "LEATHER_HELMET");
+		startingArmorChestplate = plugin.getConfig().getString("config.gameSettings.startingArmorMaterials.chestplate", "LEATHER_CHESTPLATE");
+		startingArmorLeggings = plugin.getConfig().getString("config.gameSettings.startingArmorMaterials.leggings", "LEATHER_LEGGINGS");
+		startingArmorBoots = plugin.getConfig().getString("config.gameSettings.startingArmorMaterials.boots", "LEATHER_BOOTS");
 		pointsOnHit = plugin.getConfig().getInt("config.gameSettings.defaultPointsOnHit");
 		pointsOnKill = plugin.getConfig().getInt("config.gameSettings.defaultPointsOnKill");
 		maxWave = plugin.getConfig().getInt("config.gameSettings.maxWave");

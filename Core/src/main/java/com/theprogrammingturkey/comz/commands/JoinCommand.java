@@ -6,7 +6,7 @@ import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.GamePlayer;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 import java.util.Map;
@@ -27,12 +27,12 @@ public class JoinCommand extends SubCommand
 			if(gamePlayers.get(player).hasLeftGame())
 				gamePlayers.remove(player);
 			else
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must leave your current game first!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You must leave your current game first!");
 			return true;
 		}
 		if(GameManager.INSTANCE.getGames().isEmpty())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "There are no arenas!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "There are no arenas!");
 			return true;
 		}
 
@@ -63,7 +63,7 @@ public class JoinCommand extends SubCommand
 					com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.enqueue(template, player);
 					return true;
 				}
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No arena available!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No arena available!");
 		}
 		else
 		{
@@ -94,19 +94,19 @@ public class JoinCommand extends SubCommand
 				{
 					if(game.spawnManager.getPoints().isEmpty())
 					{
-						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Arena has no spawn points!");
+						CommandUtil.sendMessageToPlayer(player, Colors.RED + "Arena has no spawn points!");
 						return true;
 					}
 					if(game.maxPlayers <= game.getPlayersInGame().size())
 					{
-						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Game is full!");
+						CommandUtil.sendMessageToPlayer(player, Colors.RED + "Game is full!");
 						return true;
 					}
 					if(COMZPermission.JOIN_ARENA.hasPerm(player, game.getTemplateName()))
 					{
 						com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.cancelQueue(player.getUniqueId());
 						game.addPlayer(player);
-						CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You joined " + game.getName() + "!");
+						CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You joined " + game.getName() + "!");
 						return true;
 					}
 
@@ -117,19 +117,19 @@ public class JoinCommand extends SubCommand
 				{
 					if(game.getStatus() == GameStatus.INGAME)
 					{
-						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + game.getName() + " is already in progress!");
+						CommandUtil.sendMessageToPlayer(player, Colors.RED + game.getName() + " is already in progress!");
 						return true;
 					}
 					else if(game.getStatus() == GameStatus.DISABLED)
 					{
-						CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This arena is disabled!");
+						CommandUtil.sendMessageToPlayer(player, Colors.RED + "This arena is disabled!");
 						return true;
 					}
 				}
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "There is no arena called " + ChatColor.GRAY + args[1]);
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "There is no arena called " + Colors.GRAY + args[1]);
 				return true;
 			}
 		}

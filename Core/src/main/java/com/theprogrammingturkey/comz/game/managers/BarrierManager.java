@@ -11,7 +11,7 @@ import com.theprogrammingturkey.comz.game.features.Barrier;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
 import com.theprogrammingturkey.comz.util.BlockUtils;
 import com.theprogrammingturkey.comz.util.Util;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.Material;
@@ -150,7 +150,7 @@ public class BarrierManager
 	{
 		if(barriers.contains(barrier))
 		{
-			player.sendMessage(ChatColor.DARK_GREEN + "Barrier removed!");
+			player.sendMessage(Colors.DARK_GREEN + "Barrier removed!");
 			barrier.clearRepairSign();
 			barriers.remove(barrier);
 			GameManager.INSTANCE.saveAllGames();

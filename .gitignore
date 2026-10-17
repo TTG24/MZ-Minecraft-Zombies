@@ -13,6 +13,7 @@
 .gradle/
 .idea/
 build/
+build-*.log
 Core/bin/*
 **/bin/
 .vscode/

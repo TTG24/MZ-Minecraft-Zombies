@@ -1,7 +1,7 @@
 package com.theprogrammingturkey.comz.game.features;
 
 import com.theprogrammingturkey.comz.COMZombies;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -30,7 +30,7 @@ public enum PerkType
 	public static PerkType getPerkType(String name)
 	{
 		for(PerkType pt : values())
-			if((ChatColor.GOLD + pt.toString()).equalsIgnoreCase(name) || (pt.toString().toLowerCase().equalsIgnoreCase(name)))
+			if((Colors.GOLD + pt.toString()).equalsIgnoreCase(name) || (pt.toString().toLowerCase().equalsIgnoreCase(name)))
 				return pt;
 		if(name.equalsIgnoreCase("der wunderfizz") || name.equalsIgnoreCase("wunderfizz") || name.equalsIgnoreCase("random"))
 			return DER_WUNDERFIZZ;
@@ -50,44 +50,52 @@ public enum PerkType
 		String Perktype = "";
 		switch(type)
 		{
-			case JUGGERNOG:
+			case JUGGERNOG ->
+			{
 				stack = new ItemStack(Material.CHAINMAIL_CHESTPLATE, 1);
 				Perktype = "Juggernog";
-				break;
-			case SPEED_COLA:
+			}
+			case SPEED_COLA ->
+			{
 				stack = new ItemStack(Material.FEATHER, 1);
 				Perktype = "Speed Cola";
-				break;
-			case QUICK_REVIVE:
+			}
+			case QUICK_REVIVE ->
+			{
 				stack = new ItemStack(Material.GLISTERING_MELON_SLICE, 1);
 				Perktype = "Quick Revive";
-				break;
-			case DOUBLE_TAP:
+			}
+			case DOUBLE_TAP ->
+			{
 				stack = new ItemStack(Material.REPEATER, 1);
 				Perktype = "Double Tap";
-				break;
-			case STAMIN_UP:
+			}
+			case STAMIN_UP ->
+			{
 				stack = new ItemStack(Material.SUGAR, 1);
 				Perktype = "Stamina Up";
-				break;
-			case PHD_FLOPPER:
+			}
+			case PHD_FLOPPER ->
+			{
 				stack = new ItemStack(Material.FIRE_CHARGE);
 				Perktype = "PHD Flopper";
-				break;
-			case DEADSHOT_DAIQ:
+			}
+			case DEADSHOT_DAIQ ->
+			{
 				stack = new ItemStack(Material.GUNPOWDER);
 				Perktype = "Deadshot Daiquiri";
-				break;
-			case MULE_KICK:
+			}
+			case MULE_KICK ->
+			{
 				stack = new ItemStack(Material.STRING);
 				Perktype = "Mule Kick";
-				break;
-			case ELECTRIC_C:
+			}
+			case ELECTRIC_C ->
+			{
 				stack = new ItemStack(Material.NETHER_STAR);
 				Perktype = "Electric Cherry";
-				break;
-			default:
-				break;
+			}
+			default -> {}
 		}
 		player.getInventory().setItem(slot, setItemMeta(stack, Perktype));
 		player.updateInventory();
@@ -102,7 +110,7 @@ public enum PerkType
 	private ItemStack setItemMeta(ItemStack item, String type)
 	{
 		ItemMeta data = item.getItemMeta();
-		data.setDisplayName(type);
+		data.displayName(Colors.legacy(type));
 		item.setItemMeta(data);
 		return item;
 	}
@@ -112,35 +120,16 @@ public enum PerkType
 		ItemStack stack = new ItemStack(Material.AIR, 1);
 		switch(type)
 		{
-			case JUGGERNOG:
-				stack = new ItemStack(Material.CHAINMAIL_CHESTPLATE, 1);
-				break;
-			case SPEED_COLA:
-				stack = new ItemStack(Material.FEATHER, 1);
-				break;
-			case QUICK_REVIVE:
-				stack = new ItemStack(Material.GLISTERING_MELON_SLICE, 1);
-				break;
-			case DOUBLE_TAP:
-				stack = new ItemStack(Material.REPEATER, 1);
-				break;
-			case STAMIN_UP:
-				stack = new ItemStack(Material.SUGAR, 1);
-				break;
-			case PHD_FLOPPER:
-				stack = new ItemStack(Material.FIRE_CHARGE);
-				break;
-			case DEADSHOT_DAIQ:
-				stack = new ItemStack(Material.GUNPOWDER);
-				break;
-			case MULE_KICK:
-				stack = new ItemStack(Material.STRING);
-				break;
-			case ELECTRIC_C:
-				stack = new ItemStack(Material.NETHER_STAR);
-				break;
-			default:
-				break;
+			case JUGGERNOG -> stack = new ItemStack(Material.CHAINMAIL_CHESTPLATE, 1);
+			case SPEED_COLA -> stack = new ItemStack(Material.FEATHER, 1);
+			case QUICK_REVIVE -> stack = new ItemStack(Material.GLISTERING_MELON_SLICE, 1);
+			case DOUBLE_TAP -> stack = new ItemStack(Material.REPEATER, 1);
+			case STAMIN_UP -> stack = new ItemStack(Material.SUGAR, 1);
+			case PHD_FLOPPER -> stack = new ItemStack(Material.FIRE_CHARGE);
+			case DEADSHOT_DAIQ -> stack = new ItemStack(Material.GUNPOWDER);
+			case MULE_KICK -> stack = new ItemStack(Material.STRING);
+			case ELECTRIC_C -> stack = new ItemStack(Material.NETHER_STAR);
+			default -> {}
 		}
 		return stack;
 	}

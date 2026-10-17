@@ -6,7 +6,7 @@ import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.actions.SpawnsEditAction;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class EditZSpawnCommand extends SubCommand
@@ -32,7 +32,7 @@ public class EditZSpawnCommand extends SubCommand
 		}
 		else if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena to edit the spawns of!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please specify an arena to edit the spawns of!");
 		}
 		else
 		{
@@ -40,7 +40,7 @@ public class EditZSpawnCommand extends SubCommand
 			Game game = GameManager.INSTANCE.getGame(arena);
 			if(game == null)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + arena + " is not a valid arena! Type /z la for a list of arenas!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + arena + " is not a valid arena! Type /z la for a list of arenas!");
 				return true;
 			}
 

@@ -7,11 +7,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class GameStartEvent extends Event
 {
 
+	@NotNull
 	private static final HandlerList handlers = new HandlerList();
 	private final Game game;
 
@@ -30,7 +31,8 @@ public class GameStartEvent extends Event
 		return game;
 	}
 
-	@Nonnull
+	@NotNull
+	@Override
 	public HandlerList getHandlers()
 	{
 		return handlers;

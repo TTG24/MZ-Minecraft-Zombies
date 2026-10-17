@@ -1,11 +1,14 @@
 package com.theprogrammingturkey.comz.game.weapons;
 
+import java.util.List;
+
 import com.google.gson.JsonObject;
 import com.theprogrammingturkey.comz.config.CustomConfig;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 
 public class Weapon
 {
@@ -48,7 +51,9 @@ public class Weapon
 		if(modelData != -1)
 		{
 			ItemMeta itemMeta = stack.getItemMeta();
-			itemMeta.setCustomModelData(this.modelData);
+			CustomModelDataComponent cmdc = itemMeta.getCustomModelDataComponent();
+			cmdc.setFloats(List.of((float) this.modelData));
+			itemMeta.setCustomModelDataComponent(cmdc);
 			stack.setItemMeta(itemMeta);
 		}
 		return stack;

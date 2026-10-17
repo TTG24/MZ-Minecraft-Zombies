@@ -1,26 +1,25 @@
 package com.theprogrammingturkey.comz.game.managers;
 
 import java.util.HashMap;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Iterator;
 
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.game.features.Door;
 import com.theprogrammingturkey.comz.game.features.Barrier;
-import org.bukkit.block.Block;
+import com.theprogrammingturkey.comz.game.features.Door;
+import com.theprogrammingturkey.comz.util.Colors;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+
 
 /**
  * Shows actionbar tooltips for nearby doors, barriers and machines using the swap-hand key (F).
@@ -60,15 +59,7 @@ public class DoorProximityManager
 		Barrier barrier = door == null ? getNearBarrier(player) : null;
 		NearbyTarget target = null;
 		if(door != null)
-		{
-			List<Location> anchors = new ArrayList<>(door.getSignsLocations());
-			anchors.addAll(door.getBlockLocations());
-			double distance = Double.POSITIVE_INFINITY;
-			for(Location anchor : anchors)
-				if(player.getWorld().equals(anchor.getWorld()))
-					distance = Math.min(distance, anchor.distanceSquared(player.getLocation()));
-			target = new NearbyTarget(door, null, null, distance);
-		}
+			target = new NearbyTarget(door, null, null, minAnchorDistance(door, player.getLocation()));
 		else if(barrier != null)
 			target = new NearbyTarget(null, barrier, null, barrierDistanceSquared(barrier, player));
 		MachineProximityManager.Target machine = MachineProximityManager.nearest(game, player);
@@ -146,7 +137,10 @@ public class DoorProximityManager
 
 	private void checkProximity()
 	{
-		updateRepairs();
+		// Repairs are the only part that needs work when nobody is mid-repair, so skip the
+		// whole update pass in the common case where no player is actively repairing.
+		if(!repairs.isEmpty())
+			updateRepairs();
 		if(!COMZombies.getPlugin().getConfig().getBoolean("config.doorProximity.enabled", true)
 				&& !COMZombies.getPlugin().getConfig().getBoolean("config.barrierProximity.enabled", true)
 				&& !COMZombies.getPlugin().getConfig().getBoolean("config.interaction.power.enabled", true)
@@ -199,24 +193,64 @@ public class DoorProximityManager
 		}
 	}
 
-	private Door nearestDoor(Game game, Player player, double radiusSq)
+	/**
+	 * Lowest squared distance from the player to any of the door's anchors (its sign or blocks).
+	 * Anchors in another world are ignored; returns {@link Double#POSITIVE_INFINITY} when no anchor
+	 * shares the player's world.
+	 *
+	 * @param door the door whose anchors to measure against
+	 * @param playerLoc the player's location (its world identifies which anchors count)
+	 * @return the minimum squared distance, or infinity if no anchor is in the player's world
+	 */
+	public static double minAnchorDistance(Door door, Location playerLoc)
+	{
+		double distance = Double.POSITIVE_INFINITY;
+		for(Location anchor : door.getSignsLocations())
+			if(playerLoc.getWorld().equals(anchor.getWorld()))
+				distance = Math.min(distance, anchor.distanceSquared(playerLoc));
+		for(Location anchor : door.getBlockLocations())
+			if(playerLoc.getWorld().equals(anchor.getWorld()))
+				distance = Math.min(distance, anchor.distanceSquared(playerLoc));
+		return distance;
+	}
+
+	/**
+	 * Finds the nearest unopened door to the player within {@code radiusSq}.
+	 *
+	 * <p>Each door is measured from its sign and its blocks, only in the player's world. A door
+	 * qualifies if any anchor is within {@code radiusSq}; on a tie the first qualifying door wins
+	 * (the same ordering the original per-anchor selection produced).
+	 *
+	 * @param doors the candidate doors, in iteration order
+	 * @param playerLoc the player's location (its world identifies which anchors count)
+	 * @param radiusSq the maximum squared distance at which a door still counts
+	 * @return the nearest qualifying door, or null if none qualify
+	 */
+	public static Door nearestDoorIn(List<Door> doors, Location playerLoc, double radiusSq)
 	{
 		double best = radiusSq;
 		Door bestDoor = null;
-
-		for(Door door : game.doorManager.getDoors())
+		for(Door door : doors)
 		{
 			if(door.isOpened())
 				continue;
-			// Measure from either the sign or any door block.
-			List<Location> anchors = new ArrayList<>(door.getSignsLocations());
-			anchors.addAll(door.getBlockLocations());
-
-			for(Location anchor : anchors)
+			// Measure from either the sign or any door block, only in the player's world.
+			for(Location anchor : door.getSignsLocations())
 			{
-				if(anchor.getWorld() == null || anchor.getWorld() != player.getWorld())
+				if(anchor.getWorld() == null || anchor.getWorld() != playerLoc.getWorld())
 					continue;
-				double d = anchor.distanceSquared(player.getLocation());
+				double d = anchor.distanceSquared(playerLoc);
+				if(d <= best)
+				{
+					best = d;
+					bestDoor = door;
+				}
+			}
+			for(Location anchor : door.getBlockLocations())
+			{
+				if(anchor.getWorld() == null || anchor.getWorld() != playerLoc.getWorld())
+					continue;
+				double d = anchor.distanceSquared(playerLoc);
 				if(d <= best)
 				{
 					best = d;
@@ -225,6 +259,11 @@ public class DoorProximityManager
 			}
 		}
 		return bestDoor;
+	}
+
+	private Door nearestDoor(Game game, Player player, double radiusSq)
+	{
+		return nearestDoorIn(game.doorManager.getDoors(), player.getLocation(), radiusSq);
 	}
 
 	/**
@@ -238,7 +277,7 @@ public class DoorProximityManager
 		String path = "config.doorProximity.tooltip.";
 		int price = door.getCost();
 
-		String priceText = ChatColor.translateAlternateColorCodes('&',
+		String priceText = Colors.translateAlternateColorCodes('&',
 				COMZombies.getPlugin().getConfig().getString(path + "price", "&e{price}"));
 		priceText = priceText.replace("{price}", String.valueOf(price));
 
@@ -257,8 +296,10 @@ public class DoorProximityManager
 	private String format(String path, String def, String key, String priceText)
 	{
 		String value = COMZombies.getPlugin().getConfig().getString(path, def);
+		if(value == null)
+			value = def;
 		value = value.replace("{key}", key).replace("{price}", priceText);
-		return ChatColor.translateAlternateColorCodes('&', value);
+		return Colors.translateAlternateColorCodes('&', value);
 	}
 
 	private boolean gameIsPowered(Player player)
@@ -282,16 +323,8 @@ public class DoorProximityManager
 		Door door = nearestDoor(game, player, radius * radius);
 		Barrier barrier = getNearBarrier(player);
 		if(door != null && barrier != null)
-		{
-			List<Location> anchors = new ArrayList<>(door.getSignsLocations());
-			anchors.addAll(door.getBlockLocations());
-			double distance = Double.POSITIVE_INFINITY;
-			for(Location anchor : anchors)
-				if(player.getWorld().equals(anchor.getWorld()))
-					distance = Math.min(distance, anchor.distanceSquared(player.getLocation()));
-			if(barrierDistanceSquared(barrier, player) <= distance)
+			if(barrierDistanceSquared(barrier, player) <= minAnchorDistance(door, player.getLocation()))
 				return null;
-		}
 		return door;
 	}
 
@@ -381,8 +414,10 @@ public class DoorProximityManager
 				? "&aRepairing one stage per second &7- Press {key} to stop"
 				: "&aPress {key} to start repairing &7- 1 stage per second");
 		String key = getKeyLabel();
-		return ChatColor.translateAlternateColorCodes('&', COMZombies.getPlugin().getConfig()
-				.getString(path + state, fallback).replace("{key}", key));
+		String tooltip = COMZombies.getPlugin().getConfig().getString(path + state, fallback);
+		if(tooltip == null)
+			tooltip = fallback;
+		return Colors.translateAlternateColorCodes('&', tooltip.replace("{key}", key));
 	}
 
 	/**
@@ -394,18 +429,18 @@ public class DoorProximityManager
 	{
 		if(door.isOpened())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This door is already open!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This door is already open!");
 			return false;
 		}
 		if(door.requiresPower() && !gameIsPowered(player))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This door requires power to open!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This door requires power to open!");
 			return false;
 		}
 		int points = PointManager.INSTANCE.getPlayerPoints(player).getPoints();
 		if(!door.canOpen(points))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have enough points!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You don't have enough points!");
 			return false;
 		}
 
@@ -413,7 +448,7 @@ public class DoorProximityManager
 		door.playerDoorOpenSound();
 		PointManager.INSTANCE.takePoints(player, door.getCost());
 		PointManager.INSTANCE.notifyPlayer(player);
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Door opened!");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Door opened!");
 
 		// Door is open now — clear the tooltip
 		nearDoors.remove(player);
@@ -431,6 +466,10 @@ public class DoorProximityManager
 	private void sendActionbar(Player player, String message)
 	{
 		if(player.isValid())
-			player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+		{
+			// Translate the legacy ChatColor string to an Adventure component; the String
+			// overload of sendActionBar is deprecated on Paper in favour of the Component one.
+			player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(message));
+		}
 	}
 }

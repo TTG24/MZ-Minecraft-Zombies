@@ -1,5 +1,13 @@
 package com.theprogrammingturkey.comz.game.managers;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
+
+import org.bukkit.entity.Player;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.theprogrammingturkey.comz.COMZombies;
@@ -11,15 +19,9 @@ import com.theprogrammingturkey.comz.game.weapons.BasicGun;
 import com.theprogrammingturkey.comz.game.weapons.PackAPunchGun;
 import com.theprogrammingturkey.comz.game.weapons.Weapon;
 import com.theprogrammingturkey.comz.game.weapons.WeaponType;
+import com.theprogrammingturkey.comz.util.ApiCompat;
+import com.theprogrammingturkey.comz.util.Colors;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 public class WeaponManager
 {
@@ -35,25 +37,33 @@ public class WeaponManager
 	 * Gets a gun based off of the name given
 	 *
 	 * @param name to get gun from
-	 * @return gun based off the name
+	 * @return gun based off the name, or a usable default if no gun matches
 	 */
 	public static BaseGun getGun(String name)
 	{
-		//TODO: Default gun
-		//LOL this line length xD
-		return weapons.stream().filter(weapon -> weapon instanceof BaseGun && (weapon.getName().equalsIgnoreCase(name))).map(weapon -> (BaseGun) weapon).findFirst().orElse(null);
+		return weapons.stream().filter(weapon -> weapon instanceof BaseGun && (weapon.getName().equalsIgnoreCase(name))).map(weapon -> (BaseGun) weapon).findFirst().orElseGet(WeaponManager::defaultGun);
 	}
 
 	/**
 	 * Gets a weapon based off of the name given
 	 *
 	 * @param name to get weapon from
-	 * @return weapon based off the name
+	 * @return weapon based off the name, or a usable default if no weapon matches
 	 */
 	public static Weapon getWeapon(String name)
 	{
-		//TODO: Default gun
-		return weapons.stream().filter(weapon -> weapon.getName().equalsIgnoreCase(name)).findFirst().orElse(null);
+		return weapons.stream().filter(weapon -> weapon.getName().equalsIgnoreCase(name)).findFirst().orElseGet(WeaponManager::defaultGun);
+	}
+
+	/** Builds a minimal usable gun so a misconfigured weapon name degrades gracefully instead of throwing. */
+	private static BaseGun defaultGun()
+	{
+		BaseGun fallback = new BasicGun("Unnamed", WeaponType.SPECIAL);
+		fallback.clipAmmo = 1;
+		fallback.fireDelay = 5;
+		fallback.distance = 30;
+		fallback.sound = ApiCompat.getSound("BLOCK_LAVA_POP");
+		return fallback;
 	}
 
 	public static Weapon getRandomWeapon(boolean includePackaPunch, PlayerWeaponManager playerWeaponManager)
@@ -70,23 +80,23 @@ public class WeaponManager
 	public static void listGuns(Player player)
 	{
 		List<BaseGun> guns = weapons.stream().filter(weapon -> weapon instanceof BaseGun).map(weapon -> (BaseGun) weapon).collect(Collectors.toList());
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "---------" + ChatColor.RED + " Guns " + ChatColor.DARK_GREEN + "----------");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " Guns " + Colors.DARK_GREEN + "----------");
 		if(guns.isEmpty())
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You have no guns! Make sure MinecraftZombies can read from your " + ChatColor.GRAY + "guns.json");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You have no guns! Make sure MinecraftZombies can read from your " + Colors.GRAY + "guns.json");
 
 		WeaponType gunClass = guns.get(0).getWeaponType();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + gunClass.toString());
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + gunClass.toString());
 		for(BaseGun gun : guns)
 		{
 			if(gunClass == gun.getWeaponType())
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "  " + gun.getName());
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "     Ammo: " + gun.clipAmmo + "/" + gun.totalAmmo);
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "     Damage: " + gun.damage);
+				CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "  " + gun.getName());
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "     Ammo: " + gun.clipAmmo + "/" + gun.totalAmmo);
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "     Damage: " + gun.damage);
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + gun.getWeaponType().toString());
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + gun.getWeaponType().toString());
 				gunClass = gun.getWeaponType();
 			}
 		}

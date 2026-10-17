@@ -1,17 +1,28 @@
 package com.theprogrammingturkey.comz.game;
 
-import com.google.gson.JsonObject;
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.game.signs.SignRegistry;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.logging.Level;
+
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.util.*;
-import java.util.logging.Level;
+import com.google.gson.JsonObject;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.game.signs.SignRegistry;
 
 /** Fixed, reusable match worlds. The source arena stays available for editing only. */
 public final class ArenaInstances
@@ -24,8 +35,7 @@ public final class ArenaInstances
 	private static <T> void copyGameRule(World source, World destination, org.bukkit.GameRule<T> rule)
 	{
 		if(rule == null) return;
-		T value = source.getGameRuleValue(rule);
-		if(value != null) destination.setGameRule(rule, value);
+		destination.setGameRule(rule, source.getGameRuleValue(rule));
 	}
 
 	public boolean hasQueue(String template)
@@ -73,6 +83,19 @@ public final class ArenaInstances
 				match.addPlayer(player);
 				player.sendMessage(COMZombies.PREFIX + "You joined " + match.getName() + "!");
 			}
+		// Drop templates whose queue has fully drained and stop the recurring task
+		// when no players remain queued, so it does not keep ticking every 20 ticks.
+		queues.values().removeIf(Set::isEmpty);
+		if(queues.isEmpty()) stopQueueTask();
+	}
+
+	private void stopQueueTask()
+	{
+		if(queueTask != -1)
+		{
+			Bukkit.getScheduler().cancelTask(queueTask);
+			queueTask = -1;
+		}
 	}
 
 	public void loadPools()
@@ -85,19 +108,25 @@ public final class ArenaInstances
 				continue;
 			if(!template.arena.isSetupComplete() || template.spawnManager.getPoints().isEmpty())
 			{
-				COMZombies.log.warning("Cannot create instances for incomplete arena " + template.getName());
+				COMZombies.log.log(Level.WARNING, "Cannot create instances for incomplete arena {0}", new Object[]{template.getName()});
 				continue;
 			}
 			boolean worldGuard = Bukkit.getPluginManager().isPluginEnabled("WorldGuard");
 			if(template.arena.getWorldGuardRegionId() != null && !worldGuard)
 			{
-				COMZombies.log.warning("WorldGuard must be enabled to prepare linked arena " + template.getName());
+				COMZombies.log.log(Level.WARNING, "WorldGuard must be enabled to prepare linked arena {0}", new Object[]{template.getName()});
 				continue;
 			}
-			if(!Bukkit.getPluginManager().isPluginEnabled("WorldEdit") && !Bukkit.getPluginManager().isPluginEnabled("FastAsyncWorldEdit"))
+			boolean fawe = Bukkit.getPluginManager().isPluginEnabled("FastAsyncWorldEdit");
+			boolean worldEdit = Bukkit.getPluginManager().isPluginEnabled("WorldEdit");
+			if(!fawe && !worldEdit)
 			{
-				COMZombies.log.severe("Arena selection copies require WorldEdit or FastAsyncWorldEdit: " + template.getName());
+				COMZombies.log.log(Level.SEVERE, "Arena instances require FastAsyncWorldEdit (recommended) or WorldEdit: {0}", new Object[]{template.getName()});
 				continue;
+			}
+			if(!fawe)
+			{
+				COMZombies.log.log(Level.WARNING, "FastAsyncWorldEdit is recommended for {0}: arena copies will use WorldEdit and run synchronously on the main thread.", new Object[]{template.getName()});
 			}
 			World source = template.getWorld();
 			ArenaSelectionCopy snapshot;
@@ -114,7 +143,7 @@ public final class ArenaInstances
 				String name = template.getName() + "~" + slot;
 				if(GameManager.INSTANCE.getGames().stream().anyMatch(g -> g.getName().equalsIgnoreCase(name)))
 				{
-					COMZombies.log.warning("Instance name conflicts with existing arena: " + name);
+					COMZombies.log.log(Level.WARNING, "Instance name conflicts with existing arena: {0}", new Object[]{name});
 					continue;
 				}
 				String id = UUID.nameUUIDFromBytes(template.getName().toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8)).toString();
@@ -154,7 +183,7 @@ public final class ArenaInstances
 						throw new IOException("Could not load instance configuration " + name);
 					GameManager.INSTANCE.addGame(match);
 					SignRegistry.INSTANCE.copyToInstance(template, match);
-					COMZombies.log.info("Prepared " + name + " in " + worldName);
+					COMZombies.log.log(Level.INFO, "Prepared {0} in {1}", new Object[]{name, worldName});
 				}
 				catch(Exception | LinkageError failure)
 				{
@@ -177,7 +206,7 @@ public final class ArenaInstances
 				String name = "mz_instance_" + owner + "_" + slot;
 				if(Bukkit.getWorld(name) != null)
 				{
-					COMZombies.log.warning("Cannot remove loaded instance " + name + "; retry after restart.");
+					COMZombies.log.log(Level.WARNING, "Cannot remove loaded instance {0}; retry after restart.", new Object[]{name});
 					continue;
 				}
 				Path destination = InstanceWorldFiles.destination(container, Bukkit.getWorlds().getFirst().getWorldFolder().toPath(), name);
@@ -189,7 +218,7 @@ public final class ArenaInstances
 						if(Files.exists(path, LinkOption.NOFOLLOW_LINKS))
 						{
 							InstanceWorldFiles.deleteOwned(template.getWorld().getWorldFolder().toPath(), path, owner);
-							COMZombies.log.info("Removed disabled arena instance " + path);
+							COMZombies.log.log(Level.INFO, "Removed disabled arena instance {0}", new Object[]{path});
 						}
 				}
 				catch(IOException failure) { COMZombies.log.log(Level.WARNING, "Could not remove instance " + name, failure); }
@@ -201,8 +230,7 @@ public final class ArenaInstances
 	/** Called after matches end, before replacing game objects or disabling the plugin. */
 	public void shutdown()
 	{
-		if(queueTask != -1) Bukkit.getScheduler().cancelTask(queueTask);
-		queueTask = -1;
+		stopQueueTask();
 		for(Set<UUID> queue : queues.values())
 			for(UUID id : queue)
 			{
@@ -219,7 +247,7 @@ public final class ArenaInstances
 			if(Bukkit.unloadWorld(world, false))
 				it.remove();
 			else
-				COMZombies.log.severe("Could not unload instance world " + world.getName() + "; it will not be overwritten.");
+				COMZombies.log.log(Level.SEVERE, "Could not unload instance world {0}; it will not be overwritten.", new Object[]{world.getName()});
 		}
 	}
 }

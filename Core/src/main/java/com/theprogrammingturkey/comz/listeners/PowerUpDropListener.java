@@ -1,5 +1,13 @@
 package com.theprogrammingturkey.comz.listeners;
 
+import com.theprogrammingturkey.comz.util.Colors;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.inventory.ItemStack;
+
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.config.ConfigManager;
 import com.theprogrammingturkey.comz.economy.PointManager;
@@ -8,45 +16,38 @@ import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.features.Barrier;
 import com.theprogrammingturkey.comz.game.features.PowerUp;
 import com.theprogrammingturkey.comz.game.managers.PlayerWeaponManager;
-import com.theprogrammingturkey.comz.game.managers.PowerUpManager;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.inventory.ItemStack;
+
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public class PowerUpDropListener implements Listener
 {
 	@EventHandler
 	private void onPowerUpPickup(EntityPickupItemEvent event)
 	{
-		if(event.getEntity() instanceof Player)
+		if(event.getEntity() instanceof Player player)
 		{
-			Player player = (Player) event.getEntity();
 			final Item eItem = event.getItem();
+
+			final Game game = GameManager.INSTANCE.getGame(player);
+			if(game == null)
+				return;
 
 			if(!GameManager.INSTANCE.isPlayerInGame(player))
 			{
-				if(PowerUpManager.currentPowerUps.contains(event.getItem()))
+				if(game.powerUpManager.getCurrentPowerUps().contains(event.getItem()))
 					event.setCancelled(true);
 				return;
 			}
-			else if(!PowerUpManager.currentPowerUps.contains(event.getItem()))
+			else if(!game.powerUpManager.getCurrentPowerUps().contains(event.getItem()))
 			{
 				event.setCancelled(true);
 				return;
 			}
 
-			final Game game = GameManager.INSTANCE.getGame(player);
-
 			event.getItem().remove();
 			event.setCancelled(true);
 
-			PowerUpManager.currentPowerUps.remove(event.getItem());
+			game.powerUpManager.getCurrentPowerUps().remove(event.getItem());
 
 			ItemStack item = event.getItem().getItemStack();
 			PowerUp powerUp = PowerUp.getPowerUpForMaterial(item.getType());
@@ -60,25 +61,30 @@ public class PowerUpDropListener implements Listener
 			int duration = -1;
 			switch(powerUp)
 			{
-				case MAX_AMMO:
+				case MAX_AMMO ->
+				{
 					for(Player pl : game.getPlayersInGame())
 					{
 						PlayerWeaponManager manager = game.getPlayersWeapons(pl);
 						manager.maxAmmo();
 					}
-					break;
-				case INSTA_KILL:
-					if(game.isInstaKill())
-						break;
-					game.setInstaKill(true);
-					duration = ConfigManager.getMainConfig().instaKillTimer * 20;
-					game.scheduleMatchTask(duration, () -> game.setInstaKill(false));
-					break;
-				case CARPENTER:
+				}
+				case INSTA_KILL ->
+				{
+					if(!game.isInstaKill())
+					{
+						game.setInstaKill(true);
+						duration = ConfigManager.getMainConfig().instaKillTimer * 20;
+						game.scheduleMatchTask(duration, () -> game.setInstaKill(false));
+					}
+				}
+				case CARPENTER ->
+				{
 					for(Barrier barrier : game.barrierManager.getBarriers())
 						barrier.repairFull();
-					break;
-				case NUKE:
+				}
+				case NUKE ->
+				{
 					for(Player pl : game.getPlayersInGame())
 					{
 						if(game.isDoublePoints())
@@ -88,30 +94,35 @@ public class PowerUpDropListener implements Listener
 						PointManager.INSTANCE.notifyPlayer(pl);
 					}
 					game.spawnManager.nuke();
-					break;
-				case DOUBLE_POINTS:
-					if(game.isDoublePoints())
-						break;
-					game.setDoublePoints(true);
-					duration = ConfigManager.getMainConfig().doublePointsTimer * 20;
-					game.scheduleMatchTask(duration, () -> game.setDoublePoints(false));
-					break;
-				case FIRE_SALE:
-					if(game.isFireSale())
-						break;
-					game.setFireSale(true);
-					game.boxManager.FireSale();
-					duration = ConfigManager.getMainConfig().fireSaleTimer * 20;
-					game.scheduleMatchTask(duration, () ->
+				}
+				case DOUBLE_POINTS ->
+				{
+					if(!game.isDoublePoints())
 					{
-						game.setFireSale(false);
+						game.setDoublePoints(true);
+						duration = ConfigManager.getMainConfig().doublePointsTimer * 20;
+						game.scheduleMatchTask(duration, () -> game.setDoublePoints(false));
+					}
+				}
+				case FIRE_SALE ->
+				{
+					if(!game.isFireSale())
+					{
+						game.setFireSale(true);
 						game.boxManager.FireSale();
-					});
-					break;
-				default:
+						duration = ConfigManager.getMainConfig().fireSaleTimer * 20;
+						game.scheduleMatchTask(duration, () ->
+						{
+							game.setFireSale(false);
+							game.boxManager.FireSale();
+						});
+					}
+				}
+				default ->
+				{
 					player.updateInventory();
 					COMZombies.scheduleTask(5, () -> player.getInventory().removeItem(eItem.getItemStack()));
-					break;
+				}
 			}
 
 			if(duration != -1)
@@ -128,8 +139,10 @@ public class PowerUpDropListener implements Listener
 	{
 		if(!GameManager.INSTANCE.isPlayerInGame(player))
 			return;
-
-		player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(ChatColor.RED + powerUp.getDisplay() + ": " + (duration / 20)));
+		// Translate the legacy ChatColor string to an Adventure component; the String
+		// overload of sendActionBar is deprecated on Paper in favour of the Component one.
+		player.sendActionBar(LegacyComponentSerializer.legacySection()
+				.deserialize(Colors.RED + powerUp.getDisplay() + ": " + (duration / 20)));
 		COMZombies.scheduleTask(20, () ->
 		{
 			if(duration - 20 > 0)
@@ -141,7 +154,7 @@ public class PowerUpDropListener implements Listener
 	{
 		for(Player pl : game.getPlayersInGame())
 		{
-			pl.sendMessage(ChatColor.RED + powerUp.getDisplay() + "!");
+			pl.sendMessage(Colors.RED + powerUp.getDisplay() + "!");
 			pl.playSound(pl.getLocation(), powerUp.getSound(), 1, 1);
 		}
 	}

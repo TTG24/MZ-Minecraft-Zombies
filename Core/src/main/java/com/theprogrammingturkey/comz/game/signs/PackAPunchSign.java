@@ -1,6 +1,6 @@
 package com.theprogrammingturkey.comz.game.signs;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -48,7 +48,7 @@ public class PackAPunchSign implements IGameSign
 	{
 		if(game.hasPower() && !game.isPowered())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must turn on the power before you can Pack-a-Punch!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You must turn on the power before you can Pack-a-Punch!");
 			PerkType.noPower(player);
 			return;
 		}
@@ -56,7 +56,7 @@ public class PackAPunchSign implements IGameSign
 		PlayerWeaponManager manager = game.getPlayersWeapons(player);
 		if(manager == null || !manager.isHeldItemGun())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must hold the gun you want to Pack-a-Punch!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You must hold the gun you want to Pack-a-Punch!");
 			return;
 		}
 
@@ -67,11 +67,11 @@ public class PackAPunchSign implements IGameSign
 		{
 			if(gun.isPackOfPunched())
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Your " + ChatColor.GRAY + gun.getType().getName() + ChatColor.RED + " is already Pack-a-Punched!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Your " + Colors.GRAY + gun.getType().getName() + Colors.RED + " is already Pack-a-Punched!");
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Your " + ChatColor.RED + gun.getType().getName() + ChatColor.DARK_GREEN + " was Pack-a-Punched!");
+				CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Your " + Colors.RED + gun.getType().getName() + Colors.DARK_GREEN + " was Pack-a-Punched!");
 				player.getWorld().playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1, 1);
 				gun.setPackOfPunch();
 				PointManager.INSTANCE.takePoints(player, cost);
@@ -80,7 +80,7 @@ public class PackAPunchSign implements IGameSign
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You do not have enough points to Pack-a-Punch your " + gun.getType().getName() + "!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You do not have enough points to Pack-a-Punch your " + gun.getType().getName() + "!");
 		}
 	}
 

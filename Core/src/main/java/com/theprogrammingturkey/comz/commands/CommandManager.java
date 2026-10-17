@@ -2,14 +2,9 @@ package com.theprogrammingturkey.comz.commands;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
-
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
@@ -20,8 +15,9 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
+import com.theprogrammingturkey.comz.util.Colors;
 
-public class CommandManager implements CommandExecutor, TabExecutor
+public class CommandManager implements TabExecutor
 {
 	public static final CommandManager INSTANCE = new CommandManager();
 	private final HashMap<String, SubCommand> commandList = new HashMap<>();
@@ -227,7 +223,7 @@ public class CommandManager implements CommandExecutor, TabExecutor
 	}
 
 	@Override
-	public boolean onCommand(@Nonnull CommandSender sender, Command cmd, @Nonnull String label, @Nonnull String[] args)
+	public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args)
 	{
 		String command = cmd.getName();
 		if(command.equalsIgnoreCase("zombies"))
@@ -242,8 +238,8 @@ public class CommandManager implements CommandExecutor, TabExecutor
 
 			if(args.length == 0)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "MinecraftZombies" + ChatColor.GRAY + " by " + ChatColor.RED + "TTG24" + ChatColor.GRAY + ", based on Call of Minecraft: Zombies by " + ChatColor.RED + "IModZombies4Fun, Turkey2349 and Smeths" + ChatColor.GRAY + "!");
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type /zombies help for a list of commands!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "MinecraftZombies" + Colors.GRAY + " by " + Colors.RED + "TTG24" + Colors.GRAY + ", based on Call of Minecraft: Zombies by " + Colors.RED + "IModZombies4Fun, Turkey2349 and Smeths" + Colors.GRAY + "!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type /zombies help for a list of commands!");
 				return true;
 			}
 			else if(args[0].equalsIgnoreCase("setround"))
@@ -256,11 +252,11 @@ public class CommandManager implements CommandExecutor, TabExecutor
 
 				for(int i = 0; i < Integer.parseInt(args[2]); i++)
 					arena.nextWave();
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Setting wave to: " + ChatColor.RED + args[2]);
+				CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Setting wave to: " + Colors.RED + args[2]);
 			}
 			else if(args[0].equalsIgnoreCase("version"))
 			{
-				CommandUtil.sendMessageToPlayer(player, COMZombies.getPlugin().getDescription().getVersion());
+				CommandUtil.sendMessageToPlayer(player, COMZombies.getPlugin().getPluginMeta().getVersion());
 				return true;
 			}
 
@@ -284,13 +280,13 @@ public class CommandManager implements CommandExecutor, TabExecutor
 			if(commandList.containsKey(args[0].toLowerCase()))
 				this.commandList.get(args[0].toLowerCase()).onCommand(player, args);
 			else
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No such command! Type /zombies help for a list of commands!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "No such command! Type /zombies help for a list of commands!");
 		}
 		return false;
 	}
 
 	@Override
-	public List<String> onTabComplete(@Nonnull CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args)
+	public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args)
 	{
 		if(args.length == 1)
 		{
@@ -300,7 +296,7 @@ public class CommandManager implements CommandExecutor, TabExecutor
 				String commandName = entry.getKey().toLowerCase();
 				SubCommand subCommand = entry.getValue();
 				return commandName.startsWith(args[0]) && (player == null || subCommand.permission == null || subCommand.permission.hasPerm(player));
-			}).map(Map.Entry::getKey).collect(Collectors.toList());
+			}).map(entry -> entry.getKey()).collect(Collectors.toList());
 		}
 		else if(args.length > 1)
 		{

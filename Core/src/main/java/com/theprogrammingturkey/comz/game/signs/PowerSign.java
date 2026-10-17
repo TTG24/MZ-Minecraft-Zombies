@@ -3,7 +3,7 @@ package com.theprogrammingturkey.comz.game.signs;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -43,11 +43,11 @@ public class PowerSign implements IGameSign
 		{
 			if(game.isPowered())
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "The power is already on!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "The power is already on!");
 				return;
 			}
 			game.turnOnPower();
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Power on!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Power on!");
 		}
 		// Refresh the sign to reflect the new state
 		Block block = location.getBlock();

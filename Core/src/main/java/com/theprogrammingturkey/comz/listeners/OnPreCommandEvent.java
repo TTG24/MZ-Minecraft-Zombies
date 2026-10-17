@@ -2,7 +2,7 @@ package com.theprogrammingturkey.comz.listeners;
 
 import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.game.GameManager;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -26,7 +26,7 @@ public class OnPreCommandEvent implements Listener
 			}
 			if(GameManager.INSTANCE.isPlayerInGame(player))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You are not allowed to use commands in game!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You are not allowed to use commands in game!");
 				event.setCancelled(true);
 			}
 		}

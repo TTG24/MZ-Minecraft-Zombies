@@ -1,16 +1,21 @@
 package com.theprogrammingturkey.comz.game;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Dependency-free regression checks, run by Gradle's check task. */
-public final class InstanceWorldFilesTest
+class InstanceWorldFilesTest
 {
-	public static void main(String[] args) throws Exception
+	@TempDir
+	Path root;
+
+	@Test
+	void copyingUuidIsolationResetAndOwnershipGuards() throws Exception
 	{
-		Path root = Files.createTempDirectory(Path.of(args[0]), "instance-files-");
-		try
-		{
 			Path source = Files.createDirectory(root.resolve("template"));
 			String instanceName = "mz_instance_01234567-89ab-cdef_1";
 			check(InstanceWorldFiles.destination(root, source, instanceName).equals(root.resolve(instanceName)), "Legacy world destination");
@@ -80,18 +85,9 @@ public final class InstanceWorldFilesTest
 			InstanceWorldFiles.deleteOwned(source, copy, "owner");
 			check(Files.exists(source.resolve("region/r.0.0.mca")), "Cleanup preserves the original arena world");
 			check(Files.exists(unrelated.resolve("important")), "Cleanup preserves unowned folders");
-			InstanceWorldFiles.deleteOwned(source, expected, "owner");
-			InstanceWorldFiles.deleteOwned(source, legacy, "owner");
-			check(!Files.exists(expected) && !Files.exists(legacy), "Unified and legacy instance folders removed");
-			System.out.println("PASS: instance copying, UUID isolation, reset, stale chunk cleanup, ownership and overlap guards");
-		}
-		finally
-		{
-			try(var paths = Files.walk(root))
-			{
-				for(Path file : paths.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(file);
-			}
-		}
+		InstanceWorldFiles.deleteOwned(source, expected, "owner");
+		InstanceWorldFiles.deleteOwned(source, legacy, "owner");
+		check(!Files.exists(expected) && !Files.exists(legacy), "Unified and legacy instance folders removed");
 	}
 
 	private static void check(boolean result, String message)

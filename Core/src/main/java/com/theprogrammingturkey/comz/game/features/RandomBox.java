@@ -1,11 +1,10 @@
 package com.theprogrammingturkey.comz.game.features;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -33,7 +32,7 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class RandomBox
 {
-	public static Map<RandomBox, Integer> boxes = new HashMap<>();
+	private int activeTask = -1;
 	private int teddyVelocityTask = -1;
 	private final Location boxLoc;
 	private final BlockFace facing;
@@ -74,16 +73,16 @@ public class RandomBox
 
 		if(!PointManager.INSTANCE.canBuy(player, pointsNeeded))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have enough points!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You don't have enough points!");
 			return;
 		}
 
 		chestLocation = null;
-		for(BlockFace facing : BlockFace.values())
+		for(BlockFace face : BlockFace.values())
 		{
-			if(boxLoc.clone().add(facing.getModX(), facing.getModY(), facing.getModZ()).getBlock().getType().equals(Material.CHEST))
+			if(boxLoc.clone().add(face.getModX(), face.getModY(), face.getModZ()).getBlock().getType().equals(Material.CHEST))
 			{
-				chestLocation = boxLoc.clone().add(facing.getModX(), facing.getModY(), facing.getModZ());
+				chestLocation = boxLoc.clone().add(face.getModX(), face.getModY(), face.getModZ());
 				break;
 			}
 		}
@@ -107,7 +106,7 @@ public class RandomBox
 		namePlate.setVisible(false);
 		namePlate.setGravity(false);
 		namePlate.setAI(false);
-		namePlate.setCustomName(weapon.getName());
+		namePlate.customName(Colors.legacy(weapon.getName()));
 		namePlate.setCustomNameVisible(true);
 
 		PointManager.INSTANCE.takePoints(player, pointsNeeded);
@@ -117,6 +116,7 @@ public class RandomBox
 		{
 			int time = 10;
 
+			@Override
 			public void run()
 			{
 				item.setTicksLived(5960);
@@ -128,19 +128,19 @@ public class RandomBox
 					{
 						weapon = WeaponManager.getRandomWeapon(false, boxGame.getPlayersWeapons(player));
 						item.setItemStack(weapon.getStack());
-						namePlate.setCustomName(weapon.getName());
+						namePlate.customName(Colors.legacy(weapon.getName()));
 						player.getWorld().playSound(boxLoc, Sound.BLOCK_NOTE_BLOCK_HARP, 1f, 1f);
 					}
 					else if(time == 0)
 					{
 						if(!boxGame.isFireSale() && !boxGame.boxManager.isMultiBox() && boxGame.getTeddyBearPercent() != 0 && COMZombies.rand.nextInt(boxGame.getTeddyBearPercent()) == 0)
 						{
-							CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Teddy Bear!!!!!!");
+							CommandUtil.sendMessageToPlayer(player, Colors.RED + "Teddy Bear!!!!!!");
 							item.setItemStack(new ItemStack(Material.TOTEM_OF_UNDYING));
-							namePlate.setCustomName("");
+							namePlate.customName(Component.empty());
 							namePlate.setCustomNameVisible(false);
 							item.setGravity(false);
-							item.setCustomName("Teddy Bear");
+							item.customName(Colors.legacy("Teddy Bear"));
 							item.setCustomNameVisible(true);
 							isTeddyBear = true;
 
@@ -168,14 +168,14 @@ public class RandomBox
 					}
 					else if(!isTeddyBear)
 					{
-							namePlate.setCustomName(weapon.getName() + " (" + (20 + time) + ")");
+							namePlate.customName(Colors.legacy(weapon.getName() + " (" + (20 + time) + ")"));
 					}
 					time--;
 				}
 			}
 		});
 
-		boxes.put(this, taskID);
+		activeTask = taskID;
 	}
 
 	public boolean canActivate()
@@ -207,9 +207,11 @@ public class RandomBox
 			namePlate.remove();
 		if(chestLocation != null)
 			COMZombies.nmsUtil.playChestAction(chestLocation, false);
-		Integer id = RandomBox.boxes.remove(RandomBox.this);
-		if(id != null)
-			Bukkit.getScheduler().cancelTask(id);
+		if(activeTask != -1)
+		{
+			Bukkit.getScheduler().cancelTask(activeTask);
+			activeTask = -1;
+		}
 		running = false;
 
 		if(!boxGame.boxManager.isMultiBox() && !boxGame.isFireSale() && boxGame.boxManager.getCurrentbox() != this)
@@ -220,7 +222,7 @@ public class RandomBox
 	{
 		if(boxLoc == null)
 		{
-			Bukkit.getServer().broadcastMessage("Mystery box " + this.getId() + " is broken and has no location!");
+			Bukkit.getServer().broadcast(Colors.legacy("Mystery box " + this.getId() + " is broken and has no location!"));
 			return;
 		}
 

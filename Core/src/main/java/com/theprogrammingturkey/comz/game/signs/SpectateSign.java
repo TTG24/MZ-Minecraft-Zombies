@@ -3,7 +3,7 @@ package com.theprogrammingturkey.comz.game.signs;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -25,7 +25,7 @@ public class SpectateSign implements IGameSign
 		String name = lines[2].equalsIgnoreCase("Arena:") ? lines[3] : lines[2];
 		Game arena = GameManager.INSTANCE.getGame(name);
 		if(arena == null)
-			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "Arena name is", ChatColor.RED + "" + ChatColor.BOLD + "not a valid", ChatColor.RED + "" + ChatColor.BOLD + "arena!");
+			throw new SignParseException(Colors.RED + "" + Colors.BOLD + "Arena name is", Colors.RED + "" + Colors.BOLD + "not a valid", Colors.RED + "" + Colors.BOLD + "arena!");
 
 		Map<String, String> data = new HashMap<>();
 		data.put("arena", arena.getName());
@@ -38,7 +38,7 @@ public class SpectateSign implements IGameSign
 		game = GameManager.INSTANCE.getGame(data.get("arena"));
 		if(game == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Invalid Arena!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Invalid Arena!");
 			return;
 		}
 		player.performCommand("zombies spec " + game.getName());

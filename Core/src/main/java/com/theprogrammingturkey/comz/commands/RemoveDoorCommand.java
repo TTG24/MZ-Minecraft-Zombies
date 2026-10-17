@@ -6,7 +6,7 @@ import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.actions.DoorRemoveAction;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class RemoveDoorCommand extends SubCommand
@@ -32,14 +32,14 @@ public class RemoveDoorCommand extends SubCommand
 		}
 		else if(args.length < 2)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena to remove a door from!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please specify an arena to remove a door from!");
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
 			Game game = GameManager.INSTANCE.getGame(args[1]);
 			if(game.doorManager.getDoors().isEmpty())
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This arena has no doors!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "This arena has no doors!");
 				return true;
 			}
 
@@ -47,7 +47,7 @@ public class RemoveDoorCommand extends SubCommand
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + args[2] + " is not a valid arena!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + args[2] + " is not a valid arena!");
 		}
 
 		return true;

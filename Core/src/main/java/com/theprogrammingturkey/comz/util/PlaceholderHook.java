@@ -9,8 +9,7 @@ import com.theprogrammingturkey.comz.leaderboards.StatsCategory;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.UUID;
 
 public class PlaceholderHook extends PlaceholderExpansion
@@ -47,10 +46,11 @@ public class PlaceholderHook extends PlaceholderExpansion
 	 * @return The name of the author as a String.
 	 */
 	@Override
-	@Nonnull
+	@NotNull
+	@SuppressWarnings("null")
 	public String getAuthor()
 	{
-		return COMZombies.getPlugin().getDescription().getAuthors().toString();
+		return COMZombies.getPlugin().getPluginMeta().getAuthors().toString();
 	}
 
 	/**
@@ -63,7 +63,7 @@ public class PlaceholderHook extends PlaceholderExpansion
 	 * @return The identifier in {@code %<identifier>_<value>%} as String.
 	 */
 	@Override
-	@Nonnull
+	@NotNull
 	public String getIdentifier()
 	{
 		return "comz";
@@ -78,10 +78,11 @@ public class PlaceholderHook extends PlaceholderExpansion
 	 * @return The version as a String.
 	 */
 	@Override
-	@Nonnull
+	@NotNull
+	@SuppressWarnings("null")
 	public String getVersion()
 	{
-		return COMZombies.getPlugin().getDescription().getVersion();
+		return COMZombies.getPlugin().getPluginMeta().getVersion();
 	}
 
 	/**
@@ -146,12 +147,10 @@ public class PlaceholderHook extends PlaceholderExpansion
 			{
 				switch(parts[2])
 				{
-					case "status":
-						return game.getName() + " - " + game.getStatus().name();
-					case "wave":
-						return game.getName() + " - " + game.getWave();
-					case "players":
-						return game.getName() + " - " + game.getPlayersInGame().size() + "/" + game.maxPlayers;
+					case "status" -> { return game.getName() + " - " + game.getStatus().name(); }
+					case "wave" -> { return game.getName() + " - " + game.getWave(); }
+					case "players" -> { return game.getName() + " - " + game.getPlayersInGame().size() + "/" + game.maxPlayers; }
+					default -> {}
 				}
 			}
 		}
@@ -161,46 +160,31 @@ public class PlaceholderHook extends PlaceholderExpansion
 
 	private String getStatForCategory(StatsCategory category, PlayerStats stats)
 	{
-		switch(category)
+		return switch(category)
 		{
-			case KILLS:
-				return String.valueOf(stats.getKills());
-			case REVIVES:
-				return String.valueOf(stats.getRevives());
-			case DEATHS:
-				return String.valueOf(stats.getDeaths());
-			case DOWNS:
-				return String.valueOf(stats.getDowns());
-			case GAMES_PLAYED:
-				return String.valueOf(stats.getGamesPlayed());
-			case HIGHEST_ROUND:
-				return String.valueOf(stats.getHighestRound());
-			case MOST_POINTS:
-				return String.valueOf(stats.getMostPoints());
-			default:
-				return "";
-		}
+			case KILLS -> String.valueOf(stats.getKills());
+			case REVIVES -> String.valueOf(stats.getRevives());
+			case DEATHS -> String.valueOf(stats.getDeaths());
+			case DOWNS -> String.valueOf(stats.getDowns());
+			case GAMES_PLAYED -> String.valueOf(stats.getGamesPlayed());
+			case HIGHEST_ROUND -> String.valueOf(stats.getHighestRound());
+			case MOST_POINTS -> String.valueOf(stats.getMostPoints());
+			default -> "";
+		};
 	}
 
 	private StatsCategory getStatEnumFromString(String toGet)
 	{
 		switch(toGet)
 		{
-			case "kills":
-				return StatsCategory.KILLS;
-			case "revives":
-				return StatsCategory.REVIVES;
-			case "deaths":
-				return StatsCategory.DEATHS;
-			case "downs":
-				return StatsCategory.DOWNS;
-			case "gamesPlayed":
-				return StatsCategory.GAMES_PLAYED;
-			case "highestRound":
-				return StatsCategory.HIGHEST_ROUND;
-			case "mostPoints":
-				return StatsCategory.MOST_POINTS;
+			case "kills" -> { return StatsCategory.KILLS; }
+			case "revives" -> { return StatsCategory.REVIVES; }
+			case "deaths" -> { return StatsCategory.DEATHS; }
+			case "downs" -> { return StatsCategory.DOWNS; }
+			case "gamesPlayed" -> { return StatsCategory.GAMES_PLAYED; }
+			case "highestRound" -> { return StatsCategory.HIGHEST_ROUND; }
+			case "mostPoints" -> { return StatsCategory.MOST_POINTS; }
+			default -> { return StatsCategory.KILLS; }
 		}
-		return StatsCategory.KILLS;
 	}
 }

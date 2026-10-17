@@ -1,16 +1,16 @@
 package com.theprogrammingturkey.comz.listeners;
 
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.Game.GameStatus;
-import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.game.managers.PowerUpManager;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.Game.GameStatus;
+import com.theprogrammingturkey.comz.game.GameManager;
 
 public class OnOutsidePlayerInteractEvent implements Listener
 {
@@ -32,7 +32,7 @@ public class OnOutsidePlayerInteractEvent implements Listener
 
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{
-			if(!PowerUpManager.currentPowerUps.contains(e.getEntity()))
+			if(!game.powerUpManager.getCurrentPowerUps().contains(e.getItem()))
 			{
 				e.getItem().remove();
 				return;
@@ -58,7 +58,7 @@ public class OnOutsidePlayerInteractEvent implements Listener
 
 			event.setCancelled(true);
 			if(!GameManager.INSTANCE.isPlayerInGame(player))
-				player.sendMessage(ChatColor.RED + "Do not drop items in this arena!");
+				player.sendMessage(Colors.RED + "Do not drop items in this arena!");
 		}
 	}
 }

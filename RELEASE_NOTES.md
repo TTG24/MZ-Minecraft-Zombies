@@ -1,3 +1,48 @@
+# MinecraftZombies 1.2.1
+
+## Configurable starting armor
+
+- New `config.gameSettings.startingArmor` (default `true`) controls whether players join
+  wearing the default unbreakable leather armor. Set it to `false` so players start with no
+  armor at all. Perks that grant armor, such as the Juggernog chainmail chestplate, are
+  unaffected. The setting is re-read on `/zombies reload`, and applies when players join.
+
+## Optional lobby warp
+
+- The lobby warp (`lw`) is no longer required when setting up an arena. Only the game warp
+  (`gw`) and spectator warp (`sw`) are mandatory; without a lobby, players wait at the game
+  warp before the match.
+- Type `rlw` during arena setup to remove a lobby from an existing arena; players then wait at
+  the game warp. `/zombies info` shows "(using game spawn)" for the lobby line when none is set.
+- Arena saves omit the lobby entry when unset, and remain compatible with existing saves.
+- Arenas with a lobby keep their previous behavior exactly.
+
+## Instant start with spawn freeze
+
+- Arenas without a lobby have no pre-game holding spot, so they now start immediately once
+  the minimum number of players have joined, skipping the configured start countdown.
+- At the start, players are frozen in place for 3 seconds: they can still look around, but
+  walking, sprinting and jumping snap them back to their spawn spot. Arenas with a lobby are
+  unaffected.
+
+## Internal
+
+- Door/barrier proximity distance checks extracted into pure, unit-tested helpers with 9 new
+  automated tests covering anchor distance, world filtering, radius boundaries and tie-breaks.
+
+## Upgrade
+
+Stop the server, replace the previous plugin JAR with **MinecraftZombies-1.2.1.jar**, and restart.
+Keep only one MinecraftZombies JAR installed. Existing arena settings remain;
+`startingArmor` defaults to `true`, so current behavior is unchanged unless you opt in.
+Apply lobby changes with a restart or `/zombies reload` between games; reload ends active games.
+
+## Validation
+
+The full Gradle build and automated checks pass, including the new proximity geometry tests.
+The spawn freeze was confirmed in-game by the server owner (players can look around but cannot
+move or jump). Optional-lobby setup and instant start were verified against a lobby-less arena.
+
 # MinecraftZombies 1.2
 
 ## Arena instances

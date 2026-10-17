@@ -4,7 +4,7 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class LeaveCommand extends SubCommand
@@ -26,19 +26,19 @@ public class LeaveCommand extends SubCommand
 
 		if(game == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You are not in a game!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You are not in a game!");
 			return true;
 		}
 
 		if(game.isPlayerSpectating(player))
 		{
 			game.removeSpectator(player);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "You are no longer spectating!");
+			CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "You are no longer spectating!");
 		}
 		else if(game.isPlayerPlaying(player))
 		{
 			game.removePlayer(player);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "You have left the game!");
+			CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "You have left the game!");
 		}
 
 		return true;

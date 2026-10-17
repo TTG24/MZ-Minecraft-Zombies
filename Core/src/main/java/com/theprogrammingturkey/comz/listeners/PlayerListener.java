@@ -9,7 +9,7 @@ import com.theprogrammingturkey.comz.game.features.DownedPlayer;
 import com.theprogrammingturkey.comz.game.features.PerkType;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -47,7 +47,7 @@ public class PlayerListener implements Listener
 		if(game == null)
 			return;
 		if(game.wasDisconnected(player))
-			CommandUtil.sendClickableMessageToPlayer(player, ChatColor.RED + "You can reconnect to your last game with /z rejoin or ", "CLICK HERE", "/z rejoin");
+			CommandUtil.sendClickableMessageToPlayer(player, Colors.RED + "You can reconnect to your last game with /z rejoin or ", "CLICK HERE", "/z rejoin");
 	}
 
 	@EventHandler
@@ -86,7 +86,7 @@ public class PlayerListener implements Listener
 			if(game.getStatus() == Game.GameStatus.INGAME)
 			{
 				player.teleport(game.arena.getPlayerTPLocation());
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please do not leave the arena!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please do not leave the arena!");
 			}
 		}
 
@@ -103,7 +103,7 @@ public class PlayerListener implements Listener
 		{
 			if(downedPlayer.isPlayerDown() && change.lengthSquared() > DEAD_ZONE)
 			{
-				player.sendMessage(ChatColor.RED + "You Moved! You are no longer reviving " + downedPlayer.getPlayer().getName());
+				player.sendMessage(Colors.RED + "You Moved! You are no longer reviving " + downedPlayer.getPlayer().getName());
 				downedPlayer.cancelRevive();
 			}
 		}
@@ -226,8 +226,8 @@ public class PlayerListener implements Listener
 
 		if(GameManager.INSTANCE.isPlayerInGame(reviver))
 		{
-			reviver.sendMessage(ChatColor.GRAY + "You are reviving " + clickedPlayer.getName());
-			clickedPlayer.sendMessage(ChatColor.GRAY + "You are being revived by " + reviver.getName() + "!");
+			reviver.sendMessage(Colors.GRAY + "You are reviving " + clickedPlayer.getName());
+			clickedPlayer.sendMessage(Colors.GRAY + "You are being revived by " + reviver.getName() + "!");
 			downedPlayer.startRevive(reviver);
 			event.setCancelled(true);
 		}

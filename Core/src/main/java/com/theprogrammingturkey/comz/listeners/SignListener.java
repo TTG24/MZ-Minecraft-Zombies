@@ -4,9 +4,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -83,8 +85,9 @@ public class SignListener implements Listener
 
 		// Old-style signs, recognised by "[Zombies]" on the first line
 		String[] lines = new String[4];
+		org.bukkit.block.sign.SignSide front = sign.getSide(Side.FRONT);
 		for(int i = 0; i < 4; i++)
-			lines[i] = ChatColor.stripColor(sign.getLine(i)).trim();
+			lines[i] = Colors.plain(front.line(i)).trim();
 
 		IGameSign logic = lines[0].equalsIgnoreCase("[Zombies]") ? GameSigns.fromName(lines[1]) : null;
 		if(logic == null || !logic.isRegistered() || (logic.requiresGame() && game == null))
@@ -146,22 +149,23 @@ public class SignListener implements Listener
 	@EventHandler
 	public void RightClickSign(PlayerInteractEvent event)
 	{
-		if(event.getClickedBlock() == null)
+		org.bukkit.block.Block clickedBlock = event.getClickedBlock();
+		if(clickedBlock == null)
 			return;
 
 		COMZombies plugin = COMZombies.getPlugin();
 
-		if(BlockUtils.isSign(event.getClickedBlock().getType()))
+		if(BlockUtils.isSign(clickedBlock.getType()))
 		{
-			Sign sign = (Sign) event.getClickedBlock().getState();
+			Sign sign = (Sign) clickedBlock.getState();
 			Player player = event.getPlayer();
 
 			if(GameManager.INSTANCE.isPlayerInGame(player))
 			{
 				// We don't want to cancel the event if this case so that barrier signs can work
-				if(event.getAction() != Action.LEFT_CLICK_BLOCK || !BlockUtils.isBarrierRepairSign(event.getClickedBlock(), player))
+				if(event.getAction() != Action.LEFT_CLICK_BLOCK || !BlockUtils.isBarrierRepairSign(clickedBlock, player))
 				{
-					sign.setEditable(false);
+					sign.setWaxed(true);
 					sign.update();
 					event.setCancelled(true);
 				}
@@ -176,7 +180,7 @@ public class SignListener implements Listener
 			{
 				if(!plugin.isEditingASign.containsKey(player) && !GameManager.INSTANCE.isPlayerInGame(player))
 				{
-					plugin.isEditingASign.put(player, event.getClickedBlock().getLocation());
+					plugin.isEditingASign.put(player, clickedBlock.getLocation());
 					CommandUtil.sendMessageToPlayer(player, "You are now editing a sign!");
 					return;
 				}
@@ -202,8 +206,8 @@ public class SignListener implements Listener
 		String[] lines = new String[4];
 		for(int i = 0; i < 4; i++)
 		{
-			String line = event.getLine(i);
-			lines[i] = line == null ? "" : ChatColor.stripColor(line).trim();
+			Component line = event.line(i);
+			lines[i] = line == null ? "" : Colors.plain(line).trim();
 		}
 
 		if(!lines[0].equalsIgnoreCase("[Zombies]"))
@@ -214,19 +218,19 @@ public class SignListener implements Listener
 		IGameSign signLogic = GameSigns.fromName(lines[1]);
 		if(signLogic == null)
 		{
-			event.setLine(0, ChatColor.RED + String.valueOf(ChatColor.BOLD) + lines[1]);
-			event.setLine(1, ChatColor.RED + String.valueOf(ChatColor.BOLD) + "is not a");
-			event.setLine(2, ChatColor.RED + String.valueOf(ChatColor.BOLD) + "valid sign");
-			event.setLine(3, "");
+			event.line(0, Colors.legacy(Colors.RED + String.valueOf(Colors.BOLD) + lines[1]));
+			event.line(1, Colors.legacy(Colors.RED + String.valueOf(Colors.BOLD) + "is not a"));
+			event.line(2, Colors.legacy(Colors.RED + String.valueOf(Colors.BOLD) + "valid sign"));
+			event.line(3, Component.empty());
 			return;
 		}
 
 		if(game == null && signLogic.requiresGame())
 		{
-			event.setLine(0, ChatColor.RED + String.valueOf(ChatColor.BOLD) + "Sign is");
-			event.setLine(1, ChatColor.RED + String.valueOf(ChatColor.BOLD) + "not in");
-			event.setLine(2, ChatColor.RED + String.valueOf(ChatColor.BOLD) + "an arena!");
-			event.setLine(3, "");
+			event.line(0, Colors.legacy(Colors.RED + String.valueOf(Colors.BOLD) + "Sign is"));
+			event.line(1, Colors.legacy(Colors.RED + String.valueOf(Colors.BOLD) + "not in"));
+			event.line(2, Colors.legacy(Colors.RED + String.valueOf(Colors.BOLD) + "an arena!"));
+			event.line(3, Component.empty());
 			return;
 		}
 
@@ -240,11 +244,11 @@ public class SignListener implements Listener
 			String[] text = signLogic.getText(data);
 			if(text != null)
 				for(int i = 0; i < 4; i++)
-					event.setLine(i, text[i]);
+					event.line(i, Colors.legacy(text[i]));
 		} catch(SignParseException e)
 		{
 			for(int i = 0; i < 4; i++)
-				event.setLine(i, e.getLines()[i]);
+				event.line(i, Colors.legacy(e.getLines()[i]));
 		}
 	}
 }

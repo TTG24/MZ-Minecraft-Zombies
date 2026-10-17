@@ -4,7 +4,7 @@ import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class DisableCommand extends SubCommand
@@ -25,7 +25,7 @@ public class DisableCommand extends SubCommand
 
 		if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Incorrect usage! Please use /zombies disable [arena]");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Incorrect usage! Please use /zombies disable [arena]");
 			return true;
 		}
 		else
@@ -35,18 +35,18 @@ public class DisableCommand extends SubCommand
 				Game game = GameManager.INSTANCE.getGame(args[1]);
 				if(game == null)
 				{
-					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "That arena does not exist!");
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + "That arena does not exist!");
 				}
 				else
 				{
 					game.setDisabled();
-					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Arena " + game.getName() + " has been disabled!");
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + "Arena " + game.getName() + " has been disabled!");
 					return true;
 				}
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "That arena does not exist!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "That arena does not exist!");
 			}
 		}
 		return true;

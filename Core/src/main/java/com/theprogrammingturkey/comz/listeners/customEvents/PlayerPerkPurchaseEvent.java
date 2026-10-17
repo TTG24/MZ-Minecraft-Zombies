@@ -5,10 +5,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class PlayerPerkPurchaseEvent extends Event
 {
+	@NotNull
 	private static final HandlerList handlers = new HandlerList();
 	private final Player player;
 	private final PerkType perk;
@@ -29,7 +30,8 @@ public class PlayerPerkPurchaseEvent extends Event
 		return player;
 	}
 
-	@Nonnull
+	@NotNull
+	@Override
 	public HandlerList getHandlers()
 	{
 		return handlers;

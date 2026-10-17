@@ -1,6 +1,6 @@
 package com.theprogrammingturkey.comz.game.weapons;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -66,7 +66,7 @@ public class WeaponInstance
 		newStack.setAmount(totalAmmo);
 		ItemMeta data = newStack.getItemMeta();
 		if(data != null)
-			data.setDisplayName(ChatColor.DARK_GREEN + "" + baseWeapon.getName());
+			data.displayName(Colors.legacy(Colors.DARK_GREEN + "" + baseWeapon.getName()));
 		newStack.setItemMeta(data);
 
 		player.getInventory().setItem(slot, newStack);

@@ -1,6 +1,6 @@
 package com.theprogrammingturkey.comz.game.signs;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -45,18 +45,18 @@ public class GrenadeSign implements IGameSign
 		{
 			if(manager.hasFullGrenades())
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You already have grenades!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You already have grenades!");
 				return;
 			}
 
 			manager.addWeapon(w);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Bought grenades!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Bought grenades!");
 			PointManager.INSTANCE.takePoints(player, buyPoints);
 			PointManager.INSTANCE.notifyPlayer(player);
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have enough points!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You don't have enough points!");
 		}
 	}
 

@@ -3,7 +3,7 @@ package com.theprogrammingturkey.comz.commands;
 import com.theprogrammingturkey.comz.game.features.PerkType;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class PerksCommand extends SubCommand
@@ -22,9 +22,9 @@ public class PerksCommand extends SubCommand
 			return true;
 		}
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "The following perks are available:\n");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "The following perks are available:\n");
 		for(PerkType perk : PerkType.values())
-			player.sendMessage(ChatColor.GRAY + "- " + perk.name());
+			player.sendMessage(Colors.GRAY + "- " + perk.name());
 
 		return true;
 	}

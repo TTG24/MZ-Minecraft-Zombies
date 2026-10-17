@@ -1,6 +1,6 @@
 package com.theprogrammingturkey.comz.game.signs;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -29,11 +29,11 @@ public class GunSign implements IGameSign
 	{
 		String gunName = lines[2];
 		if(gunName.isEmpty())
-			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "No gun?");
+			throw new SignParseException(Colors.RED + "" + Colors.BOLD + "No gun?");
 
 		BaseGun gunType = WeaponManager.getGun(gunName);
 		if(gunType == null)
-			throw new SignParseException(ChatColor.RED + "Invalid Gun!");
+			throw new SignParseException(Colors.RED + "Invalid Gun!");
 
 		// Typed as "buy / refill", e.g. "500/250"
 		String buyPrice = "200";
@@ -77,13 +77,13 @@ public class GunSign implements IGameSign
 			if(PointManager.INSTANCE.canBuy(player, refillPoints))
 			{
 				manager.getGun(gunType).maxAmmo();
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Filling ammo!");
+				CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Filling ammo!");
 				PointManager.INSTANCE.takePoints(player, refillPoints);
 				PointManager.INSTANCE.notifyPlayer(player);
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have enough points!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You don't have enough points!");
 			}
 		}
 		else
@@ -91,7 +91,7 @@ public class GunSign implements IGameSign
 			int slot = manager.getCorrectSlot(gunType);
 			if(PointManager.INSTANCE.canBuy(player, buyPoints))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You got the " + ChatColor.RED + gunType.getName() + ChatColor.DARK_GREEN + "!");
+				CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You got the " + Colors.RED + gunType.getName() + Colors.DARK_GREEN + "!");
 				manager.removeWeapon(manager.getGun(slot));
 				manager.addWeapon(gunType.getNewInstance(player, slot));
 				player.getLocation().getWorld().playSound(player.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1, 1);
@@ -100,7 +100,7 @@ public class GunSign implements IGameSign
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have enough points!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You don't have enough points!");
 			}
 		}
 	}

@@ -3,7 +3,7 @@ package com.theprogrammingturkey.comz.game.managers;
 import java.util.Map;
 import java.util.Set;
 
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -141,7 +141,7 @@ public class MachineProximityManager
 			fallback = "&cNeed {missing} more points &7- {price} points";
 		}
 		String message = COMZombies.getPlugin().getConfig().getString("config.interaction." + target.type() + ".tooltip." + state, fallback);
-		return ChatColor.translateAlternateColorCodes('&', message.replace("{key}", key)
+		return Colors.translateAlternateColorCodes('&', message.replace("{key}", key)
 				.replace("{price}", String.valueOf(cost)).replace("{missing}", String.valueOf(Math.max(0, cost - points)))
 				.replace("{perk}", name));
 	}

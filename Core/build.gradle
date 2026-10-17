@@ -3,7 +3,7 @@ import org.apache.tools.ant.filters.ReplaceTokens
 apply plugin: 'idea'
 apply plugin: 'maven-publish'
 
-archivesBaseName = "MinecraftZombies"
+base.archivesName.set("MinecraftZombies")
 
 repositories {
     mavenCentral()
@@ -12,17 +12,55 @@ repositories {
     maven { url 'https://oss.sonatype.org/content/repositories/central' }
     maven { url 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
     maven { url 'https://repo.enginehub.org/repo/' }
+    maven { url 'https://repo.papermc.io/repository/maven-public/' }
     maven { url 'https://jitpack.io' }
 }
 
 dependencies {
-    implementation project(':API')
-    implementation project(':Compat')
+    // paper-api is the single provider of the org.bukkit / spigot-api capability in Core.
+    // The API module is compiled against an older spigot-api for compatibility, but that
+    // transitive jar would conflict with paper-api's capability, so exclude it here.
+    implementation(project(':API')) {
+        exclude group: 'org.spigotmc'
+    }
+    implementation(project(':Compat')) {
+        exclude group: 'org.spigotmc'
+    }
     compileOnly "com.github.MilkBowl:VaultAPI:1.7.1"
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
-    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
-    testImplementation 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
-    implementation group: 'org.spigotmc', name: 'spigot-api', version: '26.3-R0.1-SNAPSHOT'
+    // WorldGuard supplies protection APIs. Its transitive standard WorldEdit (worldedit-bukkit
+    // AND worldedit-core, pulled via worldguard-core) is excluded across the whole subtree so
+    // FAWE is the sole provider of the com.sk89q.worldedit package on the compile classpath.
+    compileOnly('com.sk89q.worldguard:worldguard-bukkit:7.0.9') {
+        exclude group: 'com.sk89q.worldedit'
+    }
+    // FAWE is a fork of WorldEdit: it provides the full com.sk89q.worldedit API plus the async
+    // queue engine. At runtime this resolves to FAWE's fast engine when FAWE is installed, and
+    // to standard WorldEdit (synchronous) otherwise. snakeyaml is excluded: the server provides it.
+    compileOnly('com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.16.1') {
+        exclude group: 'org.yaml'
+    }
+    compileOnly('com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.16.1') {
+        exclude group: 'org.yaml'
+    }
+    testImplementation('com.sk89q.worldguard:worldguard-bukkit:7.0.9') {
+        exclude group: 'com.sk89q.worldedit'
+        // paper-api already provides the spigot-api capability; let it win.
+        exclude group: 'org.spigotmc'
+    }
+    testImplementation('com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.16.1') {
+        exclude group: 'org.yaml'
+    }
+    testImplementation('com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit:2.16.1') {
+        exclude group: 'org.yaml'
+    }
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'io.papermc.paper:paper-api:26.3.build.194-stable'
+    // paper-api (superset of spigot-api) so we can use the Adventure component APIs for
+    // action bars and clickable messages; org.bukkit.ChatColor string sending is left alone.
+    compileOnly 'io.papermc.paper:paper-api:26.3.build.194-stable'
     implementation 'me.clip:placeholderapi:2.11.6'
 }
 
@@ -31,36 +69,17 @@ jar {
     from project(":Compat").sourceSets.main.output.classesDirs
 }
 
-tasks.register('instanceWorldTest', JavaExec) {
-    dependsOn testClasses
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.theprogrammingturkey.comz.game.InstanceWorldFilesTest'
-    args layout.buildDirectory.get().asFile.absolutePath
+test {
+    useJUnitPlatform()
+    // Keep the JVM close to the server runtime so reflection/compiler-based tests behave.
+    maxHeapSize = '1g'
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+    }
 }
 
-check.dependsOn instanceWorldTest
-
-tasks.register('worldGuardInstanceTest', JavaExec) {
-    dependsOn testClasses
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.theprogrammingturkey.comz.game.WorldGuardInstancesTest'
-}
-check.dependsOn worldGuardInstanceTest
-
-tasks.register('gameRuleCompatTest', JavaExec) {
-    dependsOn testClasses
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.theprogrammingturkey.comz.game.GameRuleCompatTest'
-    args layout.buildDirectory.get().asFile.absolutePath
-}
-check.dependsOn gameRuleCompatTest
-
-tasks.register('arenaSelectionCopyTest', JavaExec) {
-    dependsOn testClasses
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.theprogrammingturkey.comz.game.ArenaSelectionCopyTest'
-}
-check.dependsOn arenaSelectionCopyTest
+check.dependsOn test
 
 processResources {
     inputs.property 'version', project.version

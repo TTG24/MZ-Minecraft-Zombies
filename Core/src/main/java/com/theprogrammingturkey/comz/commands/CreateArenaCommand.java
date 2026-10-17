@@ -1,14 +1,14 @@
 package com.theprogrammingturkey.comz.commands;
 
-import com.theprogrammingturkey.comz.game.GameManager;
-import com.theprogrammingturkey.comz.game.actions.ArenaSetupAction;
-import com.theprogrammingturkey.comz.util.COMZPermission;
-import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.GameManager;
+import com.theprogrammingturkey.comz.game.actions.ArenaSetupAction;
+import com.theprogrammingturkey.comz.util.COMZPermission;
+import com.theprogrammingturkey.comz.util.Colors;
+import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class CreateArenaCommand extends SubCommand
 {
@@ -32,18 +32,19 @@ public class CreateArenaCommand extends SubCommand
 		}
 		else if(args.length < 2)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena name!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please specify an arena name!");
 		}
 		else
 		{
 			if(GameManager.INSTANCE.isValidArena(args[1]))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This arena already exists!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "This arena already exists!");
 				return true;
 			}
 
 			Game newGame = new Game(args[1]);
-			//TODO: Don't add yet?
+			// The game is registered immediately so arena setup can operate on it;
+			// an open question remains on whether it should only be added once setup finishes.
 			GameManager.INSTANCE.addGame(newGame);
 			plugin.activeActions.put(player, new ArenaSetupAction(player, newGame));
 		}

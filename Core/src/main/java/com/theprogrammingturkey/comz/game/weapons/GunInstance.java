@@ -6,7 +6,8 @@ import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.config.ConfigManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.enchantments.Enchantment;
@@ -141,13 +142,13 @@ public class GunInstance extends WeaponInstance
 				List<Entity> near = player.getNearbyEntities(range, range, range);
 				for(Entity ent : near)
 				{
-					if(ent instanceof Mob)
+					if(ent instanceof Mob mob)
 					{
-						if(game.spawnManager.getEntities().contains(ent))
+						if(game.spawnManager.getEntities().contains(mob))
 						{
 							World world = player.getWorld();
 							world.strikeLightningEffect(ent.getLocation());
-							game.damageMob((Mob) ent, player, 10);
+							game.damageMob(mob, player, 10);
 						}
 					}
 				}
@@ -191,7 +192,7 @@ public class GunInstance extends WeaponInstance
 
 		if(totalAmmo == 0 && clipAmmo == 0)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No ammo!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No ammo!");
 			player.getWorld().playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
 			return false;
 		}
@@ -249,19 +250,19 @@ public class GunInstance extends WeaponInstance
 
 		if(isReloading)
 		{
-			data.setDisplayName(ChatColor.RED + "Reloading!");
+			data.displayName(Colors.legacy(Colors.RED + "Reloading!"));
 		}
 		else if(gun instanceof PackAPunchGun)
 		{
-			data.setDisplayName(ChatColor.BLUE + gun.getName() + " " + clipAmmo + "/" + totalAmmo);
+			data.displayName(Colors.legacy(Colors.BLUE + gun.getName() + " " + clipAmmo + "/" + totalAmmo));
 			data.addEnchant(Enchantment.KNOCKBACK, 1, true);
-			List<String> lore = new ArrayList<>();
-			lore.add("PACK-A-PUNCHED");
-			data.setLore(lore);
+			List<Component> lore = new ArrayList<>();
+			lore.add(Colors.legacy("PACK-A-PUNCHED"));
+			data.lore(lore);
 		}
 		else
 		{
-			data.setDisplayName(ChatColor.RED + gun.getName() + " " + clipAmmo + "/" + totalAmmo);
+			data.displayName(Colors.legacy(Colors.RED + gun.getName() + " " + clipAmmo + "/" + totalAmmo));
 		}
 		stack.setItemMeta(data);
 		player.getInventory().setItem(slot, stack);

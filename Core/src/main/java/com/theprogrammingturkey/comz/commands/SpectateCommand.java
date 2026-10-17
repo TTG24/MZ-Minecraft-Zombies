@@ -4,7 +4,7 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class SpectateCommand extends SubCommand
@@ -18,11 +18,11 @@ public class SpectateCommand extends SubCommand
 	{
 		if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena to spectate!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please specify an arena to spectate!");
 		}
 		else if(GameManager.INSTANCE.getGame(player) != null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must leave your current game before you can spectate another one!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You must leave your current game before you can spectate another one!");
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
@@ -33,11 +33,11 @@ public class SpectateCommand extends SubCommand
 			}
 			Game game = GameManager.INSTANCE.getGame(args[1]);
 			game.addSpectator(player);
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You are now spectating " + ChatColor.RED + game.getName() + ChatColor.DARK_GREEN + "!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You are now spectating " + Colors.RED + game.getName() + Colors.DARK_GREEN + "!");
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "That is not a valid arena!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "That is not a valid arena!");
 		}
 
 		return true;

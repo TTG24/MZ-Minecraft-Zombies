@@ -1,8 +1,8 @@
 package com.theprogrammingturkey.comz.spawning;
 
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.util.BlockUtils;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -13,8 +13,9 @@ import org.bukkit.entity.Wolf;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.util.BlockUtils;
 
 public class HellHoundSpawner extends RoundSpawner
 {
@@ -93,7 +94,7 @@ public class HellHoundSpawner extends RoundSpawner
 		wolf.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 99999, 1, true));
 		setFollowDistance(wolf, 512);
 
-		//TODO: Strength?
+		// Wave-based strength formula; balance tuning may still be desired.
 		float strength = ((wave * 100f) + 50) / 50f;
 		setMaxHealth(wolf, strength);
 		wolf.setHealth(strength);

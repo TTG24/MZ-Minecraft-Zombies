@@ -1,11 +1,12 @@
 package com.theprogrammingturkey.comz.util;
 
 import com.theprogrammingturkey.comz.COMZombies;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Text;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+
 import org.bukkit.entity.Player;
 
 public class CommandUtil
@@ -25,13 +26,12 @@ public class CommandUtil
 	 */
 	public static void sendClickableMessageToPlayer(Player player, String message, String clickMessage, String command)
 	{
-		TextComponent first = new TextComponent(COMZombies.PREFIX + message);
-		//bold red
-		TextComponent component = new TextComponent(clickMessage);
-		component.setColor(net.md_5.bungee.api.ChatColor.RED);
-		component.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to run command")));
-		component.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command));
-		player.spigot().sendMessage(first, component);
+	Component prefix = LegacyComponentSerializer.legacySection().deserialize(COMZombies.PREFIX + message);
+	Component click = Component.text(clickMessage)
+		.color(NamedTextColor.RED)
+		.hoverEvent(HoverEvent.showText(Component.text("Click to run command")))
+		.clickEvent(ClickEvent.runCommand(command));
+	player.sendMessage(prefix.append(click));
 	}
 
 	/**
@@ -39,6 +39,6 @@ public class CommandUtil
 	 */
 	public static void noPermission(Player player, String action)
 	{
-		player.sendMessage(COMZombies.PREFIX + ChatColor.RED + "You do not have permission to " + action + "!");
+		player.sendMessage(COMZombies.PREFIX + Colors.RED + "You do not have permission to " + action + "!");
 	}
 }

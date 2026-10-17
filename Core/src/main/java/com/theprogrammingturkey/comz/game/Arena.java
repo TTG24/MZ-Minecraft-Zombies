@@ -165,21 +165,23 @@ public class Arena
 		if(min == null || max == null)
 			return false;
 
-		double x = currentLoc.getX();
-		double y = currentLoc.getY();
-		double z = currentLoc.getZ();
-
-		if(x <= Math.max(max.getBlockX(), min.getBlockX()) && x >= Math.min(max.getBlockX(), min.getBlockX()))
-			if(y <= Math.max(max.getBlockY(), min.getBlockY()) && y >= Math.min(max.getBlockY(), min.getBlockY()))
-				return z <= Math.max(max.getBlockZ(), min.getBlockZ()) && z >= Math.min(max.getBlockZ(), min.getBlockZ());
-		return false;
+		return withinBox(currentLoc.getBlockX(), currentLoc.getBlockY(), currentLoc.getBlockZ());
 	}
 
 	/** The physical map copy always uses the two corners, independently of WorldGuard containment. */
 	public boolean containsCopySelection(Location location)
 	{
 		if(location == null || location.getWorld() != world || min == null || max == null) return false;
-		int x = location.getBlockX(), y = location.getBlockY(), z = location.getBlockZ();
+		return withinBox(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+	}
+
+	/**
+	 * Block-coordinate box check shared by {@link #containsBlock} and {@link #containsCopySelection}.
+	 * Uses block coordinates (not the raw double x/y/z) so that every block touched by a location is
+	 * treated consistently, and so the corners can be stored in any order.
+	 */
+	private boolean withinBox(int x, int y, int z)
+	{
 		return x >= Math.min(min.getBlockX(), max.getBlockX()) && x <= Math.max(min.getBlockX(), max.getBlockX())
 				&& y >= Math.min(min.getBlockY(), max.getBlockY()) && y <= Math.max(min.getBlockY(), max.getBlockY())
 				&& z >= Math.min(min.getBlockZ(), max.getBlockZ()) && z <= Math.max(min.getBlockZ(), max.getBlockZ());
@@ -351,13 +353,14 @@ public class Arena
 	}
 
 	/**
-	 * Get the location of the lobby to teleport players.
+	 * Get the location to teleport players when they join or wait.
+	 * Falls back to the game spawn when no lobby has been set.
 	 *
-	 * @return spectateLocation
+	 * @return lobby location, or the game spawn if the lobby is not set
 	 */
 	public Location getLobbyLocation()
 	{
-		return lobbyLocation;
+		return lobbyLocation != null ? lobbyLocation : playerTPLocation;
 	}
 
 	/**
@@ -379,13 +382,14 @@ public class Arena
 	}
 
 	/**
-	 * Get if all 3 teleport locations are not null
+	 * Get if the required teleport locations are set.
+	 * The lobby is optional; when it is not set, players wait at the game warp.
 	 *
-	 * @return If playerTP, Lobby, and Spectate locations are not null
+	 * @return If playerTP and Spectate locations are not null
 	 */
 	public boolean areAllLocationsSet()
 	{
-		return this.hasPlayerTPLocation() && this.hasLobbyLocation() && this.hasSpectateLocation();
+		return this.hasPlayerTPLocation() && this.hasSpectateLocation();
 	}
 
 	/**
@@ -417,7 +421,8 @@ public class Arena
 		arenaSaveJson.add("p2", CustomConfig.locationToJsonNoWorld(max));
 		arenaSaveJson.add("player_spawn", CustomConfig.warpLocationToJsonNoWorld(playerTPLocation));
 		arenaSaveJson.add("spectator_spawn", CustomConfig.warpLocationToJsonNoWorld(spectateLocation));
-		arenaSaveJson.add("lobby_spawn", CustomConfig.warpLocationToJsonNoWorld(lobbyLocation));
+		if(lobbyLocation != null)
+			arenaSaveJson.add("lobby_spawn", CustomConfig.warpLocationToJsonNoWorld(lobbyLocation));
 		if(worldGuardRegionId != null && !worldGuardRegionId.isEmpty())
 			arenaSaveJson.addProperty("worldguard_region", worldGuardRegionId);
 	}

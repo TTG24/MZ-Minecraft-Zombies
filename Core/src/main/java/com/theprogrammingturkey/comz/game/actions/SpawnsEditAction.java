@@ -5,7 +5,7 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -18,12 +18,12 @@ public class SpawnsEditAction extends BaseAction
 		super(player, game);
 
 		game.showSpawnLocations();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------" + ChatColor.RED + "Zombie Spawn Point Edit" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "-------");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "The Ender portal frames represent zombie spawn locations");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "If you break one of these blocks, the spawn point at that location will be removed.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type add to add a spawn location.");
-		//CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type cancel or /zombies cancel to cancel this operation.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Type done to complete this operation.");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "" + Colors.STRIKETHROUGH + "-------" + Colors.RED + "Zombie Spawn Point Edit" + Colors.DARK_GREEN + "" + Colors.STRIKETHROUGH + "-------");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "The Ender portal frames represent zombie spawn locations");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "If you break one of these blocks, the spawn point at that location will be removed.");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type add to add a spawn location.");
+		//CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type cancel or /zombies cancel to cancel this operation.");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type done to complete this operation.");
 	}
 
 	public void onChatMessage(String message)
@@ -32,7 +32,7 @@ public class SpawnsEditAction extends BaseAction
 		{
 			if(game.getStatus() != Game.GameStatus.DISABLED)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You cannot add spawn points to an arena unless it is disabled!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You cannot add spawn points to an arena unless it is disabled!");
 				return;
 			}
 
@@ -40,19 +40,19 @@ public class SpawnsEditAction extends BaseAction
 
 			if(!game.arena.containsBlock(b.getLocation()))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "The spawn point must be inside the arena!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "The spawn point must be inside the arena!");
 				return;
 			}
 
 			SpawnPoint point = new SpawnPoint(b.getLocation(), game, b.getType(), game.spawnManager.getNewSpawnPointNum());
 			if(!game.spawnManager.addPoint(point))
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Failed to add that spawn point for some reason!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Failed to add that spawn point for some reason!");
 				return;
 			}
 
 			GameManager.INSTANCE.saveAllGames();
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Spawn point added to arena " + ChatColor.RED + game.getName() + ChatColor.DARK_GREEN + "!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Spawn point added to arena " + Colors.RED + game.getName() + Colors.DARK_GREEN + "!");
 			Block block = point.getLocation().getBlock();
 			point.setMaterial(block.getType());
 			block.setType(Material.END_PORTAL_FRAME);
@@ -61,14 +61,14 @@ public class SpawnsEditAction extends BaseAction
 		{
 			COMZombies.getPlugin().activeActions.remove(player);
 			game.setEnabled();
-			CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You are no longer editing zombie spawns for arena " + game.getName() + "!");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You are no longer editing zombie spawns for arena " + game.getName() + "!");
 		}
 	}
 
 	public void cancelAction()
 	{
 		game.resetSpawnLocationBlocks();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Spawn point removal operation canceled!");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Spawn point removal operation canceled!");
 	}
 
 	@Override
@@ -80,7 +80,7 @@ public class SpawnsEditAction extends BaseAction
 			{
 				game.spawnManager.removePoint(point);
 				interact.setCancelled(false);
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Spawn point removed!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Spawn point removed!");
 				return;
 			}
 		}

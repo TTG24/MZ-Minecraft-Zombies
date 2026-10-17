@@ -6,7 +6,7 @@ import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.features.Door;
 import com.theprogrammingturkey.comz.util.BlockUtils;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -24,8 +24,8 @@ public class DoorRemoveAction extends BaseAction
 			door.closeDoor();
 		if(!player.getInventory().contains(Material.WOODEN_SWORD))
 			player.getInventory().addItem(new ItemStack(Material.WOODEN_SWORD));
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Click a door block with the wooden sword to remove that door.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type done or cancel to exit this operation.");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Click a door block with the wooden sword to remove that door.");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type done or cancel to exit this operation.");
 	}
 
 	private Door findDoor(Location location)
@@ -63,10 +63,10 @@ public class DoorRemoveAction extends BaseAction
 				BlockUtils.setBlockToAir(location);
 		game.doorManager.removeDoor(door);
 		GameManager.INSTANCE.saveAllGames();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Door removed!");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Door removed!");
 		if(game.doorManager.getDoors().isEmpty())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No doors left!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No doors left!");
 			COMZombies.getPlugin().activeActions.remove(player);
 		}
 	}
@@ -76,7 +76,7 @@ public class DoorRemoveAction extends BaseAction
 	{
 		if(message.equalsIgnoreCase("done"))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Exiting door removal!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Exiting door removal!");
 			COMZombies.scheduleTask(1, () -> COMZombies.getPlugin().activeActions.remove(player));
 		}
 	}

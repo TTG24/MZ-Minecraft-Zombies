@@ -6,7 +6,7 @@ import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.actions.BaseAction;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class EnableCommand extends SubCommand
@@ -27,7 +27,7 @@ public class EnableCommand extends SubCommand
 
 		if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Incorrect usage! Please use /zombies enable [arena]");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Incorrect usage! Please use /zombies enable [arena]");
 			return true;
 		}
 		else
@@ -37,7 +37,7 @@ public class EnableCommand extends SubCommand
 				Game game = GameManager.INSTANCE.getGame(args[1]);
 				if(game == null)
 				{
-					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "That arena does not exist!");
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + "That arena does not exist!");
 				}
 				else
 				{
@@ -46,13 +46,13 @@ public class EnableCommand extends SubCommand
 						action.cancelAction();
 
 					game.setEnabled();
-					CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Arena " + game.getName() + " has been enabled!");
+					CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Arena " + game.getName() + " has been enabled!");
 					return true;
 				}
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + args[1] + " is not a valid arena!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + args[1] + " is not a valid arena!");
 			}
 		}
 		return false;

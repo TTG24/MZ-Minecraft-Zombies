@@ -4,7 +4,7 @@ import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.features.Barrier;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -22,8 +22,8 @@ public class BarrierRemoveAction extends BaseAction
 			barrier.repairFull();
 		if(!player.getInventory().contains(Material.WOODEN_SWORD))
 			player.getInventory().addItem(new ItemStack(Material.WOODEN_SWORD));
-		CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Click a barrier block with the wooden sword to remove that barrier.");
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Type done or cancel to exit this operation.");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Click a barrier block with the wooden sword to remove that barrier.");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type done or cancel to exit this operation.");
 	}
 
 	private Barrier findBarrier(Location location)
@@ -59,7 +59,7 @@ public class BarrierRemoveAction extends BaseAction
 		game.barrierManager.removeBarrier(player, barrier);
 		if(game.barrierManager.getTotalBarriers() == 0)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "No barriers left!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No barriers left!");
 			COMZombies.getPlugin().activeActions.remove(player);
 		}
 	}
@@ -69,7 +69,7 @@ public class BarrierRemoveAction extends BaseAction
 	{
 		if(message.equalsIgnoreCase("done"))
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Exiting barrier removal!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Exiting barrier removal!");
 			COMZombies.scheduleTask(1, () -> COMZombies.getPlugin().activeActions.remove(player));
 		}
 	}

@@ -16,7 +16,6 @@ public class ApiCompat
 	public static final Attribute MOVEMENT_SPEED = constant(Attribute.class, "MOVEMENT_SPEED", "GENERIC_MOVEMENT_SPEED");
 
 	/** Renamed from DO_DAYLIGHT_CYCLE in 1.21.11 */
-	@SuppressWarnings("unchecked")
 	public static final GameRule<Boolean> ADVANCE_TIME = constant(GameRule.class, "ADVANCE_TIME", "DO_DAYLIGHT_CYCLE");
 
 	/**

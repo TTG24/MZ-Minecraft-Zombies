@@ -8,7 +8,7 @@ import com.theprogrammingturkey.comz.config.COMZConfig;
 import com.theprogrammingturkey.comz.config.ConfigManager;
 import com.theprogrammingturkey.comz.game.Game.GameStatus;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mob;
@@ -62,7 +62,7 @@ public class GameManager
 	public void loadAllGames()
 	{
 		endAll();
-		games.forEach(Game::retire);
+		games.forEach(game -> game.retire());
 		ArenaInstances.INSTANCE.shutdown();
 		games.clear();
 		JsonElement jsonElement = ConfigManager.getConfig(COMZConfig.ARENAS).getJson();
@@ -78,10 +78,10 @@ public class GameManager
 			if(game.loadGame(arena.getValue()))
 				games.add(game);
 			else
-				COMZombies.log.log(Level.SEVERE, "Failed to load arena " + arena.getKey() + "!");
+				COMZombies.log.log(Level.SEVERE, "Failed to load arena {0}!", new Object[]{arena.getKey()});
 		}
 		ArenaInstances.INSTANCE.loadPools();
-		Bukkit.broadcastMessage(COMZombies.PREFIX + ChatColor.RED + " Done loading arenas!");
+		Bukkit.broadcast(Colors.legacy(COMZombies.PREFIX + Colors.RED + " Done loading arenas!"));
 	}
 
 	public void saveAllGames()
@@ -166,12 +166,12 @@ public class GameManager
 
 	public boolean isEntityInGame(Entity entity)
 	{
-		if(entity instanceof Player)
-			return isPlayerInGame((Player) entity);
+		if(entity instanceof Player player)
+			return isPlayerInGame(player);
 
-		if(entity instanceof Mob)
+		if(entity instanceof Mob mob)
 			for(Game game : games)
-				if(game.spawnManager.isEntitySpawned((Mob) entity))
+				if(game.spawnManager.isEntitySpawned(mob))
 					return true;
 
 		return false;
@@ -199,6 +199,7 @@ public class GameManager
 		return null;
 	}
 
+	@Override
 	public String toString()
 	{
 		StringBuilder toString = new StringBuilder("GameManager, games: ");
@@ -210,7 +211,7 @@ public class GameManager
 
 	public List<String> getArenas()
 	{
-		return games.stream().map(Game::getName).collect(Collectors.toList());
+		return games.stream().map(game -> game.getName()).collect(Collectors.toList());
 	}
 
 	public Game findJoinable(String template)

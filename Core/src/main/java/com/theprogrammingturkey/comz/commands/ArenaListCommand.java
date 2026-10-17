@@ -4,7 +4,7 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class ArenaListCommand extends SubCommand
@@ -23,9 +23,9 @@ public class ArenaListCommand extends SubCommand
 			return true;
 		}
 
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "---------------" + ChatColor.RED + "Arenas" + ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "---------------");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "" + Colors.STRIKETHROUGH + "---------------" + Colors.RED + "Arenas" + Colors.DARK_GREEN + "" + Colors.STRIKETHROUGH + "---------------");
 		for(Game game : GameManager.INSTANCE.getGames())
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + game.getName() + ChatColor.GRAY + ": Players: " + game.getPlayersInGame().size() + ", Status: " + game.getStatus().toString().toLowerCase());
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + game.getName() + Colors.GRAY + ": Players: " + game.getPlayersInGame().size() + ", Status: " + game.getStatus().toString().toLowerCase());
 
 		return true;
 	}

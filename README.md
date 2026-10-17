@@ -6,7 +6,8 @@ Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 ## Release 1.2
 
 Host independent matches from one arena template, with automatic instance selection and queues.
-Each instance copies the arena's two-corner box into a void world using WorldEdit or FAWE,
+Each instance copies the arena's two-corner box into a void world using FastAsyncWorldEdit
+(recommended) or WorldEdit (synchronous fallback),
 while WorldGuard supplies its gameplay boundary and protections. Setting the count to `0`
 removes owned instance folders on restart/reload. See [instance setup](#multiple-matches-on-one-arena-template)
 and [release notes](RELEASE_NOTES.md).
@@ -76,18 +77,27 @@ with the existing start/end commands. Disabling/enabling Hospital affects its wh
 Configure and edit the original arena; apply changes with restart/reload. Runtime copies
 are excluded from `arenas.json`. Set the count to `0` and reload to return to a normal arena.
 
-Instances require **WorldEdit or FastAsyncWorldEdit**. Each copy is a blank void world containing
-only the arena's inclusive **two-corner box**, at its original coordinates. The snapshot includes
-blocks, block entities (such as containers), entities and biomes. No terrain or structures generate
-outside the selection, including in Nether/End instances. Difficulty, time and game rules come
-from the template world. Ordinary arenas without instances do not require WorldEdit.
+Instances require **FastAsyncWorldEdit** (recommended) or **WorldEdit**. Each copy is a blank void
+world containing only the arena's inclusive **two-corner box**, at its original coordinates. The
+snapshot includes blocks, block entities (such as containers), entities and biomes. No terrain or
+structures generate outside the selection, including in Nether/End instances. Difficulty, time and
+game rules come from the template world. Ordinary arenas without instances do not require either plugin.
+
+**FastAsyncWorldEdit is the recommended plugin.** It is a fork of WorldEdit that provides the same
+API plus an asynchronous block-queue engine, so arena copies run on its faster, lower-memory engine
+when FAWE is installed. Install FAWE instead of WorldEdit (they both provide the same
+`com.sk89q.worldedit` package and are not meant to run side by side). WorldGuard works unchanged
+alongside FAWE. If only WorldEdit is present, the plugin still works but each copy runs
+synchronously on the server thread and the console logs a recommendation to install FAWE.
 
 Include the arena's floor, walls, warps, spawn points, doors and machines within the two corners.
 Configured arena locations outside the box cause preparation to fail with a console explanation.
 The map is captured once per template and pasted into each slot at startup/reload. The default
 volume limit is 5,000,000 blocks, including air; adjust `config.instances.maxCopyBlocks` if needed.
-Preparation runs on the server thread, so large selections or many slots can still cause a pause.
-Start with a few copies and measure server load; the allowed range is 0–16 per template.
+The copy is applied in order and each instance is only opened after its blocks are fully written.
+With FAWE this runs through its fast engine; with WorldEdit only, it runs on the server thread, so
+large selections or many slots can still cause a pause. Start with a few copies and measure server
+load; the allowed range is 0–16 per template.
 
 WorldGuard is optional. When installed, each instance receives an independent copy of all
 regions in the template world: cuboids, polygons, global regions, priorities, owners, members,

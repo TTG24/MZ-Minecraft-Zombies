@@ -7,7 +7,7 @@ import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.actions.BarrierSetupAction;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class AddBarrier extends SubCommand
@@ -45,7 +45,7 @@ public class AddBarrier extends SubCommand
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "That is not a valid arena!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "That is not a valid arena!");
 				return true;
 			}
 		}

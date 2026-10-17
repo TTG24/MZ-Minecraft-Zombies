@@ -4,7 +4,7 @@ import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -29,16 +29,16 @@ public class AddTeleporterCommand extends SubCommand
 		Game game = GameManager.INSTANCE.getGame(loc);
 		if(game == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must be in an arena!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You must be in an arena!");
 			return true;
 		}
 		if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify a teleporter name!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please specify a teleporter name!");
 			return true;
 		}
 		game.teleporterManager.saveTeleporterSpot(args[1], loc);
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Teleporter added for arena: " + ChatColor.RED + game.getName() + ChatColor.DARK_GREEN + "!");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Teleporter added for arena: " + Colors.RED + game.getName() + Colors.DARK_GREEN + "!");
 		return true;
 	}
 }

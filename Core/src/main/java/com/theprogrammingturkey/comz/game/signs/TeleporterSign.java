@@ -6,7 +6,7 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.features.PerkType;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Player;
@@ -33,7 +33,7 @@ public class TeleporterSign implements IGameSign
 				teleporterName = name;
 
 		if(teleporterName == null)
-			throw new SignParseException(ChatColor.RED + "" + ChatColor.BOLD + "No such", ChatColor.RED + "" + ChatColor.BOLD + "teleporter!");
+			throw new SignParseException(Colors.RED + "" + Colors.BOLD + "No such", Colors.RED + "" + Colors.BOLD + "teleporter!");
 
 		String cost = lines[3];
 		if(!cost.matches("[0-9]+"))
@@ -59,7 +59,7 @@ public class TeleporterSign implements IGameSign
 			{
 				if(game.hasPower() && !game.isPowered())
 				{
-					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must turn on the power first!");
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + "You must turn on the power first!");
 					PerkType.noPower(player);
 					return;
 				}
@@ -80,12 +80,12 @@ public class TeleporterSign implements IGameSign
 				}
 				else
 				{
-					CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You don't have enough points!");
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + "You don't have enough points!");
 				}
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This teleporter does not exist!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "This teleporter does not exist!");
 			}
 		}
 	}

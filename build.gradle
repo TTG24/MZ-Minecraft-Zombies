@@ -1,12 +1,18 @@
 allprojects {
     group = 'comz'
-    version = '1.2'
+    version = '1.2.1'
 }
 
 subprojects {
     apply plugin: 'java'
 
-    sourceCompatibility = targetCompatibility = JavaLanguageVersion.of(21)
+    // Paper 26.x API and the runtime server both require Java 25. The Gradle
+    // daemon can stay on JDK 21; the toolchain routes javac to the installed JDK 25.
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(25)
+        }
+    }
 
     repositories {
         mavenLocal()

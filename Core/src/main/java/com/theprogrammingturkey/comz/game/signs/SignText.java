@@ -6,11 +6,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.bukkit.ChatColor;
 import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.util.Colors;
 
 /**
  * Builds the text shown on game signs from the "config.signs" section of config.yml.
@@ -63,7 +64,7 @@ public class SignText
 			String line = i < lines.size() ? lines.get(i) : "";
 			for(Map.Entry<String, String> value : values.entrySet())
 				line = line.replace("{" + value.getKey() + "}", value.getValue());
-			result[i] = ChatColor.translateAlternateColorCodes('&', line);
+			result[i] = Colors.translateAlternateColorCodes('&', line);
 		}
 		return result;
 	}
@@ -75,8 +76,9 @@ public class SignText
 
 	public static void apply(Sign sign, String[] lines)
 	{
+		org.bukkit.block.sign.SignSide front = sign.getSide(Side.FRONT);
 		for(int i = 0; i < 4; i++)
-			sign.setLine(i, lines[i]);
+			front.line(i, Colors.legacy(lines[i]));
 		sign.update(true);
 	}
 }

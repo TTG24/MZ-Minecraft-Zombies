@@ -8,7 +8,7 @@ import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.actions.DoorSetupAction;
 import com.theprogrammingturkey.comz.util.Util;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class AddDoorCommand extends SubCommand
@@ -45,7 +45,7 @@ public class AddDoorCommand extends SubCommand
 			}
 			else
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "That is not a valid arena!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "That is not a valid arena!");
 			}
 		}
 		return true;

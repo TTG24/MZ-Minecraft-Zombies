@@ -15,7 +15,7 @@ import com.theprogrammingturkey.comz.util.PaperPathfinding;
 import com.theprogrammingturkey.comz.util.PeacefulArenaMobs;
 import com.theprogrammingturkey.comz.util.Util;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -70,7 +70,7 @@ public class SpawnManager
 			if(loc != null && !id.equals("MISSING"))
 				points.add(new SpawnPoint(loc, game, loc.getBlock().getType(), id));
 			else
-				COMZombies.log.log(Level.WARNING, "Failed to load zombie spawn! ID: " + id + " w/ Loc: " + loc);
+				COMZombies.log.log(Level.WARNING, "Failed to load zombie spawn! ID: {0} w/ Loc: {1}", new Object[]{id, loc});
 		}
 	}
 
@@ -120,7 +120,7 @@ public class SpawnManager
 
 	public void killMob(Entity entity)
 	{
-		if(entity instanceof Player)
+		if(entity == null || entity instanceof Player)
 			return;
 
 		while(!entity.isDead())
@@ -151,11 +151,11 @@ public class SpawnManager
 
 	public void removeEntity(Entity entity)
 	{
-		if(!(entity instanceof Mob))
+		if(!(entity instanceof Mob mob))
 			return;
 
-		mobs.remove(entity);
-		lastPeacefulAttack.remove(entity);
+		mobs.remove(mob);
+		lastPeacefulAttack.remove(mob);
 
 		if(mobs.isEmpty() && mobsSpawned >= mobsToSpawn)
 			game.nextWave();
@@ -185,22 +185,22 @@ public class SpawnManager
 
 	private List<SpawnPoint> getNearestPoints(Location loc, int numToGet)
 	{
-		List<SpawnPoint> points = game.spawnManager.getPoints();
+		List<SpawnPoint> spawnPoints = game.spawnManager.getPoints();
 		if(numToGet < 0)
 			throw new IllegalArgumentException("numToGet should not be less than zero");
 		if(numToGet == 0)
 			return new ArrayList<>();
 
-		int numPoints = Math.min(numToGet, points.size());
+		int numPoints = Math.min(numToGet, spawnPoints.size());
 		List<SpawnPoint> results = new ArrayList<>(numPoints);
 		for(int i = 0; i < numPoints; i++)
-			results.add(points.get(i));
+			results.add(spawnPoints.get(i));
 
 		List<Double> distances = new ArrayList<>();
 		for(int i = 0; i < numToGet; i++)
 			distances.add(Double.POSITIVE_INFINITY);
 
-		for(SpawnPoint point : points)
+		for(SpawnPoint point : spawnPoints)
 		{
 			Location spawnLoc = point.getLocation();
 			double dx = spawnLoc.getBlockX() - loc.getBlockX();
@@ -242,19 +242,19 @@ public class SpawnManager
 		SpawnPoint selectPoint = null;
 		Player player = game.getPlayersInGame().get(COMZombies.rand.nextInt(playersSize));
 
-		List<SpawnPoint> points = getNearestPoints(player.getLocation(), mobsToSpawn);
+		List<SpawnPoint> nearest = getNearestPoints(player.getLocation(), mobsToSpawn);
 		int totalRetries = 0;
 		int curr = 0;
 		while(selectPoint == null)
 		{
-			if(curr == points.size())
+			if(curr == nearest.size())
 			{
 				player = game.getPlayersInGame().get(COMZombies.rand.nextInt(playersSize));
-				points = getNearestPoints(player.getLocation(), mobsToSpawn / playersSize);
+				nearest = getNearestPoints(player.getLocation(), mobsToSpawn / playersSize);
 				curr = 0;
 				continue;
 			}
-			selectPoint = points.get(COMZombies.rand.nextInt(points.size()));
+			selectPoint = nearest.get(COMZombies.rand.nextInt(nearest.size()));
 			if(!(canSpawn(selectPoint)))
 				selectPoint = null;
 			curr++;
@@ -390,7 +390,7 @@ public class SpawnManager
 			return;
 
 		for(Player pl : game.getPlayersInGame())
-			pl.sendMessage(ChatColor.RED + "Well..  I guess we had an error trying to pick a spawn point out of the many we had! We'll have to end your game because of our lack of skillez.");
+			pl.sendMessage(Colors.RED + "Well..  I guess we had an error trying to pick a spawn point out of the many we had! We'll have to end your game because of our lack of skillez.");
 		game.endGame();
 	}
 
@@ -426,7 +426,7 @@ public class SpawnManager
 		if(game.getPlayersInGame().isEmpty() && game.getStatus() == GameStatus.INGAME)
 		{
 			this.game.endGame();
-			Bukkit.broadcastMessage(COMZombies.PREFIX + "SmartSpawn was sent a players list with no players in it! Game was ended");
+			Bukkit.broadcast(Colors.legacy(COMZombies.PREFIX + "SmartSpawn was sent a players list with no players in it! Game was ended"));
 			return;
 		}
 		else if(game.getStatus() != GameStatus.INGAME)

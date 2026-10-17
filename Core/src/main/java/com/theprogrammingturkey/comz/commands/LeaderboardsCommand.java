@@ -1,11 +1,12 @@
 package com.theprogrammingturkey.comz.commands;
 
+import org.bukkit.entity.Player;
+
 import com.theprogrammingturkey.comz.leaderboards.Leaderboard;
 import com.theprogrammingturkey.comz.leaderboards.StatsCategory;
 import com.theprogrammingturkey.comz.util.COMZPermission;
+import com.theprogrammingturkey.comz.util.Colors;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 
 public class LeaderboardsCommand extends SubCommand
 {
@@ -23,38 +24,49 @@ public class LeaderboardsCommand extends SubCommand
 			return true;
 		}
 
-		if(args.length < 2)
+		if(args.length < 2 || args.length > 3)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Try /z leaderboard <category>");
-			StringBuilder cats = new StringBuilder();
-			for(StatsCategory cat : StatsCategory.values())
-				cats.append(cat.name().toLowerCase()).append(", ");
-			cats.delete(cats.length() - 2, cats.length());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Categories: " + cats);
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Try /z leaderboard <category> [count]");
+			sendCategories(player);
+			return true;
 		}
-		else if(args.length == 2)
+
+		int count = 15;
+		if(args.length == 3)
 		{
-			//TODO: dynamic length
-			String catName = args[1].toLowerCase();
-			for(StatsCategory cat : StatsCategory.values())
+			try
 			{
-				if(cat.name().toLowerCase().equals(catName))
-				{
-					Leaderboard.getTopX(cat, 15, player);
-					return true;
-				}
+				count = Integer.parseInt(args[2]);
 			}
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + catName + " is not a valid category!");
-			StringBuilder cats = new StringBuilder();
-			for(StatsCategory cat : StatsCategory.values())
-				cats.append(cat.name().toLowerCase()).append(", ");
-			cats.delete(cats.length() - 2, cats.length());
-			CommandUtil.sendMessageToPlayer(player, ChatColor.GRAY + "Categories: " + cats);
+			catch(NumberFormatException e)
+			{
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Count must be a number!");
+				return true;
+			}
+			// Clamp to a sane range; getTopX caps the displayed top-20 anyway.
+			count = Math.max(1, Math.min(count, 100));
 		}
-		else
+
+		String catName = args[1].toLowerCase();
+		for(StatsCategory cat : StatsCategory.values())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Invalid leaderboard command!");
+			if(cat.name().toLowerCase().equals(catName))
+			{
+				Leaderboard.getTopX(cat, count, player);
+				return true;
+			}
 		}
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + catName + " is not a valid category!");
+		sendCategories(player);
 		return true;
+	}
+
+	private void sendCategories(Player player)
+	{
+		StringBuilder cats = new StringBuilder();
+		for(StatsCategory cat : StatsCategory.values())
+			cats.append(cat.name().toLowerCase()).append(", ");
+		cats.delete(cats.length() - 2, cats.length());
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Categories: " + cats);
 	}
 }

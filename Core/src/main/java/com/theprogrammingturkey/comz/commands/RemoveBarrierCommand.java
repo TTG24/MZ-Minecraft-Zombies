@@ -6,7 +6,7 @@ import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.actions.BarrierRemoveAction;
 import com.theprogrammingturkey.comz.util.COMZPermission;
 import com.theprogrammingturkey.comz.util.CommandUtil;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class RemoveBarrierCommand extends SubCommand
@@ -34,14 +34,14 @@ public class RemoveBarrierCommand extends SubCommand
 
 		if(args.length < 2)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify an arena to remove a barrier from!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please specify an arena to remove a barrier from!");
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
 			Game game = GameManager.INSTANCE.getGame(args[1]);
 			if(game.barrierManager.getTotalBarriers() == 0)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This arena has no barriers!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "This arena has no barriers!");
 				return true;
 			}
 
@@ -49,7 +49,7 @@ public class RemoveBarrierCommand extends SubCommand
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + args[1] + " is not a valid arena!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + args[1] + " is not a valid arena!");
 		}
 
 		return true;

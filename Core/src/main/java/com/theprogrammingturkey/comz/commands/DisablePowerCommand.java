@@ -5,7 +5,7 @@ import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.Game.GameStatus;
 import com.theprogrammingturkey.comz.game.GameManager;
-import org.bukkit.ChatColor;
+import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.entity.Player;
 
 public class DisablePowerCommand extends SubCommand
@@ -26,21 +26,21 @@ public class DisablePowerCommand extends SubCommand
 
 		if(args.length == 1)
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Please specify a game to disable the power from!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please specify a game to disable the power from!");
 		}
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
 			Game game = GameManager.INSTANCE.getGame(args[1]);
 			if(game.getStatus() != GameStatus.DISABLED)
 			{
-				CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "You must disable this arena first!");
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You must disable this arena first!");
 				return true;
 			}
 			game.removePower(player);
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "This is not a valid arena!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This is not a valid arena!");
 		}
 		return true;
 	}

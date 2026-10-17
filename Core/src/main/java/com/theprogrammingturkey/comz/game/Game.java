@@ -10,6 +10,7 @@ package com.theprogrammingturkey.comz.game;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +18,10 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.EntityEffect;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -37,15 +37,16 @@ import org.bukkit.entity.Wolf;
 import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.config.ConfigManager;
+import com.theprogrammingturkey.comz.config.ConfigSetup;
 import com.theprogrammingturkey.comz.config.CustomConfig;
 import com.theprogrammingturkey.comz.economy.PointManager;
-import com.theprogrammingturkey.comz.game.features.Barrier;
 import com.theprogrammingturkey.comz.game.features.Door;
 import com.theprogrammingturkey.comz.game.features.PowerUp;
 import com.theprogrammingturkey.comz.game.features.RandomBox;
@@ -69,13 +70,35 @@ import com.theprogrammingturkey.comz.spawning.SpawnManager;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
 import com.theprogrammingturkey.comz.util.ApiCompat;
 import com.theprogrammingturkey.comz.util.BlockUtils;
+import com.theprogrammingturkey.comz.util.Colors;
 import com.theprogrammingturkey.comz.util.CommandUtil;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
 
 /**
  * Main game class.
  */
 public class Game
 {
+	/** Default gun when an arena has no explicit StartingGun configured. */
+	static final String DEFAULT_STARTING_GUN = "M1911";
+
+	// Player inventory slot layout (absolute slots in the 9x6 + hotbar grid).
+	// Knife occupies the hotbar; guns, perks and the grenade occupy one row
+	// of the main inventory. Other systems (weapon swap, inventory clicks)
+	// rely on these exact positions.
+	static final int SLOT_KNIFE = 0;
+	static final int SLOT_KNIFE_MARKER = 27;
+	static final int SLOT_GUN_1 = 28;
+	static final int SLOT_GUN_2 = 29;
+	static final int SLOT_GUN_3 = 30;
+	static final int SLOT_PERK_1 = 31;
+	static final int SLOT_PERK_2 = 32;
+	static final int SLOT_PERK_3 = 33;
+	static final int SLOT_PERK_4 = 34;
+	static final int SLOT_GRENADE = 35;
+
 	/**
 	 * List of every player contained in game.
 	 */
@@ -109,6 +132,9 @@ public class Game
 	private boolean templateMode;
 	private long matchGeneration;
 	private boolean retired;
+
+	/** Players pinned in place by the no-lobby spawn freeze, and the spot they are anchored to. */
+	private final Map<Player, Location> frozenPlayers = new HashMap<>();
 
 	public void retire() { retired = true; matchGeneration++; starter.endTimer(); powerUpManager.clear(); }
 
@@ -145,7 +171,7 @@ public class Game
 
 	private boolean maxAmmoReplishClip;
 
-	private String startingGun = "M1911";
+	private String startingGun = DEFAULT_STARTING_GUN;
 
 	/**
 	 * Current wave number.
@@ -263,7 +289,7 @@ public class Game
 
 	public List<Player> getPlayersInGame()
 	{
-		return gamePlayers.values().stream().filter(gp -> gp.isInGame() || gp.isDead()).map(GamePlayer::getPlayer).collect(Collectors.toList());
+		return gamePlayers.values().stream().filter(gp -> gp.isInGame() || gp.isDead()).map(gp -> gp.getPlayer()).collect(Collectors.toList());
 	}
 
 	public boolean wasDisconnected(Player player)
@@ -359,14 +385,14 @@ public class Game
 	public void enablePower(Player player)
 	{
 		powerSetup = true;
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Power enabled! Type /z disablepower " + getName() + " to disable the power!");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Power enabled! Type /z disablepower " + getName() + " to disable the power!");
 		GameManager.INSTANCE.saveAllGames();
 	}
 
 	public void removePower(Player player)
 	{
 		powerSetup = false;
-		CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Power disabled!");
+		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Power disabled!");
 		GameManager.INSTANCE.saveAllGames();
 	}
 
@@ -414,6 +440,16 @@ public class Game
 		if(forced && status == GameStatus.STARTING && !starter.forced)
 			starter.endTimer();
 
+		// Arenas without a lobby have no pre-game holding spot, so skip the
+		// countdown and start right away. Players get a brief spawn freeze in
+		// startArena to get their bearings before the first wave.
+		if(!arena.hasLobbyLocation())
+		{
+			status = GameStatus.STARTING;
+			startArena();
+			return;
+		}
+
 		int delay = ConfigManager.getMainConfig().arenaStartTime + 1;
 
 		if(forced && delay > 6)
@@ -425,7 +461,7 @@ public class Game
 		if(forced)
 			starter.forced = true;
 
-		sendMessageToPlayers(ChatColor.GRAY + "Game starting soon!");
+		sendMessageToPlayers(Colors.GRAY + "Game starting soon!");
 		status = GameStatus.STARTING;
 	}
 
@@ -456,10 +492,15 @@ public class Game
 			Leaderboard.getPlayerStatFromPlayer(player).incGamesPlayed();
 		}
 
+		// Without a lobby, players are teleported straight into the match, so
+		// freeze them for 3 seconds to let them look around before the first wave.
+		if(!arena.hasLobbyLocation())
+			freezePlayers();
+
 		scoreboard.update();
 		if(this.boxManager.isMultiBox())
 		{
-			sendMessageToPlayers(ChatColor.RED + "All mystery boxes are being generated.");
+			sendMessageToPlayers(Colors.RED + "All mystery boxes are being generated.");
 			this.boxManager.loadAllBoxes();
 		}
 		else
@@ -494,6 +535,52 @@ public class Game
 		nextWave();
 		signManager.updateGame();
 		KitManager.giveOutKits(this);
+	}
+
+	/**
+	 * Pins players in place for 3 seconds: they can still look around (their view
+	 * direction is preserved), but any movement or jumping snaps them back to their
+	 * anchored spot. Used when a lobby-less arena starts the match immediately.
+	 */
+	private void freezePlayers()
+	{
+		sendMessageToPlayers(Colors.RED + "Frozen for 3 seconds - get ready!");
+		frozenPlayers.clear();
+		scheduleMatchTask(1, () -> freezePlayersTick(1));
+	}
+
+	/**
+	 * One tick of the spawn freeze; re-schedules itself until 60 ticks elapse.
+	 */
+	private void freezePlayersTick(int tick)
+	{
+		if(tick >= 60)
+		{
+			frozenPlayers.clear();
+			return;
+		}
+
+		for(Player player : getPlayersInGame())
+			if(player.isOnline())
+			{
+				frozenPlayers.putIfAbsent(player, player.getLocation().clone());
+				// Keep them from dashing far in a single tick before the pin pulls them back.
+				player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 128, false, true, false));
+			}
+
+		for(Map.Entry<Player, Location> entry : frozenPlayers.entrySet())
+		{
+			Player p = entry.getKey();
+			if(!p.isOnline() || !gamePlayers.containsKey(p))
+				continue;
+			Location anchor = entry.getValue();
+			Location cur = p.getLocation();
+			if(cur.getX() != anchor.getX() || cur.getY() != anchor.getY() || cur.getZ() != anchor.getZ())
+				// Teleport to the anchor position but keep the player's current facing.
+				p.teleport(new Location(anchor.getWorld(), anchor.getX(), anchor.getY(), anchor.getZ(), cur.getYaw(), cur.getPitch()));
+		}
+
+		scheduleMatchTask(1, () -> freezePlayersTick(tick + 1));
 	}
 
 	/**
@@ -540,7 +627,7 @@ public class Game
 			for(Player pl : getPlayersAndSpectators())
 			{
 				pl.playSound(pl.getLocation(), Sound.BLOCK_PORTAL_AMBIENT, ConfigManager.getMainConfig().roundSoundVolume, 1);
-				pl.sendTitle(ChatColor.RED + "Round " + waveNumber, ChatColor.GRAY + "starting in 10 seconds", 10, 60, 10);
+				pl.showTitle(Title.title(Colors.legacy(Colors.RED + "Round " + waveNumber), Colors.legacy(Colors.GRAY + "starting in 10 seconds"), 10, 60, 10));
 			}
 			delay = 200;
 		}
@@ -551,15 +638,11 @@ public class Game
 		{
 			for(Player pl : getPlayersAndSpectators())
 			{
-				pl.sendTitle(ChatColor.RED + "Round " + waveNumber, "", 10, 60, 10);
+				pl.showTitle(Title.title(Colors.legacy(Colors.RED + "Round " + waveNumber), Component.empty(), 10, 60, 10));
 				switch(spawnType)
 				{
-					case REGULAR:
-						pl.playSound(pl.getLocation(), Sound.BLOCK_PORTAL_TRAVEL, ConfigManager.getMainConfig().roundSoundVolume, 1);
-						break;
-					case HELL_HOUNDS:
-						pl.playSound(pl.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, ConfigManager.getMainConfig().roundSoundVolume, 1);
-						break;
+					case REGULAR -> pl.playSound(pl.getLocation(), Sound.BLOCK_PORTAL_TRAVEL, ConfigManager.getMainConfig().roundSoundVolume, 1);
+					case HELL_HOUNDS -> pl.playSound(pl.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, ConfigManager.getMainConfig().roundSoundVolume, 1);
 				}
 			}
 
@@ -608,7 +691,7 @@ public class Game
 		}
 		else if(gun == null)
 		{
-			COMZombies.log.log(Level.SEVERE, "The " + startingGun + " is listed as the starting gun, but it could not be found! Did you forget to change this?");
+			COMZombies.log.log(Level.SEVERE, "The {0} is listed as the starting gun, but it could not be found! Did you forget to change this?", new Object[]{startingGun});
 		}
 	}
 
@@ -621,52 +704,47 @@ public class Game
 	{
 		if(isTemplate())
 			return;
-		if(status == GameStatus.WAITING || status == GameStatus.STARTING)
+		switch(status)
 		{
-			gamePlayers.put(player, new GamePlayer(player));
-			internalAddPlayer(player, 500);
-
-			sendMessageToPlayers(player.getName() + " has joined with " + getPlayersInGame().size() + "/" + maxPlayers + "!");
-			if(getPlayersInGame().size() >= minPlayers)
-			{
-				setStarting(false);
-				signManager.updateGame();
-			}
-		}
-		else if(status == GameStatus.INGAME)
-		{
-			if(wasDisconnected(player))
-			{
-				removePlayer(player);
-
-				gamePlayers.put(player, new GamePlayer(player));
-				setDead(player);
-
-				sendMessageToPlayers(player.getName() + " rejoined and can play in the next wave!");
-				player.sendRawMessage(COMZombies.PREFIX + "You will be able to play in the next wave!");
-			}
-			else if(isPlayerDeath(player))
-			{
-				// removePlayer(player);
-				gamePlayers.put(player, new GamePlayer(player));
-				//resetPlayer(player);
-				internalAddPlayer(player, 500 * waveNumber);
-
-				sendMessageToPlayers(player.getName() + " can play again!");
-			}
-//			else if (getWave() <= 5) {
-//				gamePlayers.put(player, new GamePlayer(player));
-//			}
-			else
+			case WAITING, STARTING ->
 			{
 				gamePlayers.put(player, new GamePlayer(player));
-				addSpectator(player);
-				sendMessageToPlayers(player.getName() + " has joined as a spectator!");
+				internalAddPlayer(player, 500);
+
+				sendMessageToPlayers(player.getName() + " has joined with " + getPlayersInGame().size() + "/" + maxPlayers + "!");
+				if(getPlayersInGame().size() >= minPlayers)
+				{
+					setStarting(false);
+					signManager.updateGame();
+				}
 			}
-		}
-		else
-		{
-			CommandUtil.sendMessageToPlayer(player, "Something may have gone wrong here, but MinecraftZombies caught it and will continue without error.");
+			case INGAME ->
+			{
+				if(wasDisconnected(player))
+				{
+					removePlayer(player);
+
+					gamePlayers.put(player, new GamePlayer(player));
+					setDead(player);
+
+					sendMessageToPlayers(player.getName() + " rejoined and can play in the next wave!");
+					player.sendRawMessage(COMZombies.PREFIX + "You will be able to play in the next wave!");
+				}
+				else if(isPlayerDeath(player))
+				{
+					gamePlayers.put(player, new GamePlayer(player));
+					internalAddPlayer(player, 500 * waveNumber);
+
+					sendMessageToPlayers(player.getName() + " can play again!");
+				}
+				else
+				{
+					gamePlayers.put(player, new GamePlayer(player));
+					addSpectator(player);
+					sendMessageToPlayers(player.getName() + " has joined as a spectator!");
+				}
+			}
+			default -> CommandUtil.sendMessageToPlayer(player, "Something may have gone wrong here, but MinecraftZombies caught it and will continue without error.");
 		}
 		signManager.updateGame();
 	}
@@ -717,7 +795,7 @@ public class Game
 		double points = waveNumber;
 		COMZombies.getPlugin().vault.addMoney(player, points);
 		// Ƶ is the Ƶ currency symbol, escaped so the file's encoding can't garble it
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "You earned " + ChatColor.RED + "Ƶ" + (int) points + ChatColor.DARK_GREEN + " for reaching round " + ChatColor.RED + waveNumber + ChatColor.DARK_GREEN + "!");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You earned " + Colors.RED + "Ƶ" + (int) points + Colors.DARK_GREEN + " for reaching round " + Colors.RED + waveNumber + Colors.DARK_GREEN + "!");
 
 		PlayerStats stats = Leaderboard.getPlayerStatFromPlayer(player);
 		if(stats.getHighestRound() < this.waveNumber)
@@ -746,7 +824,7 @@ public class Game
 
 	private void resetPlayer(Player player)
 	{
-		for(PotionEffectType t : PotionEffectType.values())
+		for(PotionEffectType t : Registry.POTION_EFFECT_TYPE)
 			player.removePotionEffect(t);
 
 		player.removePotionEffect(PotionEffectType.SPEED);
@@ -812,6 +890,16 @@ public class Game
 	public void setLobbySpawn(Location loc)
 	{
 		arena.setLobbyLocation(loc);
+		if(arena.isSetupComplete())
+			GameManager.INSTANCE.saveAllGames();
+	}
+
+	/**
+	 * Removes the lobby spawn location. Players will then wait at the game warp.
+	 */
+	public void removeLobbySpawn()
+	{
+		arena.setLobbyLocation(null);
 		if(arena.isSetupComplete())
 			GameManager.INSTANCE.saveAllGames();
 	}
@@ -951,7 +1039,7 @@ public class Game
 
 		if(world == null)
 		{
-			COMZombies.log.log(Level.SEVERE, worldName + " isn't a valid world name for the arena " + arena.getName());
+			COMZombies.log.log(Level.SEVERE, "{0} isn't a valid world name for the arena {1}", new Object[]{worldName, arena.getName()});
 			return false;
 		}
 
@@ -961,7 +1049,7 @@ public class Game
 		minPlayers = CustomConfig.getInt(arenaSettingsJson, "min_players", 1);
 		maxPlayers = CustomConfig.getInt(arenaSettingsJson, "max_players", 8);
 		teddyBearPercent = CustomConfig.getInt(arenaSettingsJson, "teddy_bear_chance", 100);
-		startingGun = CustomConfig.getString(arenaSettingsJson, "StartingGun", "M1911");
+		startingGun = CustomConfig.getString(arenaSettingsJson, "StartingGun", DEFAULT_STARTING_GUN);
 		dogRoundEveryX = CustomConfig.getInt(arenaSettingsJson, "dog_round_every_x", 5);
 		maxAmmoReplishClip = CustomConfig.getBoolean(arenaSettingsJson, "max_ammo_replenish_clip", false);
 
@@ -1043,6 +1131,26 @@ public class Game
 	}
 
 	/**
+	 * Resolves a configured starting-armor material name to a Material.
+	 *
+	 * @param materialName the configured material name ("none" for an empty slot)
+	 * @param slotName     a human-readable slot name for log messages
+	 * @return the Material, or null to leave the slot empty
+	 */
+	private Material getStartingArmorMaterial(String materialName, String slotName)
+	{
+		if(materialName == null || materialName.equalsIgnoreCase("none"))
+			return null;
+		Material material = Material.matchMaterial(materialName);
+		if(material == null)
+		{
+			COMZombies.log.log(Level.WARNING, "Unknown starting armor material '{0}' for {1}; leaving slot empty", new Object[]{materialName, slotName});
+			return null;
+		}
+		return material;
+	}
+
+	/**
 	 * Sets up the players inventory in game
 	 *
 	 * @param slot of the item
@@ -1055,49 +1163,58 @@ public class Game
 		if(data == null)
 			return item;
 
-		List<String> lore = new ArrayList<>();
+		List<Component> lore = new ArrayList<>();
 		switch(slot)
 		{
-			case 27:
-				data.setDisplayName("Knife slot");
-				lore.add("Holds the player's knife");
-				lore.add("Knife only works within 2 blocks!");
-				break;
-			case 28:
-				data.setDisplayName("Gun Slot 1");
-				lore.add("Holds 1 Gun");
-				break;
-			case 29:
-				data.setDisplayName("Gun Slot 2");
-				lore.add("Holds 1 Gun");
-				break;
-			case 30:
-				data.setDisplayName("Gun Slot 3");
-				lore.add("Holds 1 Gun");
-				lore.add("Requires Mule Kick to work!");
-				break;
-			case 31:
-				data.setDisplayName("Perk Slot 1");
-				lore.add("Holds 1 Perk");
-				break;
-			case 32:
-				data.setDisplayName("Perk Slot 2");
-				lore.add("Holds 1 Perk");
-				break;
-			case 33:
-				data.setDisplayName("Perk Slot 3");
-				lore.add("Holds 1 Perk");
-				break;
-			case 34:
-				data.setDisplayName("Perk Slot 4");
-				lore.add("Holds 1 Perk");
-				break;
-			case 35:
-				data.setDisplayName("Grenade Slot");
-				lore.add("");
-				break;
+			case SLOT_KNIFE_MARKER ->
+			{
+				data.displayName(Colors.legacy("Knife slot"));
+				lore.add(Colors.legacy("Holds the player's knife"));
+				lore.add(Colors.legacy("Knife only works within 2 blocks!"));
+			}
+			case SLOT_GUN_1 ->
+			{
+				data.displayName(Colors.legacy("Gun Slot 1"));
+				lore.add(Colors.legacy("Holds 1 Gun"));
+			}
+			case SLOT_GUN_2 ->
+			{
+				data.displayName(Colors.legacy("Gun Slot 2"));
+				lore.add(Colors.legacy("Holds 1 Gun"));
+			}
+			case SLOT_GUN_3 ->
+			{
+				data.displayName(Colors.legacy("Gun Slot 3"));
+				lore.add(Colors.legacy("Holds 1 Gun"));
+				lore.add(Colors.legacy("Requires Mule Kick to work!"));
+			}
+			case SLOT_PERK_1 ->
+			{
+				data.displayName(Colors.legacy("Perk Slot 1"));
+				lore.add(Colors.legacy("Holds 1 Perk"));
+			}
+			case SLOT_PERK_2 ->
+			{
+				data.displayName(Colors.legacy("Perk Slot 2"));
+				lore.add(Colors.legacy("Holds 1 Perk"));
+			}
+			case SLOT_PERK_3 ->
+			{
+				data.displayName(Colors.legacy("Perk Slot 3"));
+				lore.add(Colors.legacy("Holds 1 Perk"));
+			}
+			case SLOT_PERK_4 ->
+			{
+				data.displayName(Colors.legacy("Perk Slot 4"));
+				lore.add(Colors.legacy("Holds 1 Perk"));
+			}
+			case SLOT_GRENADE ->
+			{
+				data.displayName(Colors.legacy("Grenade Slot"));
+				lore.add(Component.empty());
+			}
 		}
-		data.setLore(lore);
+		data.lore(lore);
 		item.setItemMeta(data);
 		return item;
 	}
@@ -1108,24 +1225,37 @@ public class Game
 		ItemStack knife = getUnbreakableItem(Material.IRON_SWORD);
 		ItemMeta kMeta = knife.getItemMeta();
 		if(kMeta != null)
-			kMeta.setDisplayName(ChatColor.RED + "Knife");
+			kMeta.displayName(Colors.legacy(Colors.RED + "Knife"));
 		knife.setItemMeta(kMeta);
 		ItemStack ib = new ItemStack(Material.GREEN_STAINED_GLASS_PANE, 1);
-		player.getInventory().setHelmet(getUnbreakableItem(Material.LEATHER_HELMET));
-		player.getInventory().setChestplate(getUnbreakableItem(Material.LEATHER_CHESTPLATE));
-		player.getInventory().setLeggings(getUnbreakableItem(Material.LEATHER_LEGGINGS));
-		player.getInventory().setBoots(getUnbreakableItem(Material.LEATHER_BOOTS));
-		player.getInventory().setItem(0, knife);
+		// Optional starting armor; on/off via config.gameSettings.startingArmor, materials via startingArmorMaterials.
+		if(ConfigManager.getMainConfig().startingArmor)
+		{
+			ConfigSetup main = ConfigManager.getMainConfig();
+			Material helmet = getStartingArmorMaterial(main.startingArmorHelmet, "helmet");
+			if(helmet != null)
+				player.getInventory().setHelmet(getUnbreakableItem(helmet));
+			Material chestplate = getStartingArmorMaterial(main.startingArmorChestplate, "chestplate");
+			if(chestplate != null)
+				player.getInventory().setChestplate(getUnbreakableItem(chestplate));
+			Material leggings = getStartingArmorMaterial(main.startingArmorLeggings, "leggings");
+			if(leggings != null)
+				player.getInventory().setLeggings(getUnbreakableItem(leggings));
+			Material boots = getStartingArmorMaterial(main.startingArmorBoots, "boots");
+			if(boots != null)
+				player.getInventory().setBoots(getUnbreakableItem(boots));
+		}
+		player.getInventory().setItem(SLOT_KNIFE, knife);
 		//player.getInventory().setItem(8, new ItemStack(Material.MAGMA_CREAM, 4));
-		player.getInventory().setItem(27, setItemMeta(27, ib));
-		player.getInventory().setItem(28, setItemMeta(28, ib));
-		player.getInventory().setItem(29, setItemMeta(29, ib));
-		player.getInventory().setItem(30, setItemMeta(30, ib));
-		player.getInventory().setItem(31, setItemMeta(31, ib));
-		player.getInventory().setItem(32, setItemMeta(32, ib));
-		player.getInventory().setItem(33, setItemMeta(33, ib));
-		player.getInventory().setItem(34, setItemMeta(34, ib));
-		player.getInventory().setItem(35, setItemMeta(35, ib));
+		player.getInventory().setItem(SLOT_KNIFE_MARKER, setItemMeta(SLOT_KNIFE_MARKER, ib));
+		player.getInventory().setItem(SLOT_GUN_1, setItemMeta(SLOT_GUN_1, ib));
+		player.getInventory().setItem(SLOT_GUN_2, setItemMeta(SLOT_GUN_2, ib));
+		player.getInventory().setItem(SLOT_GUN_3, setItemMeta(SLOT_GUN_3, ib));
+		player.getInventory().setItem(SLOT_PERK_1, setItemMeta(SLOT_PERK_1, ib));
+		player.getInventory().setItem(SLOT_PERK_2, setItemMeta(SLOT_PERK_2, ib));
+		player.getInventory().setItem(SLOT_PERK_3, setItemMeta(SLOT_PERK_3, ib));
+		player.getInventory().setItem(SLOT_PERK_4, setItemMeta(SLOT_PERK_4, ib));
+		player.getInventory().setItem(SLOT_GRENADE, setItemMeta(SLOT_GRENADE, ib));
 		player.updateInventory();
 	}
 
@@ -1181,7 +1311,7 @@ public class Game
 	public void damageMob(Mob mob, Player player, float damageAmount)
 	{
 		double mobHealth = mob.getHealth() - damageAmount;
-		mob.playEffect(EntityEffect.HURT);
+		// Each branch below plays the appropriate hurt/death sound for the mob type.
 
 		if(isInstaKill())
 		{
@@ -1203,7 +1333,7 @@ public class Game
 			if(mob instanceof Zombie)
 				zombieKilled(player);
 
-			if(spawnManager.getMobsSpawned() <= 0 && spawnManager.getMobsSpawned() == spawnManager.getMobsToSpawn())
+			if(spawnManager.getEntities().isEmpty() && spawnManager.getMobsSpawned() == spawnManager.getMobsToSpawn())
 			{
 				if(mob instanceof Wolf)
 					powerUpManager.dropPowerUp(mob, PowerUp.MAX_AMMO);
@@ -1254,7 +1384,7 @@ public class Game
 
 		if(debugMode)
 		{
-			mob.setCustomName(String.valueOf(mobHealth));
+			mob.customName(Component.text(String.valueOf(mobHealth)));
 			mob.setCustomNameVisible(true);
 		}
 		else
@@ -1318,7 +1448,7 @@ public class Game
 				COMZombies.getPlugin().vault.addMoney(player, ConfigManager.getMainConfig().KillMoney);
 			} catch(NullPointerException e)
 			{
-				e.printStackTrace();
+				COMZombies.log.log(Level.WARNING, "Vault addMoney failed for {0} while awarding kill money", new Object[]{player.getName()});
 			}
 		}
 	}
@@ -1356,15 +1486,15 @@ public class Game
 	{
 		return gamePlayers.values().stream()
 				.filter(v -> v.isInGame() || v.isSpectating())
-				.map(GamePlayer::getPlayer)
+				.map(v -> v.getPlayer())
 				.collect(Collectors.toList());
 	}
 
 	public List<Player> getDeathPlayers()
 	{
 		return gamePlayers.values().stream()
-				.filter(GamePlayer::isDead)
-				.map(GamePlayer::getPlayer)
+				.filter(v -> v.isDead())
+				.map(v -> v.getPlayer())
 				.collect(Collectors.toList());
 	}
 
@@ -1378,20 +1508,20 @@ public class Game
 	{
 		if(!arena.areMinAndMaxSet())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "Either P1 or P2 or both are not set!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Either P1 or P2 or both are not set!");
 			return false;
 		}
 
 		if(!arena.areAllLocationsSet())
 		{
-			CommandUtil.sendMessageToPlayer(player, ChatColor.RED + "One or multiple of the game warps (gw, lw, sw) are not set!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "One or multiple of the game warps (gw, sw) are not set! (lw is optional)");
 			return false;
 		}
 
 		status = GameStatus.DISABLED;
 		maxPlayers = 8;
 		GameManager.INSTANCE.saveAllGames();
-		CommandUtil.sendMessageToPlayer(player, ChatColor.DARK_GREEN + "Arena [" + arena.getName() + "] is setup!");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Arena [" + arena.getName() + "] is setup!");
 		return true;
 	}
 
