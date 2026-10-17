@@ -65,9 +65,17 @@ jobs:
             echo "Release v${RELEASE_VERSION} already exists; leaving it unchanged."
             exit 0
           fi
+          # RELEASE_NOTES.md is a cumulative changelog. Extract only the top
+          # (newest) section so this release's notes show its own changes
+          # instead of repeating every older version.
+          awk 'f && /^# /{exit} /^# /{f=1} f' RELEASE_NOTES.md > NOTES.md
+          if [[ ! -s NOTES.md ]]; then
+            echo "Could not extract the release notes section from RELEASE_NOTES.md" >&2
+            exit 1
+          fi
           gh release create "v${RELEASE_VERSION}" \
             --target "$RELEASE_COMMIT" \
             --title "MinecraftZombies ${RELEASE_VERSION}" \
-            --notes-file RELEASE_NOTES.md \
+            --notes-file NOTES.md \
             "Core/build/libs/MinecraftZombies-${RELEASE_VERSION}.jar" \
             Core/build/libs/SHA256SUMS.txt
