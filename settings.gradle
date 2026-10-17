@@ -1,3 +1,10 @@
+plugins {
+    // Lets Gradle auto-download a Temurin JDK 25 on CI runners (and any
+    // machine without a local install) instead of relying on a machine-specific
+    // path. Local machines with a registered JDK 25 still use that.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
 include 'API'
 include 'Compat'
 include 'Core'
