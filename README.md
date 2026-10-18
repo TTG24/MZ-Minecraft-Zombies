@@ -3,7 +3,27 @@ A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
 Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
-## Release 1.3
+## Release 1.3.1
+
+**Game over.** When a match genuinely ends (everyone down), a `mz:game_over` stinger from the
+bundled resource pack plays for everyone in the arena, and surviving players are held in
+spectator mode at the spectate warp for `config.gameSettings.gameOverSpectateSeconds` (default
+`30`) before being returned to the spot they joined from. Set the value to `0` to skip the
+hold. Re-read on `/zombies reload`.
+
+**Game over leaderboard.** While players spectate after a match, a **Game Over** sidebar shows
+the round reached plus one line per player with their points, kills, revives and deaths, sorted
+by kills (then points). Stats are tracked per match and captured the moment it ends, so they are
+independent of the lifetime `/zombies leaderboard` totals. `/zombies leave` (or `/zombies l`)
+skips the wait and sends a watcher home; the last one to leave tears a solo instance down
+immediately.
+
+**Fix.** Solo arenas no longer unload while a player is still on the post-match board.
+
+Servers using the 1.3 resource pack should update to the republished pack for the new
+`mz:game_over` sound.
+
+### Previous release 1.3
 
 **Round music.** A bundled server resource pack (source in the repo's `resourcepack/` folder)
 plays a stinger when each round starts and ends. Point your `server.properties` at the pack and
@@ -37,7 +57,7 @@ armor stands, paintings, item frames, boats, minecarts and passive mobs — and 
 decorations are protected from damage and right-click interaction in instance worlds. Live
 zombies, dropped items, XP orbs and projectiles are never copied.
 
-### Previous release 1.2.1
+#### Previous release 1.2.1
 
 **Configurable starting armor.** `config.gameSettings.startingArmor` (default `true`) controls
 whether players join wearing the default unbreakable leather armor. Set it to `false` to let
