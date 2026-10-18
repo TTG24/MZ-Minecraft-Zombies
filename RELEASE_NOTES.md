@@ -1,3 +1,46 @@
+# MinecraftZombies 1.3.1
+
+## Post-match game over
+
+- When a match genuinely ends (everyone down), a `mz:game_over` stinger from the bundled
+  resource pack now plays for everyone in the arena. Clients without the pack simply hear
+  nothing; existing round stingers are unaffected.
+- Every surviving player is then held in **spectator mode** at the arena's spectate warp for
+  `config.gameSettings.gameOverSpectateSeconds` (default `30`), so the whole party can hear the
+  ending together before being returned to the spot they were in when they joined. Setting the
+  value to `0` disables the hold and sends players home immediately. The setting is re-read on
+  `/zombies reload`.
+
+## Game over leaderboard
+
+- While players spectate after a match, a **Game Over** sidebar shows the final standings: the
+  round reached plus one line per player with their points, kills, revives and deaths, sorted by
+  kills (then points as a tiebreaker).
+- Points, kills, revives and deaths are tracked **per match** and captured the moment the match
+  ends, so they are independent of the lifetime `/zombies leaderboard` totals.
+- `/zombies leave` (or `/zombies l`) skips the wait: a player watching the board is sent straight
+  home, and the last one to leave tears the solo instance down immediately instead of waiting out
+  the timer.
+
+## Fixes
+
+- Solo arenas no longer unload while a player is still on the post-match board; the instance now
+  waits for the spectate window to finish (or the player to `/zombies leave`) before it is
+  removed.
+
+## Upgrade
+
+Stop the server, replace the previous plugin JAR with **MinecraftZombies-1.3.1.jar**, and
+restart. Keep only one MinecraftZombies JAR installed. Existing arena settings remain; the new
+setting (`gameOverSpectateSeconds`) is added automatically. Servers using the 1.3 resource pack
+should update to the republished pack for the new `mz:game_over` sound.
+
+## Validation
+
+The full Gradle build and automated checks pass. The game-over stinger, post-match spectate,
+leaderboard, `/zombies leave` skip and solo instance teardown were verified in-game by the server
+owner.
+
 # MinecraftZombies 1.3
 
 ## Round music resource pack
