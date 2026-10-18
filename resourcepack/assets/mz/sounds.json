@@ -14,5 +14,13 @@
         "volume": 1.0
       }
     ]
+  },
+  "game_over": {
+    "sounds": [
+      {
+        "name": "mz:game_over",
+        "volume": 1.0
+      }
+    ]
   }
 }

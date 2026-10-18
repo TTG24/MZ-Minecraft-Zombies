@@ -54,10 +54,14 @@ config:
     ZoomTexture: false
     #Change the volume of the round sound
     roundSoundVolume: 0.2
-    #Volume for the bundled round music stingers (mz:round_start / mz:round_end), which are
-    #delivered through a server resource pack - see the resourcepack/ folder and README.
-    #0 disables the music.
+    #Volume for the bundled round music stingers (mz:round_start / mz:round_end /
+    #mz:game_over), which are delivered through a server resource pack - see the
+    #resourcepack/ folder and README. 0 disables the music.
     roundMusicVolume: 1.0
+    #Seconds players stay in spectator mode in the arena after a match ends, so they can
+    #hear the game-over stinger (and see the post-match leaderboard). 0 returns them to
+    #their pre-match location immediately.
+    gameOverSpectateSeconds: 30
     #The amount of damage zombies do, 9 is the equivalent 3 hits down, juggernog after the 5th hit down
     zombieDamage: 9
     #Keep arena zombies alive on Peaceful without changing world difficulty.

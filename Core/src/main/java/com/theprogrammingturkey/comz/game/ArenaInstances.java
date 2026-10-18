@@ -307,30 +307,6 @@ public final class ArenaInstances
 	}
 
 	/**
-	 * Called from {@link Game#playerDowned} for the solo player.
-	 *
-	 * <p>On death the player is sent to the spectate area but their body (or spectating form)
-	 * stays inside the instance world, so the world never empties on its own. The match itself
-	 * keeps running so they can rejoin on the next wave; if they simply quit or leave shortly
-	 * after, {@link #onSoloPlayerRemoved} cleans the instance up. As a fallback, if they are
-	 * still dead a short while later and the match is no longer in progress, dispose the instance.
-	 */
-	public void onSoloPlayerDowned(Game game, Player player)
-	{
-		COMZombies.scheduleTask(600, () ->
-		{
-			World world = game.getWorld();
-			if(world == null || !worlds.containsKey(world.getName()) || !game.isSoloInstance())
-				return;
-			boolean stillDead = game.isPlayerDeath(player);
-			if((stillDead && game.getStatus() != Game.GameStatus.INGAME)
-					|| !game.isPlayerPlaying(player)
-					|| world.getPlayers().isEmpty())
-				disposeSolo(game);
-		});
-	}
-
-	/**
 	 * Disposes a solo instance after a short delay, retrying until the world is actually empty.
 	 * This handles the async teleport in {@link #onSoloPlayerRemoved} (the player may not have
 	 * left the world on the first pass) and any other trigger that empties the world gradually.

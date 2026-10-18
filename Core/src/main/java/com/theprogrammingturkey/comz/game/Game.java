@@ -126,6 +126,12 @@ public class Game
 	 */
 	private boolean instaKill = false;
 
+	/** Players held in spectator mode after a match ends, waiting to be sent home. */
+	private final List<Player> gameOverSpectators = new ArrayList<>();
+
+	/** Task id that returns {@link #gameOverSpectators} to their pre-match location. */
+	private int gameOverReturnTask = -1;
+
 	// Only templates are persisted. Runtime copies have their own managers and match state.
 	private String templateName;
 	private int instanceCount;
@@ -909,8 +915,8 @@ public class Game
 
 		if(downedPlayerManager.isDownedPlayer(player))
 			downedPlayerManager.removeDownedPlayer(player);
-		if(getPlayersInGame().contains(player))
-			resetPlayer(player);
+		// Note: no resetPlayer here — the caller (endGame) decides whether the player
+		// goes home immediately or is held in post-match spectator mode.
 	}
 
 	public void removeSpectator(Player player)
@@ -1076,20 +1082,40 @@ public class Game
 		matchGeneration++;
 		powerUpManager.clear();
 
+		// A match can end (admin command, reload, remove) while post-match spectators are
+		// still lingering; cancel their pending return so nothing runs against a fresh state.
+		if(gameOverReturnTask != -1)
+		{
+			Bukkit.getScheduler().cancelTask(gameOverReturnTask);
+			gameOverReturnTask = -1;
+		}
+
+		// Only a match that was actually in progress gets the game-over treatment (sound +
+		// post-match spectate); admin/reload/remove ends just send players home.
+		boolean realGameOver = this.status == GameStatus.INGAME;
+		if(realGameOver)
+			playRoundMusic("game_over");
+
 		this.status = GameStatus.WAITING;
 
+		// After a real match ends, players still in the arena (playing, downed, or viewing)
+		// linger in spectator mode so they hear the ending; everyone else goes home as before.
+		List<Player> keepSpectating = new ArrayList<>();
 		for(GamePlayer v : gamePlayers.values())
 		{
+			Player player = v.getPlayer();
+			boolean linger = realGameOver && !v.hasLeftGame() && player.isOnline()
+					&& (v.isInGame() || v.isSpectating());
 			if(v.isInGame() || v.hasLeftGame() || v.isDead())
 			{
-				PointManager.INSTANCE.playerLeaveGame(v.getPlayer());
-				removePlayerActions(v.getPlayer());
-				com.theprogrammingturkey.comz.game.managers.DoorProximityManager.INSTANCE.clearPlayer(v.getPlayer());
+				PointManager.INSTANCE.playerLeaveGame(player);
+				removePlayerActions(player);
+				com.theprogrammingturkey.comz.game.managers.DoorProximityManager.INSTANCE.clearPlayer(player);
 			}
+			if(linger)
+				keepSpectating.add(player);
 			else
-			{
-				resetPlayer(v.getPlayer());
-			}
+				resetPlayer(player);
 		}
 
 		spawnManager.killAll(false);
@@ -1115,12 +1141,63 @@ public class Game
 		clearArenaItems();
 		PointManager.INSTANCE.clearGamePoints(this);
 
-		if(soloInstance)
-			// A finished solo match is torn down once nobody is still inside it.
+		if(!keepSpectating.isEmpty())
+			// Hold the players in the arena to hear the ending; the solo instance (if any)
+			// is torn down once they return home.
+			beginGameOverSpectate(keepSpectating);
+		else if(soloInstance)
+			// No lingering spectators: dispose the instance now that the world will empty.
 			ArenaInstances.INSTANCE.onSoloMatchEnded(this);
 		GameManager.INSTANCE.refreshVisibility();
 
 		signManager.updateGame();
+	}
+
+	/**
+	 * Keeps the players who just finished a match in spectator mode at the arena's spectate
+	 * spot so they hear the game-over stinger, then returns them to their pre-match location.
+	 */
+	private void beginGameOverSpectate(List<Player> players)
+	{
+		gameOverSpectators.clear();
+		for(Player player : players)
+		{
+			if(!player.isOnline())
+				continue;
+			// The pre-match home is already cached from when they joined; do NOT re-save here
+			// or the arena location would become their restore point.
+			player.setGameMode(GameMode.SPECTATOR);
+			player.teleport(arena.getSpectateLocation());
+			gameOverSpectators.add(player);
+		}
+
+		long delay = ConfigManager.getMainConfig().gameOverSpectateSeconds * 20L;
+		if(delay <= 0 || gameOverSpectators.isEmpty())
+		{
+			returnGameOverSpectators();
+			return;
+		}
+		gameOverReturnTask = COMZombies.scheduleTask(delay, this::returnGameOverSpectators);
+	}
+
+	/** Sends lingering game-over spectators back to their pre-match location. */
+	private void returnGameOverSpectators()
+	{
+		gameOverReturnTask = -1;
+		for(Player player : gameOverSpectators)
+		{
+			// Skip anyone who has since joined a new game; they are handled there.
+			if(!player.isOnline() || GameManager.INSTANCE.isPlayerInGame(player))
+				continue;
+			resetPlayer(player);
+			if(gamePlayers.containsKey(player))
+				gamePlayers.remove(player);
+		}
+		gameOverSpectators.clear();
+		GameManager.INSTANCE.refreshVisibility();
+		if(soloInstance)
+			// The instance world empties once the player is home; dispose it then.
+			ArenaInstances.INSTANCE.onSoloMatchEnded(this);
 	}
 
 	public enum GameStatus
@@ -1516,16 +1593,8 @@ public class Game
 
 		player.setFireTicks(0);
 
-		if(soloInstance)
-		{
-			// A solo player has no teammate to revive them, so instead of ending the
-			// match when everyone is down, send them to the spectate area and keep the
-			// instance alive until they rejoin, leave, or the match ends on its own.
-			setDead(player);
-			ArenaInstances.INSTANCE.onSoloPlayerDowned(this, player);
-			return;
-		}
-
+		// The last player down (whether a solo match or a full one) ends the match; the
+		// post-match spectate in endGame keeps them in the arena to hear the ending.
 		if(downedPlayerManager.numDownedPlayers() + 1 == getPlayersInGame().size())
 			endGame();
 		else

@@ -113,6 +113,13 @@ public class ConfigSetup
 
 	public double juggernogHealth;
 
+	/**
+	 * Seconds players stay in spectator mode in the arena after a match ends, so they can
+	 * hear the game-over stinger (and see the post-match leaderboard); 0 returns them home
+	 * immediately.
+	 */
+	public int gameOverSpectateSeconds;
+
 	public double healTime;
 
 	/**
@@ -156,8 +163,8 @@ public class ConfigSetup
 		reloadTime = plugin.getConfig().getInt("config.gameSettings.reloadTime");
 		roundSoundVolume = (float) plugin.getConfig().getDouble("config.gameSettings.roundSoundVolume");
 		roundMusicVolume = (float) plugin.getConfig().getDouble("config.gameSettings.roundMusicVolume", 1.0);
-
 		arenaStartTime = plugin.getConfig().getInt("config.gameSettings.arenaStartTime");
+		gameOverSpectateSeconds = Math.max(0, plugin.getConfig().getInt("config.gameSettings.gameOverSpectateSeconds", 30));
 		// We only have a max of 4 inventory slots for perks
 		maxPerks = Math.min(plugin.getConfig().getInt("config.perks.maxPerks", 4), 4);
 		KillMoney = plugin.getConfig().getInt("config.Economy.MoneyPerKill");

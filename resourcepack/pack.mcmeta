@@ -1,6 +1,6 @@
 {
   "pack": {
-    "description": "MinecraftZombies round music (round start / round end stingers)",
+    "description": "MinecraftZombies round music (round start / round end / game over stingers)",
     "pack_format": 97,
     "supported_formats": {
       "min_inclusive": 34,
