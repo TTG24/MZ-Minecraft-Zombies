@@ -1,11 +1,12 @@
 package com.theprogrammingturkey.comz.commands;
 
+import org.bukkit.entity.Player;
+
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.util.COMZPermission;
-import com.theprogrammingturkey.comz.util.CommandUtil;
 import com.theprogrammingturkey.comz.util.Colors;
-import org.bukkit.entity.Player;
+import com.theprogrammingturkey.comz.util.CommandUtil;
 
 public class LeaveCommand extends SubCommand
 {
@@ -26,7 +27,15 @@ public class LeaveCommand extends SubCommand
 
 		if(game == null)
 		{
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You are not in a game!");
+			// Between matches a player may be watching the post-match board; let them skip it.
+			Game spectatorGame = GameManager.INSTANCE.getGameOverSpectatingGame(player);
+			if(spectatorGame == null)
+			{
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You are not in a game!");
+				return true;
+			}
+			spectatorGame.skipGameOverSpectate(player);
+			CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "You have left the arena!");
 			return true;
 		}
 

@@ -321,6 +321,10 @@ public final class ArenaInstances
 		World world = game.getWorld();
 		if(world == null || !worlds.containsKey(world.getName()))
 			return;
+		// Never tear down the world while someone is still spectating the post-match board;
+		// otherwise the forced logout teleport kicks them to the main world mid-spectate.
+		if(game.hasGameOverSpectators())
+			return;
 		COMZombies.scheduleTask(10, () ->
 		{
 			if(!worlds.containsKey(world.getName()) || world.getPlayers().isEmpty())
@@ -371,6 +375,9 @@ public final class ArenaInstances
 				continue;
 			World world = game.getWorld();
 			if(world == null || !worlds.containsKey(world.getName()))
+				continue;
+			// Keep the world alive while a player is still on the post-match leaderboard.
+			if(game.hasGameOverSpectators())
 				continue;
 			if(game.getStatus() != Game.GameStatus.INGAME && world.getPlayers().isEmpty())
 				disposeSolo(game);

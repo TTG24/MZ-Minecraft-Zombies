@@ -1,16 +1,6 @@
 package com.theprogrammingturkey.comz.game.features;
 
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.config.ConfigManager;
-import com.theprogrammingturkey.comz.economy.PointManager;
-import com.theprogrammingturkey.comz.game.Game;
-import com.theprogrammingturkey.comz.game.managers.PlayerWeaponManager;
-import com.theprogrammingturkey.comz.game.managers.WeaponManager;
-import com.theprogrammingturkey.comz.game.weapons.WeaponInstance;
-import com.theprogrammingturkey.comz.leaderboards.Leaderboard;
-import com.theprogrammingturkey.comz.leaderboards.PlayerStats;
 import org.bukkit.Bukkit;
-import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.FireworkEffect.Type;
@@ -20,6 +10,17 @@ import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.meta.FireworkMeta;
+
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.config.ConfigManager;
+import com.theprogrammingturkey.comz.economy.PointManager;
+import com.theprogrammingturkey.comz.game.Game;
+import com.theprogrammingturkey.comz.game.managers.PlayerWeaponManager;
+import com.theprogrammingturkey.comz.game.managers.WeaponManager;
+import com.theprogrammingturkey.comz.game.weapons.WeaponInstance;
+import com.theprogrammingturkey.comz.leaderboards.Leaderboard;
+import com.theprogrammingturkey.comz.leaderboards.PlayerStats;
+import com.theprogrammingturkey.comz.util.Colors;
 
 public class DownedPlayer implements Listener
 {
@@ -78,6 +79,7 @@ public class DownedPlayer implements Listener
 			reviver.sendMessage(Colors.GRAY + "You revived " + Colors.RED + player.getName());
 			PlayerStats stats = Leaderboard.getPlayerStatFromPlayer(reviver);
 			stats.setRevives(stats.getRevives() + 1);
+			game.recordRevive(reviver);
 		}
 		clearDownedState();
 		game.downedPlayerManager.downedPlayerRevived(this);
@@ -123,6 +125,7 @@ public class DownedPlayer implements Listener
 				//game.gamePlayers.remove(player);
 				PlayerStats stats = Leaderboard.getPlayerStatFromPlayer(player);
 				stats.setDeaths(stats.getDeaths() + 1);
+				game.recordDeath(player);
 			}
 		});
 	}

@@ -1,24 +1,25 @@
 package com.theprogrammingturkey.comz.game;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.theprogrammingturkey.comz.game.features.Door;
-import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.config.COMZConfig;
-import com.theprogrammingturkey.comz.config.ConfigManager;
-import com.theprogrammingturkey.comz.game.Game.GameStatus;
-import org.bukkit.Bukkit;
-import com.theprogrammingturkey.comz.util.Colors;
-import org.bukkit.Location;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Mob;
+import org.bukkit.entity.Player;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.theprogrammingturkey.comz.COMZombies;
+import com.theprogrammingturkey.comz.config.COMZConfig;
+import com.theprogrammingturkey.comz.config.ConfigManager;
+import com.theprogrammingturkey.comz.game.Game.GameStatus;
+import com.theprogrammingturkey.comz.game.features.Door;
+import com.theprogrammingturkey.comz.util.Colors;
 
 public class GameManager
 {
@@ -125,6 +126,19 @@ public class GameManager
 				return game;
 		for(Game game : games)
 			if(game.wasDisconnected(player))
+				return game;
+		return null;
+	}
+
+	/**
+	 * The game whose post-match board the player is watching, if any. Such players are not
+	 * counted as "in a game" (they are between matches), so {@link #getGame(Player)} returns
+	 * null for them; this lets a command like {@code /z l} find the game and send them home.
+	 */
+	public Game getGameOverSpectatingGame(Player player)
+	{
+		for(Game game : games)
+			if(game.isGameOverSpectator(player))
 				return game;
 		return null;
 	}

@@ -10,10 +10,12 @@ package com.theprogrammingturkey.comz.game;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -39,6 +41,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scoreboard.Criteria;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -131,6 +137,12 @@ public class Game
 
 	/** Task id that returns {@link #gameOverSpectators} to their pre-match location. */
 	private int gameOverReturnTask = -1;
+
+	/** Per-match kill/revive/death counts accumulated while the match is live. */
+	private final Map<UUID, PlayerMatchStats> matchStats = new HashMap<>();
+
+	/** Final round of the last finished match; shown on the post-match leaderboard. */
+	private int finalRoundReached;
 
 	// Only templates are persisted. Runtime copies have their own managers and match state.
 	private String templateName;
@@ -1096,7 +1108,15 @@ public class Game
 		if(realGameOver)
 			playRoundMusic("game_over");
 
+		// The final round is the same for everyone and is reset below.
+		finalRoundReached = waveNumber;
+
 		this.status = GameStatus.WAITING;
+
+		// Snapshot per-match stats (including each player's live points) BEFORE the loop
+		// below calls playerLeaveGame, which clears those totals.
+		final Map<UUID, PlayerMatchStats> gameOverBoard =
+				realGameOver ? buildGameOverStats() : null;
 
 		// After a real match ends, players still in the arena (playing, downed, or viewing)
 		// linger in spectator mode so they hear the ending; everyone else goes home as before.
@@ -1142,9 +1162,9 @@ public class Game
 		PointManager.INSTANCE.clearGamePoints(this);
 
 		if(!keepSpectating.isEmpty())
-			// Hold the players in the arena to hear the ending; the solo instance (if any)
-			// is torn down once they return home.
-			beginGameOverSpectate(keepSpectating);
+			// Hold the players in the arena to hear the ending and see the leaderboard;
+			// the solo instance (if any) is torn down once they return home.
+			beginGameOverSpectate(keepSpectating, gameOverBoard);
 		else if(soloInstance)
 			// No lingering spectators: dispose the instance now that the world will empty.
 			ArenaInstances.INSTANCE.onSoloMatchEnded(this);
@@ -1155,11 +1175,15 @@ public class Game
 
 	/**
 	 * Keeps the players who just finished a match in spectator mode at the arena's spectate
-	 * spot so they hear the game-over stinger, then returns them to their pre-match location.
+	 * spot so they hear the game-over stinger and see the post-match leaderboard, then
+	 * returns them to their pre-match location.
 	 */
-	private void beginGameOverSpectate(List<Player> players)
+	private void beginGameOverSpectate(List<Player> players, Map<UUID, PlayerMatchStats> stats)
 	{
 		gameOverSpectators.clear();
+		matchStats.clear();
+		if(stats != null)
+			matchStats.putAll(stats);
 		for(Player player : players)
 		{
 			if(!player.isOnline())
@@ -1170,6 +1194,9 @@ public class Game
 			player.teleport(arena.getSpectateLocation());
 			gameOverSpectators.add(player);
 		}
+
+		// Show the post-match leaderboard sidebar to everyone who is spectating.
+		showGameOverStats();
 
 		long delay = ConfigManager.getMainConfig().gameOverSpectateSeconds * 20L;
 		if(delay <= 0 || gameOverSpectators.isEmpty())
@@ -1194,10 +1221,131 @@ public class Game
 				gamePlayers.remove(player);
 		}
 		gameOverSpectators.clear();
+		matchStats.clear();
 		GameManager.INSTANCE.refreshVisibility();
 		if(soloInstance)
 			// The instance world empties once the player is home; dispose it then.
 			ArenaInstances.INSTANCE.onSoloMatchEnded(this);
+	}
+
+	/** True while players are still watching the post-match board; the solo world must not be unloaded then. */
+	public boolean hasGameOverSpectators()
+	{
+		return !gameOverSpectators.isEmpty();
+	}
+
+	/** True if the player is currently watching the post-match board (not counted as "in a game"). */
+	public boolean isGameOverSpectator(Player player)
+	{
+		return gameOverSpectators.contains(player);
+	}
+
+	/** Sends one lingering post-match spectator home immediately, e.g. via {@code /z l}. */
+	public void skipGameOverSpectate(Player player)
+	{
+		if(!gameOverSpectators.remove(player))
+			return;
+		resetPlayer(player);
+		if(gamePlayers.containsKey(player))
+			gamePlayers.remove(player);
+		// Clear their board now that they are leaving; other spectators keep theirs.
+		player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+		GameManager.INSTANCE.refreshVisibility();
+		// No one left: finish up (solo instance teardown, etc.) without waiting out the timer.
+		if(gameOverSpectators.isEmpty() && gameOverReturnTask != -1)
+		{
+			Bukkit.getScheduler().cancelTask(gameOverReturnTask);
+			gameOverReturnTask = -1;
+			matchStats.clear();
+			if(soloInstance)
+				ArenaInstances.INSTANCE.onSoloMatchEnded(this);
+		}
+	}
+
+	/** Captures each remaining player's per-match stats before endGame clears them. */
+	private Map<UUID, PlayerMatchStats> buildGameOverStats()
+	{
+		Map<UUID, PlayerMatchStats> snapshot = new HashMap<>();
+		for(GamePlayer v : gamePlayers.values())
+		{
+			if(v.hasLeftGame())
+				continue;
+			Player player = v.getPlayer();
+			PlayerMatchStats live = matchStats.get(player.getUniqueId());
+			int kills = live != null ? live.getKills() : 0;
+			int revives = live != null ? live.getRevives() : 0;
+			int deaths = live != null ? live.getDeaths() : 0;
+			snapshot.put(player.getUniqueId(),
+					new PlayerMatchStats(player.getName(),
+							PointManager.INSTANCE.getPlayersPoints(player),
+							kills, revives, deaths));
+		}
+		return snapshot;
+	}
+
+	/**
+	 * Shows the per-match leaderboard (sorted by kills, then points) as a sidebar to the
+	 * lingering spectators, replacing whatever they were viewing.
+	 */
+	private void showGameOverStats()
+	{
+		if(matchStats.isEmpty() || gameOverSpectators.isEmpty())
+			return;
+
+		List<PlayerMatchStats> ranked = new ArrayList<>(matchStats.values());
+		ranked.sort(Comparator
+				.comparingInt(PlayerMatchStats::getKills).reversed()
+				.thenComparing(PlayerMatchStats::getPoints, Comparator.reverseOrder()));
+
+		Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
+		Objective objective = board.registerNewObjective(
+				"mz_game_over", Criteria.DUMMY, Colors.legacy(Colors.RED + "Game Over"));
+		objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+
+		// Sidebar shows the highest score at the top: the round header sits above the
+		// players, and rank 1 gets the highest player score.
+		objective.getScore(Colors.RED + "Round " + finalRoundReached).setScore(ranked.size() + 2);
+		int score = ranked.size();
+		for(PlayerMatchStats stats : ranked)
+		{
+			String line = Colors.WHITE + stats.getName()
+					+ Colors.GRAY + "  " + Colors.RED + stats.getPoints() + " pts"
+					+ Colors.GRAY + "  " + Colors.GREEN + stats.getKills() + " kills"
+					+ Colors.GRAY + "  " + Colors.YELLOW + stats.getRevives() + " rev"
+					+ Colors.GRAY + "  " + Colors.RED + stats.getDeaths() + " deaths";
+			objective.getScore(line).setScore(score--);
+		}
+
+		for(Player player : gameOverSpectators)
+			if(player.isOnline())
+				player.setScoreboard(board);
+	}
+
+	/** Adds a per-match kill to {@code player}'s leaderboard entry. */
+	public void recordKill(Player player)
+	{
+		PlayerMatchStats stats = matchStats
+				.computeIfAbsent(player.getUniqueId(),
+						u -> new PlayerMatchStats(player.getName(), 0, 0, 0, 0));
+		stats.incKills();
+	}
+
+	/** Adds a per-match death to {@code player}'s leaderboard entry. */
+	public void recordDeath(Player player)
+	{
+		PlayerMatchStats stats = matchStats
+				.computeIfAbsent(player.getUniqueId(),
+						u -> new PlayerMatchStats(player.getName(), 0, 0, 0, 0));
+		stats.incDeaths();
+	}
+
+	/** Adds a per-match revive to {@code player}'s leaderboard entry. */
+	public void recordRevive(Player player)
+	{
+		PlayerMatchStats stats = matchStats
+				.computeIfAbsent(player.getUniqueId(),
+						u -> new PlayerMatchStats(player.getName(), 0, 0, 0, 0));
+		stats.incRevives();
 	}
 
 	public enum GameStatus
@@ -1596,7 +1744,12 @@ public class Game
 		// The last player down (whether a solo match or a full one) ends the match; the
 		// post-match spectate in endGame keeps them in the arena to hear the ending.
 		if(downedPlayerManager.numDownedPlayers() + 1 == getPlayersInGame().size())
+		{
+			// The downed timer never runs for the final player (the match ends first), so
+			// record their death here or it would be missing from the leaderboard.
+			recordDeath(player);
 			endGame();
+		}
 		else
 			downedPlayerManager.setPlayerDowned(player, this);
 	}
@@ -1624,6 +1777,7 @@ public class Game
 	public void zombieKilled(Player player)
 	{
 		Leaderboard.getPlayerStatFromPlayer(player).incKills();
+		recordKill(player);
 
 		if(COMZombies.getPlugin().vault != null)
 		{
