@@ -6,9 +6,16 @@ config:
   instances:
     #Maximum volume of the two-corner map snapshot (including air), captured once per template.
     maxCopyBlocks: 5000000
-    #At startup and reload, the first copy of each arena is made right away; the others are made in the background, one
-    #every this many ticks (20 = 1 second), so the server does not freeze while they are made.
+    #Copies kept of each arena (at most the arena's instance count, which is the most copies it can ever have)
+    readyCopies: 4
+    #Empty copies kept ready for the next players: when one gets used, another is made in the background
+    spareCopies: 1
+    #Each copy is pasted a slice per tick over this many ticks (60 = 3 seconds), so making one never freezes the server
+    pasteTicks: 60
+    #Ticks to wait between two copies
     prepareIntervalTicks: 5
+    #Extra copies (past readyCopies) left empty this long are removed again
+    removeExtraAfterSeconds: 180
     #Allow players to spin up a private single-player arena with /zombies solo <arena>.
     #The copy is created on demand and destroyed the moment nobody is left in it.
     soloInstances: true

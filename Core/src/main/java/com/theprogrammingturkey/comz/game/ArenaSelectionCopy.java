@@ -161,6 +161,61 @@ public final class ArenaSelectionCopy implements AutoCloseable
 		}
 	}
 
+	/**
+	 * Splits the arena box into about {@code parts} slabs along its longest side, so a copy can be pasted a slab per tick
+	 * (a whole paste at once stalls the server for a moment).
+	 */
+	public java.util.List<CuboidRegion> slices(int parts)
+	{
+		var region = clipboard.getRegion();
+		BlockVector3 min = region.getMinimumPoint(), max = region.getMaximumPoint();
+		boolean alongX = max.x() - min.x() >= max.z() - min.z();
+		int from = alongX ? min.x() : min.z(), to = alongX ? max.x() : max.z();
+		int length = to - from + 1;
+		int n = Math.max(1, Math.min(parts, length));
+		java.util.List<CuboidRegion> out = new java.util.ArrayList<>(n);
+		for(int i = 0; i < n; i++)
+		{
+			int a = from + (int) ((long) length * i / n), b = from + (int) ((long) length * (i + 1) / n) - 1;
+			if(b < a)
+				continue;
+			out.add(alongX
+					? new CuboidRegion(BlockVector3.at(a, min.y(), min.z()), BlockVector3.at(b, max.y(), max.z()))
+					: new CuboidRegion(BlockVector3.at(min.x(), min.y(), a), BlockVector3.at(max.x(), max.y(), b)));
+		}
+		return out;
+	}
+
+	/** Pastes one slab (blocks and biomes, no entities) at the same coordinates. */
+	public void pasteSlice(World destination, CuboidRegion slice) throws IOException
+	{
+		try(var session = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(destination)))
+		{
+			ForwardExtentCopy copy = new ForwardExtentCopy(clipboard, slice, session, slice.getMinimumPoint());
+			copy.setCopyingEntities(false);
+			copy.setCopyingBiomes(true);
+			Operations.complete(copy);
+		}
+		catch(Exception failure) { throw new IOException("Could not paste arena slice", failure); }
+	}
+
+	/** Places the snapshotted decor entities (armor stands, item frames...) once every slab is pasted. */
+	public void pasteEntities(World destination) throws IOException
+	{
+		try(var session = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(destination)))
+		{
+			for(Entity entity : clipboard.getEntities())
+			{
+				BaseEntity state = entity.getState();
+				if(state == null)
+					continue;
+				var loc = entity.getLocation();
+				session.createEntity(new com.sk89q.worldedit.util.Location(session, loc.x(), loc.y(), loc.z(), loc.getYaw(), loc.getPitch()), state);
+			}
+		}
+		catch(Exception failure) { throw new IOException("Could not place arena entities", failure); }
+	}
+
 	public void paste(World destination) throws IOException
 	{
 		// Pasting with a direct ForwardExtentCopy (clipboard -> world) instead of a
