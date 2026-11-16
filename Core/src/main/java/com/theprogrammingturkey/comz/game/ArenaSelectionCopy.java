@@ -199,19 +199,22 @@ public final class ArenaSelectionCopy implements AutoCloseable
 		catch(Exception failure) { throw new IOException("Could not paste arena slice", failure); }
 	}
 
-	/** Places the snapshotted decor entities (armor stands, item frames...) once every slab is pasted. */
+	/**
+	 * Places the snapshotted decor entities (armor stands, item frames...) once every slab is pasted. Done with the same copy
+	 * the full paste uses (which placed them fine), with a mask that matches no block, so only the entities are copied.
+	 * (Creating them one by one failed with "Error creating entity" for every one.)
+	 */
 	public void pasteEntities(World destination) throws IOException
 	{
+		if(clipboard.getEntities().isEmpty())
+			return;
 		try(var session = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(destination)))
 		{
-			for(Entity entity : clipboard.getEntities())
-			{
-				BaseEntity state = entity.getState();
-				if(state == null)
-					continue;
-				var loc = entity.getLocation();
-				session.createEntity(new com.sk89q.worldedit.util.Location(session, loc.x(), loc.y(), loc.z(), loc.getYaw(), loc.getPitch()), state);
-			}
+			ForwardExtentCopy copy = new ForwardExtentCopy(clipboard, clipboard.getRegion(), session, clipboard.getOrigin());
+			copy.setSourceMask(com.sk89q.worldedit.function.mask.Masks.alwaysFalse());
+			copy.setCopyingEntities(true);
+			copy.setCopyingBiomes(false);
+			Operations.complete(copy);
 		}
 		catch(Exception failure) { throw new IOException("Could not place arena entities", failure); }
 	}
