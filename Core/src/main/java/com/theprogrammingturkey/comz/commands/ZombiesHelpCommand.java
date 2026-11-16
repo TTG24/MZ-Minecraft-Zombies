@@ -18,7 +18,7 @@ public class ZombiesHelpCommand
 
 	public void playerBaseHelp()
 	{
-		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "-------- ======== " + Colors.RED + "[ MinecraftZombies ]" + Colors.DARK_GREEN + " ======== --------");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GRAY + "-------- " + Colors.DARK_RED + "☠ " + Colors.RED + "MZ Help" + Colors.DARK_RED + " ☠" + Colors.DARK_GRAY + " --------");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "        /zombies help admin  - Admin help page!");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "        /zombies help user - Displays the user help page!");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "        /zombies help signs - Displays the signs information!");
@@ -27,7 +27,7 @@ public class ZombiesHelpCommand
 
 	public void playerAdminHelp()
 	{
-		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies Admin Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GRAY + "-------- " + Colors.DARK_RED + "☠ " + Colors.RED + "MZ Admin Help " + Colors.GRAY + "(page " + page + ")" + Colors.DARK_RED + " ☠" + Colors.DARK_GRAY + " --------");
 		switch(page)
 		{
 			case 1 ->
@@ -62,7 +62,7 @@ public class ZombiesHelpCommand
 
 	public void playerUserHelp()
 	{
-		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "---------" + Colors.RED + " MinecraftZombies User Help - Page " + page + " " + Colors.DARK_GREEN + "--------");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GRAY + "-------- " + Colors.DARK_RED + "☠ " + Colors.RED + "MZ Help " + Colors.GRAY + "(page " + page + ")" + Colors.DARK_RED + " ☠" + Colors.DARK_GRAY + " --------");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies join" + Colors.GRAY + " - Puts you in the next available arena.");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies join [arena]" + Colors.GRAY + " - Join a specific arena.");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "/zombies solo [arena]" + Colors.GRAY + " - Start a private one-player copy of an arena (auto-removed when you leave).");

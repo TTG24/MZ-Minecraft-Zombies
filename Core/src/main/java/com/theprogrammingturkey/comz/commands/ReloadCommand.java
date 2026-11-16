@@ -20,7 +20,7 @@ public class ReloadCommand extends SubCommand
 	{
 		if(!COMZPermission.RELOAD.hasPerm(player))
 		{
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You do not have permission to reload MinecraftZombies!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You do not have permission to reload MZ!");
 			return true;
 		}
 
@@ -44,7 +44,7 @@ public class ReloadCommand extends SubCommand
 
 		int signsRefreshed = com.theprogrammingturkey.comz.game.signs.SignRegistry.INSTANCE.refreshAllText();
 
-		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "MinecraftZombies has been reloaded! (" + signsRefreshed + " sign" + (signsRefreshed == 1 ? "" : "s") + " refreshed.)");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "MZ has been reloaded. " + Colors.RED + "The horde regroups." + Colors.DARK_GRAY + " (" + signsRefreshed + " sign" + (signsRefreshed == 1 ? "" : "s") + " refreshed.)");
 		return true;
 	}
 }

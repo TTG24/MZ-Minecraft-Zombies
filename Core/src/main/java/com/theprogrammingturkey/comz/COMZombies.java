@@ -83,7 +83,8 @@ public class COMZombies extends JavaPlugin
 	}
 
 	public static final String CONSOLE_PREFIX = "";
-	public static final String PREFIX = Colors.DARK_GREEN + "[ " + Colors.RED + "MinecraftZombies" + Colors.DARK_GREEN + " ]" + Colors.GRAY + " ";
+	// Matches the server theme (MOTD, join messages): [☠ MZ] in dark gray, dark red and red
+	public static final String PREFIX = Colors.DARK_GRAY + "[" + Colors.DARK_RED + "☠ " + Colors.RED + "MZ" + Colors.DARK_GRAY + "]" + Colors.GRAY + " ";
 
 	public static INMSUtil nmsUtil;
 

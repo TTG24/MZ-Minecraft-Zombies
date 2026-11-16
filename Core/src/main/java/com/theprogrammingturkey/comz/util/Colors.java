@@ -36,6 +36,7 @@ public final class Colors
 	public static final String DARK_GREEN = SECTION + "2";
 	public static final String DARK_AQUA = SECTION + "3";
 	public static final String DARK_RED = SECTION + "4";
+	public static final String DARK_GRAY = SECTION + "8";
 	public static final String DARK_PURPLE = SECTION + "5";
 	public static final String GOLD = SECTION + "6";
 	public static final String GRAY = SECTION + "7";
