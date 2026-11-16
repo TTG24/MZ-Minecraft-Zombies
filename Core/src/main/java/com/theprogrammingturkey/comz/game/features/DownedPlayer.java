@@ -34,7 +34,11 @@ public class DownedPlayer implements Listener
 	private final WeaponInstance[] guns = new WeaponInstance[2];
 
 	private int fireWorksTask = -1;
+	private int heartbeatTask = -1;
+	private int loopTask = -1;
+	private int loopStartTask = -1;
 	private int reviveTask = -1;
+	private int reviveWatchTask = -1;
 
 	public DownedPlayer(Player player, Game game)
 	{
@@ -55,16 +59,63 @@ public class DownedPlayer implements Listener
 		manager.removeWeapon(3);
 		manager.addWeapon(WeaponManager.getGun(game.getStartingGun()).getNewInstance(player, 1));
 		player.setInvulnerable(true);
-		player.setWalkSpeed(0.02f);
+		// Crawl speed while downed (vanilla walking is 0.2). Configurable: config.ReviveSettings.DownedWalkSpeed.
+		float crawl = (float) Math.max(0.0, Math.min(0.2, COMZombies.getPlugin().getConfig().getDouble("config.ReviveSettings.DownedWalkSpeed", 0.1)));
+		player.setWalkSpeed(crawl);
 		scheduleTask();
+		startDownedAudio();
+	}
+
+	// Last stand: a sting, then a heartbeat loop at once and the last-stand loop once the sting has finished; both
+	// repeat until the player is revived or dies. Minecraft cannot loop a sound, so each is replayed at its own length
+	// (heartbeat 1.54 s, last-stand loop 17.32 s). The Tactical Movement plugin reads the "mz_downed" marker to switch its
+	// low-health sounds off and show the grey screen.
+	private void publishDownTime()
+	{
+		int max = COMZombies.getPlugin().getConfig().getInt("config.ReviveSettings.MaxDownTime");
+		player.setMetadata("mz_downed_left", new org.bukkit.metadata.FixedMetadataValue(COMZombies.getPlugin(), Math.max(0, max - downTime)));
+		player.setMetadata("mz_downed_max", new org.bukkit.metadata.FixedMetadataValue(COMZombies.getPlugin(), Math.max(1, max)));
+	}
+
+	private void startDownedAudio()
+	{
+		player.setMetadata("mz_downed", new org.bukkit.metadata.FixedMetadataValue(COMZombies.getPlugin(), true));
+		publishDownTime();
+		playToPlayer("last_stand_sting");
+		heartbeatTask = COMZombies.scheduleTask(0, 31, () -> playToPlayer("downed_heartbeat"));
+		loopStartTask = COMZombies.scheduleTask(73, () ->
+			loopTask = COMZombies.scheduleTask(0, 346, () -> playToPlayer("laststand_loop")));
+	}
+
+	private void stopDownedAudio()
+	{
+		player.removeMetadata("mz_revive_start", COMZombies.getPlugin());
+		player.removeMetadata("mz_revive_ms", COMZombies.getPlugin());
+		player.removeMetadata("mz_downed", COMZombies.getPlugin());
+		player.removeMetadata("mz_downed_left", COMZombies.getPlugin());
+		player.removeMetadata("mz_downed_max", COMZombies.getPlugin());
+		Bukkit.getScheduler().cancelTask(heartbeatTask);
+		Bukkit.getScheduler().cancelTask(loopTask);
+		Bukkit.getScheduler().cancelTask(loopStartTask);
+		heartbeatTask = loopTask = loopStartTask = -1;
+		for(String name : new String[]{"last_stand_sting", "downed_heartbeat", "laststand_loop"})
+			player.stopSound("mz:" + name, org.bukkit.SoundCategory.MASTER);
+	}
+
+	private void playToPlayer(String name)
+	{
+		if(player.isOnline())
+			player.playSound(player.getLocation(), "mz:" + name, org.bukkit.SoundCategory.MASTER, 1.0F, 1.0F);
 	}
 
 	public void clearDownedState()
 	{
 		isPlayerDown = false;
 		isBeingRevived = false;
+		Bukkit.getScheduler().cancelTask(reviveWatchTask);
 		Bukkit.getScheduler().cancelTask(fireWorksTask);
-		player.setGameMode(GameMode.SURVIVAL);
+		stopDownedAudio();
+		player.setGameMode(com.theprogrammingturkey.comz.game.Game.playGameMode());
 		player.setInvulnerable(false);
 		player.setWalkSpeed(0.2F);
 		player.setHealth(20);
@@ -73,6 +124,7 @@ public class DownedPlayer implements Listener
 
 	public void revivePlayer()
 	{
+		Bukkit.getScheduler().cancelTask(reviveWatchTask);
 		player.sendMessage(Colors.DARK_GREEN + "You have been revived!");
 		if(reviver != null)
 		{
@@ -82,6 +134,8 @@ public class DownedPlayer implements Listener
 			game.recordRevive(reviver);
 		}
 		clearDownedState();
+		// Fully revived: the get-up sound (it fades out inside the file), heard only by the revived player.
+		playToPlayer("get_up");
 		game.downedPlayerManager.downedPlayerRevived(this);
 		PlayerWeaponManager manager = game.getPlayersWeapons(player);
 		manager.removeWeapon(1);
@@ -94,9 +148,13 @@ public class DownedPlayer implements Listener
 
 	public void cancelRevive()
 	{
+		player.removeMetadata("mz_revive_start", COMZombies.getPlugin());
+		player.removeMetadata("mz_revive_ms", COMZombies.getPlugin());
 		this.isBeingRevived = false;
 		this.reviver = null;
 		Bukkit.getScheduler().cancelTask(reviveTask);
+		Bukkit.getScheduler().cancelTask(reviveWatchTask);
+		reviveWatchTask = -1;
 	}
 
 	public void startRevive(Player reviver)
@@ -107,6 +165,28 @@ public class DownedPlayer implements Listener
 		if (game.perkManager.hasPerk(reviver, PerkType.QUICK_REVIVE))
 			reviveTime /= 5;
 		reviveTask = COMZombies.scheduleTask(reviveTime, this::revivePlayer);
+		player.setMetadata("mz_revive_start", new org.bukkit.metadata.FixedMetadataValue(COMZombies.getPlugin(), System.currentTimeMillis()));
+		player.setMetadata("mz_revive_ms", new org.bukkit.metadata.FixedMetadataValue(COMZombies.getPlugin(), reviveTime * 50L));
+		// The reviver may move around, but must stay within the revive range of the downed player until it finishes.
+		reviveWatchTask = COMZombies.scheduleTask(2, 4, this::checkReviveRange);
+	}
+
+	private void checkReviveRange()
+	{
+		Player current = reviver;
+		if(!isBeingRevived || current == null)
+		{
+			Bukkit.getScheduler().cancelTask(reviveWatchTask);
+			return;
+		}
+		double range = ConfigManager.getMainConfig().reviveRange + 0.5;
+		boolean valid = current.isOnline() && current.getWorld().equals(player.getWorld())
+				&& !game.downedPlayerManager.isDownedPlayer(current) && game.isPlayerPlaying(current);
+		if(valid && current.getLocation().distance(player.getLocation()) <= range)
+			return;
+		if(current.isOnline())
+			current.sendMessage(Colors.RED + "You moved too far away! You are no longer reviving " + player.getName());
+		cancelRevive();
 	}
 
 	private void scheduleTask()
@@ -114,7 +194,9 @@ public class DownedPlayer implements Listener
 		fireWorksTask = COMZombies.scheduleTask(0, 20, () ->
 		{
 			downTime++;
-			displayDown();
+			// Fireworks used to mark a downed player; the Tactical Movement plugin now draws a glow that shifts from green
+			// through yellow to red as the time to be revived runs out. It reads these markers.
+			publishDownTime();
 			player.setHealth(1);
 			if(downTime >= COMZombies.getPlugin().getConfig().getInt("config.ReviveSettings.MaxDownTime"))
 			{
@@ -122,6 +204,7 @@ public class DownedPlayer implements Listener
 				//game.removePlayer(player);
 				clearDownedState();
 				game.setDead(player);
+				playToPlayer("dead");
 				//game.gamePlayers.remove(player);
 				PlayerStats stats = Leaderboard.getPlayerStatFromPlayer(player);
 				stats.setDeaths(stats.getDeaths() + 1);

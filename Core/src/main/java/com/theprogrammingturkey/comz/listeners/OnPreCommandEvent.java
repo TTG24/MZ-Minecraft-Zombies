@@ -24,6 +24,9 @@ public class OnPreCommandEvent implements Listener
 			{
 				return;
 			}
+			// Ops and anyone with zombies.debug may use any command mid-game (debugging)
+			if(player.isOp() || player.hasPermission("zombies.debug"))
+				return;
 			if(GameManager.INSTANCE.isPlayerInGame(player))
 			{
 				CommandUtil.sendMessageToPlayer(player, Colors.RED + "You are not allowed to use commands in game!");

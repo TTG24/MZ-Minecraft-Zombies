@@ -7,7 +7,6 @@ import org.bukkit.Bukkit;
 import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
@@ -40,6 +39,9 @@ public class RandomBox
 	private final Game boxGame;
 	private final String boxId;
 	private final int boxCost;
+	/** A box that is a chest (single or double) instead of a sign: it stays in place and is clicked or used with F directly. */
+	private final boolean chestBox;
+	private Location partnerLocation = null;
 
 	private Player openedBy;
 
@@ -53,6 +55,12 @@ public class RandomBox
 
 	public RandomBox(Location loc, BlockFace facing, Game game, String boxId, int cost)
 	{
+		this(loc, facing, game, boxId, cost, false);
+	}
+
+	public RandomBox(Location loc, BlockFace facing, Game game, String boxId, int cost, boolean chestBox)
+	{
+		this.chestBox = chestBox;
 		boxLoc = loc;
 		this.facing = facing;
 		boxGame = game;
@@ -78,11 +86,23 @@ public class RandomBox
 		}
 
 		chestLocation = null;
-		for(BlockFace face : BlockFace.values())
+		partnerLocation = null;
+		if(chestBox)
+		{
+			chestLocation = boxLoc;
+			Block other = BlockUtils.doubleChestPartner(boxLoc.getBlock());
+			if(other != null)
+				partnerLocation = other.getLocation();
+		}
+		else for(BlockFace face : BlockFace.values())
 		{
 			if(boxLoc.clone().add(face.getModX(), face.getModY(), face.getModZ()).getBlock().getType().equals(Material.CHEST))
 			{
 				chestLocation = boxLoc.clone().add(face.getModX(), face.getModY(), face.getModZ());
+				// A sign box beside a double chest uses the middle of both halves too
+				Block other = BlockUtils.doubleChestPartner(chestLocation.getBlock());
+				if(other != null)
+					partnerLocation = other.getLocation();
 				break;
 			}
 		}
@@ -91,12 +111,16 @@ public class RandomBox
 
 		if(chestLocation != null)
 			COMZombies.nmsUtil.playChestAction(chestLocation, true);
+		if(partnerLocation != null)
+			COMZombies.nmsUtil.playChestAction(partnerLocation, true);
 
 		running = true;
 		weapon = WeaponManager.getRandomWeapon(false, boxGame.getPlayersWeapons(player));
 		Location itemLoc;
 
-		if(chestLocation != null)
+		if(chestLocation != null && partnerLocation != null)
+			itemLoc = chestLocation.clone().add(partnerLocation).multiply(0.5).add(.5, 1, .5);
+		else if(chestLocation != null)
 			itemLoc = chestLocation.clone().add(.5, 1, .5);
 		else
 			itemLoc = boxLoc.clone().add(.5, .2, .5);
@@ -111,6 +135,8 @@ public class RandomBox
 
 		PointManager.INSTANCE.takePoints(player, pointsNeeded);
 		PointManager.INSTANCE.notifyPlayer(player);
+		// The box opening sound, for everyone near it
+		boxLoc.getWorld().playSound(boxLoc, "mz:mysterybox", org.bukkit.SoundCategory.PLAYERS, 1f, 1f);
 
 		int taskID = COMZombies.scheduleTask(0, 10, new Runnable()
 		{
@@ -129,7 +155,6 @@ public class RandomBox
 						weapon = WeaponManager.getRandomWeapon(false, boxGame.getPlayersWeapons(player));
 						item.setItemStack(weapon.getStack());
 						namePlate.customName(Colors.legacy(weapon.getName()));
-						player.getWorld().playSound(boxLoc, Sound.BLOCK_NOTE_BLOCK_HARP, 1f, 1f);
 					}
 					else if(time == 0)
 					{
@@ -158,7 +183,6 @@ public class RandomBox
 						}
 						else
 						{
-							player.getWorld().playSound(boxLoc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
 							gunSelected = true;
 						}
 					}
@@ -191,7 +215,7 @@ public class RandomBox
 	public void pickUpWeapon(Player player)
 	{
 		boxGame.getPlayersWeapons(player).addWeapon(weapon);
-		player.getLocation().getWorld().playSound(player.getLocation(), Sound.BLOCK_LAVA_POP, 1, 1);
+		com.theprogrammingturkey.comz.util.MzSounds.purchase(player);
 		reset();
 	}
 
@@ -207,6 +231,8 @@ public class RandomBox
 			namePlate.remove();
 		if(chestLocation != null)
 			COMZombies.nmsUtil.playChestAction(chestLocation, false);
+		if(partnerLocation != null)
+			COMZombies.nmsUtil.playChestAction(partnerLocation, false);
 		if(activeTask != -1)
 		{
 			Bukkit.getScheduler().cancelTask(activeTask);
@@ -231,6 +257,9 @@ public class RandomBox
 
 	public void removeBox()
 	{
+		// A chest box stays where it is; only the box that is active sells rolls
+		if(chestBox)
+			return;
 		if(!this.running)
 			BlockUtils.setBlockToAir(boxLoc);
 	}
@@ -256,10 +285,35 @@ public class RandomBox
 		return boxGame.isFireSale() ? 10 : boxCost;
 	}
 
+	public boolean isChestBox()
+	{
+		return chestBox;
+	}
+
+	/** Whether the location is this box: its block, or for a chest box, either half of the double chest. */
+	public boolean isAt(Location loc)
+	{
+		if(boxLoc.equals(loc))
+			return true;
+		if(!chestBox || loc.getWorld() == null || !loc.getWorld().equals(boxLoc.getWorld()))
+			return false;
+		Block other = BlockUtils.doubleChestPartner(boxLoc.getBlock());
+		return other != null && other.getLocation().equals(loc);
+	}
+
 	public void updateSign()
 	{
+		if(chestBox)
+			return;
 		Block block = boxLoc.getBlock();
-		block.setType(Material.OAK_WALL_SIGN);
+		// Mystery box signs hidden for this arena (/z signs hide mystery_box): no sign, the box is used with the interact key
+		if(boxGame != null && com.theprogrammingturkey.comz.game.signs.SignStyles.isHidden(boxGame, "mystery_box"))
+		{
+			if(com.theprogrammingturkey.comz.util.BlockUtils.isSign(block))
+				block.setType(Material.AIR, false);
+			return;
+		}
+		block.setType(boxGame == null ? Material.OAK_WALL_SIGN : com.theprogrammingturkey.comz.game.signs.SignStyles.wallSign(boxGame, "mystery_box"));
 		BlockData blockData = block.getBlockData();
 		((Directional) blockData).setFacing(facing);
 		block.setBlockData(blockData);

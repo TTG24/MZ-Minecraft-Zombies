@@ -46,6 +46,22 @@ public class SpawnPoint
 		return "<SpawnPoint: " + game.getName() + "> LOC X: " + loc.getBlockX() + ", Y: " + loc.getBlockY() + ", Z: " + loc.getBlockZ() + "| Material: " + mat.toString() + "> ID " + id;
 	}
 
+	/**
+	 * An always active spawn is never locked by doors: it spawns from round 1 even when a door lists it as part of the room
+	 * it leads to. Listing it under a door still works as normal (the room just also gets to use it).
+	 */
+	private boolean alwaysActive = false;
+
+	public boolean isAlwaysActive()
+	{
+		return alwaysActive;
+	}
+
+	public void setAlwaysActive(boolean alwaysActive)
+	{
+		this.alwaysActive = alwaysActive;
+	}
+
 	public String getID()
 	{
 		return id;

@@ -39,6 +39,10 @@ public class JoinCommand extends SubCommand
 
 		if(args.length == 1)
 		{
+			// The arena you are standing in, else the nearest one in this world (within 96 blocks): join that one
+			Game here = nearbyArena(player);
+			if(here != null)
+				return onCommand(player, new String[] {args[0], here.getTemplateName()});
 			for(Game game : GameManager.INSTANCE.getGames())
 			{
 				if(game.isTemplate()) continue;
@@ -135,5 +139,49 @@ public class JoinCommand extends SubCommand
 			}
 		}
 		return false;
+	}
+
+	private static final double NEARBY = 96;
+
+	/** The arena (template, or a plain arena) the player is in, or else the closest one whose box is within NEARBY blocks. */
+	private static Game nearbyArena(Player player)
+	{
+		org.bukkit.Location at = player.getLocation();
+		// In an arena copy's world (e.g. watching a match end there): that arena
+		if(com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.isInstanceWorld(at.getWorld()))
+			for(Game game : GameManager.INSTANCE.getGames())
+				if(game.isInstance() && at.getWorld().equals(game.getWorld()))
+				{
+					Game template = GameManager.INSTANCE.getGame(game.getTemplateName());
+					return template != null ? template : game;
+				}
+		Game best = null;
+		double bestDist = NEARBY * NEARBY;
+		for(Game game : GameManager.INSTANCE.getGames())
+		{
+			if(game.isInstance() || game.arena == null || game.arena.getWorld() == null || !game.arena.getWorld().equals(at.getWorld()))
+				continue;
+			if(game.arena.containsBlock(at))
+				return game;
+			if(!game.arena.hasMin() || !game.arena.hasMax())
+				continue;
+			org.bukkit.Location a = game.arena.getMin(), b = game.arena.getMax();
+			double dx = gap(at.getX(), a.getBlockX(), b.getBlockX()), dy = gap(at.getY(), a.getBlockY(), b.getBlockY()),
+					dz = gap(at.getZ(), a.getBlockZ(), b.getBlockZ());
+			double d = dx * dx + dy * dy + dz * dz;
+			if(d < bestDist)
+			{
+				bestDist = d;
+				best = game;
+			}
+		}
+		return best;
+	}
+
+	/** Distance from v to the block range [min(a,b), max(a,b)+1], 0 inside it. */
+	private static double gap(double v, int a, int b)
+	{
+		double lo = Math.min(a, b), hi = Math.max(a, b) + 1;
+		return v < lo ? lo - v : v > hi ? v - hi : 0;
 	}
 }

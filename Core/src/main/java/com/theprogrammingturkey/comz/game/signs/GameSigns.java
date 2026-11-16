@@ -20,7 +20,8 @@ public class GameSigns
 	public static final DoorSign DOOR = register(new DoorSign(), "door");
 	public static final GunSign GUN = register(new GunSign(), "gun");
 	public static final PowerSign POWER = register(new PowerSign(), "power");
-	public static final TeleporterSign TELEPORTER = register(new TeleporterSign(), "teleporter");
+	public static final TeleporterSign TELEPORTER = register(new TeleporterSign(), "teleporter", "pad", "teleporter pad", "link teleporter", "linked teleporter");
+	public static final MainframeSign MAINFRAME = register(new MainframeSign(), "mainframe");
 	public static final AmmoCrateSign AMMO_CRATE = register(new AmmoCrateSign(), "ammo crate", "ammo");
 	public static final GrenadeSign GRENADE = register(new GrenadeSign(), "grenade");
 

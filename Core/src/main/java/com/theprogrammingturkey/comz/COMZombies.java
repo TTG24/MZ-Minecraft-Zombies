@@ -9,7 +9,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
-import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
@@ -25,6 +24,7 @@ import com.theprogrammingturkey.comz.game.managers.DoorProximityManager;
 import com.theprogrammingturkey.comz.game.managers.WeaponManager;
 import com.theprogrammingturkey.comz.kits.KitManager;
 import com.theprogrammingturkey.comz.listeners.ArenaListener;
+import com.theprogrammingturkey.comz.listeners.DiveListener;
 import com.theprogrammingturkey.comz.listeners.DoorProximityListener;
 import com.theprogrammingturkey.comz.listeners.EXPListener;
 import com.theprogrammingturkey.comz.listeners.EntityListener;
@@ -37,8 +37,10 @@ import com.theprogrammingturkey.comz.listeners.PlayerListener;
 import com.theprogrammingturkey.comz.listeners.PowerUpDropListener;
 import com.theprogrammingturkey.comz.listeners.ScopeListener;
 import com.theprogrammingturkey.comz.listeners.SignListener;
+import com.theprogrammingturkey.comz.listeners.StaminaListener;
 import com.theprogrammingturkey.comz.listeners.WeaponListener;
 import com.theprogrammingturkey.comz.support.compat.BukkitApiUtil;
+import com.theprogrammingturkey.comz.util.Colors;
 import com.theprogrammingturkey.comz.util.PlaceholderHook;
 
 /**
@@ -130,6 +132,15 @@ public class COMZombies extends JavaPlugin
 
 		GameManager.INSTANCE.loadAllGames();
 		DoorProximityManager.INSTANCE.start();
+		com.theprogrammingturkey.comz.game.ArenaWeather.start(this);
+		com.theprogrammingturkey.comz.game.ZombieSounds.start(this);
+		com.theprogrammingturkey.comz.game.BoxBeacons.start(this);
+		com.theprogrammingturkey.comz.game.TeleporterLinks.start(this);
+		com.theprogrammingturkey.comz.game.ZombiePathing.start(this);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, com.theprogrammingturkey.comz.util.BloodMessages.CHANNEL);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, com.theprogrammingturkey.comz.util.GameOverMessages.CHANNEL);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, com.theprogrammingturkey.comz.game.ZombieRise.CHANNEL);
+		com.theprogrammingturkey.comz.util.RoundMessages.start(this);
 	}
 
 	public void loadConfigFiles()
@@ -181,9 +192,10 @@ public class COMZombies extends JavaPlugin
 	public void registerEvents()
 	{
 		PluginManager m = getServer().getPluginManager();
-		m.registerEvents(new WeaponListener(), this);
+		
 		m.registerEvents(new ArenaListener(), this);
 		m.registerEvents(new EntityListener(), this);
+		m.registerEvents(new com.theprogrammingturkey.comz.listeners.GameOverGuard(), this);
 		m.registerEvents(new PlayerChatListener(), this);
 		m.registerEvents(new SignListener(), this);
 		m.registerEvents(new OnPreCommandEvent(), this);
@@ -192,9 +204,20 @@ public class COMZombies extends JavaPlugin
 		m.registerEvents(new PowerUpDropListener(), this);
 		m.registerEvents(new OnOutsidePlayerInteractEvent(), this);
 		m.registerEvents(new PlayerListener(), this);
+		m.registerEvents(new com.theprogrammingturkey.comz.listeners.InspectToolListener(), this);
 		m.registerEvents(new OnInventoryChangeEvent(), this);
 		m.registerEvents(new ScopeListener(), this);
 		m.registerEvents(new DoorProximityListener(), this);
+		m.registerEvents(new com.theprogrammingturkey.comz.listeners.ResourcePackListener(), this);
+		m.registerEvents(new com.theprogrammingturkey.comz.listeners.HurtSoundListener(), this);
+		// Sprint stamina and the sneak-jump dive/prone are now provided by the TacticalMovementPlugin + client mod,
+		// so the old StaminaListener (stamina bar + Slowness lockout) and DiveListener events are no longer registered.
+		// DiveListener is still constructed because WeaponListener / CrouchCommand reference it.
+		DiveListener dive = new DiveListener(null);
+		m.registerEvents(new WeaponListener(dive), this);
+		// R-to-reload: the Tactical Movement client mod sends this empty plugin message when R is pressed.
+		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:reload",
+			(channel, player, message) -> WeaponListener.reloadHeldGun(player));
 	}
 
 	/**
@@ -206,7 +229,17 @@ public class COMZombies extends JavaPlugin
 		// Persist current session points before endAll() clears them from the map.
 		PointManager.INSTANCE.saveAll();
 		DoorProximityManager.INSTANCE.stop();
+		com.theprogrammingturkey.comz.util.Highlight.clearAll();
+		com.theprogrammingturkey.comz.game.BoxBeacons.clearAll();
 		GameManager.INSTANCE.endAll();
+		// Players still in an arena (including post-match spectators) go home now: scheduled tasks no longer run here.
+		for(org.bukkit.entity.Player online : Bukkit.getOnlinePlayers())
+		{
+			if(com.theprogrammingturkey.comz.game.CachedPlayerInfo.hasSavedInfo(online.getUniqueId()))
+				com.theprogrammingturkey.comz.game.CachedPlayerInfo.restorePlayerInfoNow(online);
+			if(com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.isInstanceWorld(online.getWorld()))
+				online.teleport(Bukkit.getWorlds().getFirst().getSpawnLocation());
+		}
 		GameManager.INSTANCE.getGames().forEach(game -> game.retire());
 		com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.shutdown();
 		log.info(COMZombies.CONSOLE_PREFIX + "has been disabled!");
@@ -256,3 +289,4 @@ public class COMZombies extends JavaPlugin
 		return null;
 	}
 }
+

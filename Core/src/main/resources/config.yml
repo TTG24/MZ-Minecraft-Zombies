@@ -2,6 +2,9 @@ config:
   instances:
     #Maximum volume of the two-corner map snapshot (including air), captured once per template.
     maxCopyBlocks: 5000000
+    #At startup and reload, the first copy of each arena is made right away; the others are made in the background, one
+    #every this many ticks (20 = 1 second), so the server does not freeze while they are made.
+    prepareIntervalTicks: 5
     #Allow players to spin up a private single-player arena with /zombies solo <arena>.
     #The copy is created on demand and destroyed the moment nobody is left in it.
     soloInstances: true
@@ -10,8 +13,70 @@ config:
     #Juggernog health multiplier (2.5 -> 250 equivalent of COD)
     juggernogHealth: 2.5
   gameSettings:
+    #Players leaving a game (or when it ends) go to the main world's spawn. false = back where they were when they joined
+    #(for joining by portal, that is inside the portal, so they join again).
+    leaveToSpawn: true
+    #Perk machine signs disappear once finished (the perk is still bought with the interact key near the machine).
+    #/z perksigns <arena> show puts them back, /z perksigns <arena> hide removes them all. Other signs (guns, doors, power, ...): /z signs.
+    hidePerkSigns: true
     #Range to allow knife attacks. (Values over 6 are set to 6, the vanilla value.)
     MeleeRange: 2
+    #How far (in blocks) a zombie looks for a barrier to break when it spawns. It walks to the NEAREST barrier within this
+    #range and breaks it before hunting the players; with none in range (or the nearest already broken) it goes for the players.
+    barrierSeekRange: 30
+    #Chance (0 to 1) that a new zombie spawns from ANY open spawn point instead of one of the spawns nearest to the players.
+    #Without it, a spawn far from everyone is almost never used in early rounds. 0 means nearest spawns only.
+    farSpawnChance: 0
+    #A zombie that has not hit a player (or a barrier) for this many seconds, and is not near a player, respawns at a spawn
+    #near a player. After idleKillSeconds without a hit it is removed instead (it counts as gone for the round). 0 = off.
+    idleRespawnSeconds: 30
+    idleKillSeconds: 120
+    #Zombies normally spawn at one of this many open spawn points closest to a (random) player, the closest most often.
+    #A spawn on another floor counts as much farther. Higher = more spread out, lower = closer to the players.
+    spawnNearestCount: 4
+    #Chance (0 to 1) that a zombie takes an already-broken barrier to reach the players instead of breaking one, whenever a
+    #real route to a player is open. 0 means zombies always break the barrier they chose first.
+    openRouteChance: 0.35
+    #Spawns with their own way to the players that needs no barrier (like Der Riese, where zombies can drop down or go to
+    #the window): the chance (0 to 1) a zombie takes that way, when it is at most openWayMaxExtra blocks longer than going
+    #through the barrier. Longer open ways use openRouteChance/openRouteMinRound/openRouteMaxDetour instead.
+    openWayChance: 0.5
+    openWayMaxExtra: 10
+    #The hurt sound plays when a hit leaves a player with this percent of their maximum health or less. 0 turns it off.
+    hurtSoundPercent: 30
+    #Height in blocks of the blue light beam above the mystery box that is active right now. 0 turns it off.
+    boxBeaconHeight: 40
+    #Open routes are not used before this round, so early rounds always break barriers.
+    openRouteMinRound: 5
+    #An open route is only taken if it is at most this many times the straight distance to the player (plus 6 blocks), so
+    #zombies never walk all the way around a building. Lower = shorter detours only. 1.0 almost never takes an open route.
+    openRouteMaxDetour: 1.5
+    #How close (in blocks) a player has to be for a zombie working on a barrier to hit them through it. 0 turns it off.
+    barrierAttackRange: 2.2
+    #How far (in blocks) zombies and hellhounds are willing to drop down a ledge while chasing. Minecraft's default is 3,
+    #which made them stand at the edge of higher drops.
+    zombieSafeFallDistance: 16
+    #Whether zombies and hellhounds take fall damage.
+    zombieFallDamage: false
+    #Teleporter pads (signs with "pad" on line 2) must be activated and then linked at the mainframe sign within this
+    #many seconds. Once every pad is linked, doors made with LINK open (the way to Pack-a-Punch, like Der Riese).
+    teleporterLinkTime: 30
+    #Seconds before a teleporter (sign or link region) can be used again. 0 = no cooldown.
+    teleporterCooldown: 0
+    #Points to teleport from a linked link region (/z linkadd). Whoever presses the key pays; everyone standing in it goes.
+    linkTeleportCost: 1500
+    #Link regions teleport to the mainframe. When true, /z linkdest can send a link to another link instead.
+    linksToLinks: false
+    #false: players press the interaction key (F) in a link region to activate it, and in the mainframe to link it.
+    #true: just standing in them is enough.
+    linkAutoActivate: false
+    #Zombies only pick a barrier at their own height: this many blocks up or down still counts. When none is at their
+    #height, every barrier is considered. -1 turns the height check off.
+    barrierHeightTolerance: 2
+    #When true, every barrier pays barrierReward points per repaired stage, and /z addbarrier no longer asks for a reward.
+    #When false, each barrier pays the reward typed when it was made (or set with /z editbarrier: reward <n>).
+    barrierRewardFromConfig: true
+    barrierReward: 10
     #Have all or only one Mystery Box be spawned at a time
     MultipleMysteryBoxes: false
     #Double points length in seconds
@@ -58,6 +123,26 @@ config:
     #mz:game_over), which are delivered through a server resource pack - see the
     #resourcepack/ folder and README. 0 disables the music.
     roundMusicVolume: 1.0
+    #Volume for the ambient track that plays once when a match starts (mz:ambient), delivered
+    #through the same resource pack. 0 disables it.
+    ambientMusicVolume: 1.0
+    #Sprint stamina (active matches only). While sprinting the bar drains over
+    #staminaMaxSeconds; at zero the player is forced to walk until the bar has fully
+    #refilled over staminaRegenSeconds while they are not sprinting.
+    #Set staminaEnabled to false to turn the mechanic off entirely.
+    staminaEnabled: true
+    staminaMaxSeconds: 5.0
+    staminaRegenSeconds: 3.0
+
+    #Dolphin dive (active matches only): sneak + jump thrusts you forward in the
+    #direction you're facing, then holds a low "prone" posture for a moment.
+    #Set diveEnabled to false to turn it off; diveCooldownSeconds is the wait
+    #between dives; diveLungeStrength is the thrust velocity in blocks/tick
+    #(0.4 is a solid burst); diveDurationSeconds is how long the low posture lasts.
+    diveEnabled: true
+    diveCooldownSeconds: 2.0
+    diveLungeStrength: 0.4
+    diveDurationSeconds: 1.0
     #Seconds players stay in spectator mode in the arena after a match ends, so they can
     #hear the game-over stinger (and see the post-match leaderboard). 0 returns them to
     #their pre-match location immediately.
@@ -67,11 +152,22 @@ config:
     #Keep arena zombies alive on Peaceful without changing world difficulty.
     #Requires Paper/Purpur with the per-mob override (works on 26.3; 26.2 clients do not support it).
     zombiesInPeaceful: true
+    #Difficulty of the arena copies (instance worlds): PEACEFUL, EASY, NORMAL, HARD, or SOURCE to copy the arena's world.
+    #On Peaceful Minecraft only lets zombies plan drops of about 4 blocks; on Easy about 8, Normal 12, Hard 16.
+    instanceDifficulty: EASY
+    #Game mode players are put in during a match (ADVENTURE stops them breaking or placing blocks).
+    playerGameMode: ADVENTURE
+    #Players in a match never get hungry (on Easy and up hunger drains otherwise).
+    disableHunger: true
+    #Players take fall damage in arena copies (turns the fallDamage game rule on there, whatever the arena world has).
+    playerFallDamage: true
     #The amount of seconds after being hit to be healed (standard 5)
     healTime: 5
-    #Sounds the barrier plays. zombieDamage is cycled through in order; playerRepair
-    #alternates pitch between hits; empty values mute a sound. Invalid names log a
-    #warning and fall back to the defaults.
+    #Sounds the barrier plays. zombieDamage and playerRepair are now mute switches (a
+    #non-empty list enables, empty mutes); the actual clips come from the bundled resource
+    #pack — mz:zombie_damage (random per-hit snaps) and mz:repair (random slams). Clients
+    #without the resource pack hear nothing for these. zombieBreak still uses the vanilla
+    #sound name below. Invalid names log a warning and fall back to the defaults.
     barrierSounds:
       zombieDamage: [ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR, ENTITY_ZOMBIE_ATTACK_IRON_DOOR]
       zombieBreak: ENTITY_ZOMBIE_BREAK_WOODEN_DOOR
@@ -79,8 +175,8 @@ config:
   #Lets players buy a nearby door using Swap Item With Offhand (F by default).
   doorProximity:
     enabled: true
-    #How close a player must be to a door (its sign or block) to see the tooltip
-    radius: 3
+    #How close a player must be to a door (its sign or block) to see the tooltip: blocks of space between the player and it, any direction
+    radius: 1
     #Legacy display label; use interaction.key below for all nearby prompts.
     key: F
     #Customize all nearby door messages below. Use & color codes; '' hides a message.
@@ -99,7 +195,7 @@ config:
   #Repair barriers without signs using Swap Item With Offhand (F by default).
   barrierProximity:
     enabled: true
-    radius: 3
+    radius: 1
     #Customize all nearby barrier messages below. Use & color codes; '' hides a message.
     #The {key} placeholder uses the display label from interaction.key.
     tooltip:
@@ -110,18 +206,24 @@ config:
   #This label only changes prompt text; it does not change client keybindings.
   interaction:
     key: F
+    #Where the door, barrier and machine prompts are shown: 'subtitle' (higher up the screen, clear of the stamina bar)
+    #or 'actionbar' (just above the hotbar).
+    promptPosition: subtitle
+    #Font of those prompts. 'mz:small' is the smaller font from the mz-font resource pack (resourcepack/ folder); it is only
+    #used for players who have loaded a server resource pack. '' keeps the normal Minecraft font.
+    promptFont: 'mz:small'
     #All messages support & colors, {key}, {price}, {missing}; perks also support {perk}.
     #Set any message to '' to hide it. Each feature has its own range and enable switch.
     power:
       enabled: true
-      radius: 3
+      radius: 1
       tooltip:
         use: '&aPress {key} to turn on power'
         already_on: '&aPower is already on'
         unavailable: '&cPower is disabled in this arena'
     mystery_box:
       enabled: true
-      radius: 3
+      radius: 1
       tooltip:
         use: '&aPress {key} to use mystery box &7- {price} points'
         pickup: '&aPress {key} to take your weapon'
@@ -129,7 +231,7 @@ config:
         no_funds: '&cNeed {missing} more points &7- {price} points'
     perk:
       enabled: true
-      radius: 3
+      radius: 1
       tooltip:
         use: '&aPress {key} to buy {perk} &7- {price} points'
         no_power: '&cRequires power &7- {price} points'
@@ -137,9 +239,34 @@ config:
         owned: '&aYou already have {perk}'
         limit: '&cPerk limit reached'
         unavailable: '&cPerk machine is unavailable'
+    #Gun signs: press the key right in front of the sign (radius in blocks) to buy the gun, or to refill its ammo if you own it.
+    gun:
+      enabled: true
+      radius: 1
+      tooltip:
+        use: '&aPress {key} to buy {gun} &7- {price} points'
+        refill: '&aPress {key} to refill ammo &7- {price} points'
+        no_funds: '&cNeed {missing} more points &7- {price} points'
+    teleporter:
+      enabled: true
+      radius: 1
+      tooltip:
+        use: '&aPress {key} to teleport &7- {price} points'
+        activate: '&bPress {key} to activate the teleporter'
+        no_power: '&cRequires power'
+        no_funds: '&cNeed {missing} more points &7- {price} points'
+    mainframe:
+      enabled: true
+      radius: 1
+    #Standing in a teleporter link region (/z linkadd)
+    link:
+      tooltip:
+        use: '&aPress {key} to teleport to {destination} &7- {price} points'
+        no_funds: '&cNeed {missing} more points &7- {price} points'
+        no_power: '&cRequires power'
     pack_a_punch:
       enabled: true
-      radius: 3
+      radius: 1
       tooltip:
         use: '&aPress {key} to Pack-a-Punch &7- {price} points'
         no_power: '&cRequires power &7- {price} points'
@@ -200,6 +327,11 @@ config:
       - '&c[Zombies]'
       - '&bGrenade'
       - '{price}'
+      - ''
+    mainframe:
+      - '&c[Zombies]'
+      - '&bMainframe'
+      - '&7Link teleporters'
       - ''
     #{teleporter} {price}
     teleporter:

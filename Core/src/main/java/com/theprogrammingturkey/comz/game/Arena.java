@@ -37,6 +37,8 @@ public class Arena
 	 * Location players will teleport to when the game starts.
 	 */
 	private Location playerTPLocation;
+	/** Optional second game warp: the players are split between the two at the start (Verruckt style). */
+	private Location playerTPLocation2;
 
 	/**
 	 * Location players will teleport to when they leave or die.
@@ -286,6 +288,21 @@ public class Arena
 		return min;
 	}
 
+	public boolean hasSecondPlayerTPLocation()
+	{
+		return playerTPLocation2 != null;
+	}
+
+	public Location getSecondPlayerTPLocation()
+	{
+		return playerTPLocation2;
+	}
+
+	public void setSecondPlayerTPLocation(Location loc)
+	{
+		this.playerTPLocation2 = loc;
+	}
+
 	/**
 	 * Is player teleport location in the arena not null
 	 *
@@ -408,6 +425,8 @@ public class Arena
 		this.setMin(CustomConfig.getLocationWithWorld(arenaSaveJson, "p1", world));
 		this.setMax(CustomConfig.getLocationWithWorld(arenaSaveJson, "p2", world));
 		this.setPlayerTPLocation(CustomConfig.getLocationWithWorld(arenaSaveJson, "player_spawn", world));
+		this.setSecondPlayerTPLocation(arenaSaveJson.has("player_spawn_2")
+				? CustomConfig.getLocationWithWorld(arenaSaveJson, "player_spawn_2", world) : null);
 		this.setSpectateLocation(CustomConfig.getLocationWithWorld(arenaSaveJson, "spectator_spawn", world));
 		this.setLobbyLocation(CustomConfig.getLocationWithWorld(arenaSaveJson, "lobby_spawn", world));
 		if(arenaSaveJson.has("worldguard_region"))
@@ -420,6 +439,10 @@ public class Arena
 		arenaSaveJson.add("p1", CustomConfig.locationToJsonNoWorld(min));
 		arenaSaveJson.add("p2", CustomConfig.locationToJsonNoWorld(max));
 		arenaSaveJson.add("player_spawn", CustomConfig.warpLocationToJsonNoWorld(playerTPLocation));
+		if(playerTPLocation2 != null)
+			arenaSaveJson.add("player_spawn_2", CustomConfig.warpLocationToJsonNoWorld(playerTPLocation2));
+		else
+			arenaSaveJson.remove("player_spawn_2");
 		arenaSaveJson.add("spectator_spawn", CustomConfig.warpLocationToJsonNoWorld(spectateLocation));
 		if(lobbyLocation != null)
 			arenaSaveJson.add("lobby_spawn", CustomConfig.warpLocationToJsonNoWorld(lobbyLocation));

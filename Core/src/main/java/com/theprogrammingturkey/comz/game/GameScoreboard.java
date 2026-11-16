@@ -68,6 +68,17 @@ public class GameScoreboard
 		game.signManager.updateGame();
 	}
 
+	private static final String LINK_ENTRY = Colors.AQUA + "Link Teleporter";
+
+	/** Shows the teleporter link countdown on the sidebar (seconds left), or hides it with a negative value. */
+	public void setLinkTimer(int seconds)
+	{
+		if(seconds < 0)
+			board.resetScores(LINK_ENTRY);
+		else
+			objective.getScore(LINK_ENTRY).setScore(seconds);
+	}
+
 	public void update()
 	{
 		round.setScore(game.getWave());

@@ -264,6 +264,9 @@ public class GunInstance extends WeaponInstance
 		{
 			data.displayName(Colors.legacy(Colors.RED + gun.getName() + " " + clipAmmo + "/" + totalAmmo));
 		}
+		// Marks the item as a gun so the Tactical Movement client mod can skip the left-click swing animation.
+		data.getPersistentDataContainer().set(new org.bukkit.NamespacedKey("tacticalmovement", "gun"),
+			org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
 		stack.setItemMeta(data);
 		player.getInventory().setItem(slot, stack);
 	}

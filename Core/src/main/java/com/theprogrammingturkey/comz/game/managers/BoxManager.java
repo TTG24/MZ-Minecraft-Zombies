@@ -43,7 +43,8 @@ public class BoxManager
 			String facing = CustomConfig.getString(boxJson, "facing", "");
 			int cost = CustomConfig.getInt(boxJson, "cost", 2000);
 			String boxId = CustomConfig.getString(boxJson, "id", "MISSING");
-			RandomBox point = new RandomBox(loc, BlockFace.valueOf(facing), game, boxId, cost);
+			boolean chest = CustomConfig.getBoolean(boxJson, "chest", false);
+			RandomBox point = new RandomBox(loc, BlockFace.valueOf(facing), game, boxId, cost, chest);
 			boxes.add(point);
 		}
 	}
@@ -57,6 +58,8 @@ public class BoxManager
 			boxJson.addProperty("facing", box.getFacing().name());
 			boxJson.addProperty("cost", box.getCost());
 			boxJson.addProperty("id", box.getId());
+			if(box.isChestBox())
+				boxJson.addProperty("chest", true);
 			saveJson.add(boxJson);
 		}
 		return saveJson;
@@ -79,7 +82,7 @@ public class BoxManager
 	public RandomBox getBox(Location loc)
 	{
 		for(RandomBox b : boxes)
-			if(b.getLocation().equals(loc))
+			if(b.isAt(loc))
 				return b;
 		return null;
 	}
@@ -106,7 +109,9 @@ public class BoxManager
 		if(boxes.contains(box))
 		{
 			player.sendMessage(Colors.DARK_GREEN + "MysteryBox removed!");
-			BlockUtils.setBlockToAir(box.getLocation());
+			// A chest box keeps its chest; a sign box's sign is removed
+			if(!box.isChestBox())
+				BlockUtils.setBlockToAir(box.getLocation());
 			boxes.remove(box);
 			GameManager.INSTANCE.saveAllGames();
 		}
@@ -119,7 +124,7 @@ public class BoxManager
 			boolean same = false;
 			for(RandomBox b : boxes)
 			{
-				if(b.getLocation().equals(box.getLocation()))
+				if(b.isAt(box.getLocation()))
 				{
 					same = true;
 					break;

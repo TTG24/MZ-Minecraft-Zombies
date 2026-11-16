@@ -31,6 +31,9 @@ public class PlayerPoints
 	public void storePoints()
 	{
 		COMZombies plugin = COMZombies.getPlugin();
+		// saveConfig() writes the whole in-memory config over config.yml, which threw away anything edited in the file since
+		// the plugin loaded (a player dying was enough). Re-read the file first so only the points change.
+		plugin.reloadConfig();
 		plugin.getConfig().set("Players." + player.getName() + ".points", points);
 		plugin.saveConfig();
 	}

@@ -5,7 +5,7 @@ version: @version@
 authors: [TurkeyDev, TTG24]
 api-version: '1.21'
 load: POSTWORLD
-softdepend: [Multiverse-Core, Vault, PlaceholderAPI, My_Worlds, WorldGuard, WorldEdit, FastAsyncWorldEdit]
+softdepend: [Multiverse-Core, Vault, PlaceholderAPI, My_Worlds, WorldGuard, WorldEdit, FastAsyncWorldEdit, BlockBlocker]
 commands:
   zombies:
     description: Type /zombies help for more info!

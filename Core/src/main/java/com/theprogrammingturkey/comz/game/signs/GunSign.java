@@ -80,6 +80,7 @@ public class GunSign implements IGameSign
 				CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Filling ammo!");
 				PointManager.INSTANCE.takePoints(player, refillPoints);
 				PointManager.INSTANCE.notifyPlayer(player);
+				com.theprogrammingturkey.comz.util.MzSounds.purchase(player);
 			}
 			else
 			{
@@ -97,6 +98,7 @@ public class GunSign implements IGameSign
 				player.getLocation().getWorld().playSound(player.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1, 1);
 				PointManager.INSTANCE.takePoints(player, buyPoints);
 				PointManager.INSTANCE.notifyPlayer(player);
+				com.theprogrammingturkey.comz.util.MzSounds.purchase(player);
 			}
 			else
 			{

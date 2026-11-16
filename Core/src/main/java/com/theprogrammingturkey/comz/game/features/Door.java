@@ -33,10 +33,16 @@ public class Door
 	private final Game game;
 	private int price = 0;
 	private final Map<Block, Material> blocks = new HashMap<>();
+	/** Each block's full state (BlockUtils.dataOf), so it is put back exactly as built. Missing: the material alone. */
+	private final Map<Block, String> blockData = new HashMap<>();
 	private final List<Location> signsLocations = new ArrayList<>();
 	private List<SpawnPoint> spawnsInRoomDoorLeadsTo = new ArrayList<>();
+	/** Ids of the barriers into the room this door opens: zombies only go for them once the door is open. */
+	private List<String> roomBarriers = new ArrayList<>();
 	private boolean isOpened = false;
 	private boolean powerRequired = false;
+	private boolean autoOpen = false;
+	private boolean openOnLink = false;
 
 	public Door(Game game, String id, boolean powerRequired)
 	{
@@ -65,6 +71,12 @@ public class Door
 			loadDoor(doorJson.get("spawns").getAsJsonArray());
 		if(doorJson.has("price"))
 			price = doorJson.get("price").getAsInt();
+		roomBarriers = new ArrayList<>();
+		if(doorJson.has("barriers"))
+			for(JsonElement e : doorJson.get("barriers").getAsJsonArray())
+				roomBarriers.add(e.getAsString());
+		autoOpen = doorJson.has("autoOpen") && doorJson.get("autoOpen").getAsBoolean();
+		openOnLink = doorJson.has("openOnLink") && doorJson.get("openOnLink").getAsBoolean();
 	}
 
 	public JsonObject save()
@@ -73,6 +85,8 @@ public class Door
 		saveJson.addProperty("id", doorID);
 		saveJson.addProperty("powerRequired", powerRequired);
 		saveJson.addProperty("price", price);
+		saveJson.addProperty("autoOpen", autoOpen);
+		saveJson.addProperty("openOnLink", openOnLink);
 
 		JsonArray blocksJson = new JsonArray();
 		saveJson.add("blocks", blocksJson);
@@ -80,6 +94,9 @@ public class Door
 		{
 			JsonObject blockJson = CustomConfig.locationToJsonNoWorld(block.getKey().getLocation());
 			blockJson.addProperty("material", block.getValue().getKey().getKey());
+			String data = getBlockData(block.getKey());
+			if(data != null)
+				blockJson.addProperty("data", data);
 			blocksJson.add(blockJson);
 		}
 
@@ -94,6 +111,11 @@ public class Door
 		for(SpawnPoint spawnPoint : spawnsInRoomDoorLeadsTo)
 			if(spawnPoint != null)
 				spawnsJson.add(spawnPoint.getID());
+
+		JsonArray barriersJson = new JsonArray();
+		saveJson.add("barriers", barriersJson);
+		for(String id : roomBarriers)
+			barriersJson.add(id);
 
 		return saveJson;
 	}
@@ -160,8 +182,47 @@ public class Door
 
 	public void addSpawnPoint(SpawnPoint point)
 	{
-		if(point != null)
+		if(point != null && !hasRoomSpawn(point))
 			spawnsInRoomDoorLeadsTo.add(point);
+	}
+
+	/** Is this spawn (by id) one of the room's? */
+	public boolean hasRoomSpawn(SpawnPoint point)
+	{
+		return point != null && spawnsInRoomDoorLeadsTo.stream().anyMatch(p -> p != null && p.getID().equalsIgnoreCase(point.getID()));
+	}
+
+	/** Takes a spawn (every copy of it, by id) out of the room. */
+	public void removeSpawnPoint(SpawnPoint point)
+	{
+		if(point != null)
+			spawnsInRoomDoorLeadsTo.removeIf(p -> p == null || p.getID().equalsIgnoreCase(point.getID()));
+	}
+
+	/** Is this barrier one of the room's (the room this door opens)? */
+	public boolean hasRoomBarrier(Barrier barrier)
+	{
+		return barrier != null && roomBarriers.contains(barrier.getID());
+	}
+
+	/** Adds the barrier to the room, or takes it back out. @return true if it is in the room now */
+	public boolean toggleRoomBarrier(Barrier barrier)
+	{
+		if(roomBarriers.remove(barrier.getID()))
+			return false;
+		roomBarriers.add(barrier.getID());
+		return true;
+	}
+
+	/** The room's barrier ids (a copy). */
+	public List<String> getRoomBarriers()
+	{
+		return new ArrayList<>(roomBarriers);
+	}
+
+	public void setRoomBarriers(List<String> ids)
+	{
+		roomBarriers = new ArrayList<>(ids);
 	}
 
 	public boolean hasDoorBlocks()
@@ -190,8 +251,8 @@ public class Door
 
 	public void closeDoor()
 	{
-		for(Block block : blocks.keySet())
-			BlockUtils.setBlockTypeHelper(block, blocks.get(block));
+		// Only blocks that are missing or wrong are placed (an already-closed door is left as built), each in its saved state
+		BlockUtils.restoreBlocks(blocks, blockData);
 
 		for(Location loc : signsLocations)
 		{
@@ -249,8 +310,14 @@ public class Door
 			if(loc != null)
 			{
 				Material mat = BlockUtils.getMaterialFromKey(CustomConfig.getString(blockJson, "material", ""));
-				BlockUtils.setBlockTypeHelper(loc.getBlock(), mat);
-				this.blocks.put(loc.getBlock(), mat);
+				Block block = loc.getBlock();
+				this.blocks.put(block, mat);
+				String data = CustomConfig.getString(blockJson, "data", null);
+				if(data != null)
+					blockData.put(block, data);
+				else if(mat != null && block.getType() == mat)
+					blockData.put(block, BlockUtils.dataOf(block)); // saved before states were kept: take it as it stands
+				BlockUtils.restoreBlocks(java.util.Map.of(block, mat == null ? Material.AIR : mat), blockData);
 			}
 			else
 			{
@@ -284,6 +351,8 @@ public class Door
 						Location loc = new Location(p1.getWorld(), x + x1, y + y1, z + z1);
 						Block block = loc.getBlock();
 						blocks.put(block, block.getType());
+						if(!block.getType().isAir())
+							blockData.put(block, BlockUtils.dataOf(block));
 					}
 				}
 			}
@@ -297,15 +366,69 @@ public class Door
 		this.addDoorBlock(block, block.getType());
 	}
 
+	/**
+	 * Takes the blocks as they are in the world right now, at the end of an edit: a block that was swapped for another one
+	 * (a temporary block replaced by the real one) remembers the new material. A spot that is air now (a temporary block
+	 * that was only there to click it) stays selected and stays air. Without this the material from the moment the block
+	 * was clicked was kept, so temporary blocks came back on every repair and reload.
+	 *
+	 * @return how many selected spots are air
+	 */
+	public int syncWithWorld()
+	{
+		int air = 0;
+		for(Map.Entry<Block, Material> e : blocks.entrySet())
+		{
+			Material now = e.getKey().getType();
+			e.setValue(now.isAir() ? Material.AIR : now);
+			if(!now.isAir())
+				blockData.put(e.getKey(), BlockUtils.dataOf(e.getKey()));
+			if(now.isAir())
+				air++;
+		}
+		return air;
+	}
+
 	public void addDoorBlock(Block block, Material mat)
 	{
 		blocks.put(block, mat);
+		if(mat != null && block.getType() == mat)
+			blockData.put(block, BlockUtils.dataOf(block));
+	}
+
+	/** The saved full state of a block (null if none), for saving. */
+	public String getBlockData(Block b)
+	{
+		String d = blockData.get(b);
+		return BlockUtils.parseData(d, blocks.get(b)) != null ? d : null;
+	}
+
+	public void setBlockData(Block b, String data)
+	{
+		if(data != null && !data.isEmpty())
+			blockData.put(b, data);
 	}
 
 	public void removeDoorBlock(Location loc)
 	{
 		Block block = loc.getBlock();
 		blocks.remove(block);
+	}
+
+	/** A copy of the block -> original material map, so the door editor can undo. */
+	public Map<Block, Material> copyBlockMaterials()
+	{
+		return new HashMap<>(blocks);
+	}
+
+	/** Puts the door back to a state taken earlier (blocks, room spawns, price, power). */
+	public void restore(Map<Block, Material> savedBlocks, List<SpawnPoint> savedSpawns, int savedPrice, boolean savedPower)
+	{
+		blocks.clear();
+		blocks.putAll(savedBlocks);
+		spawnsInRoomDoorLeadsTo = new ArrayList<>(savedSpawns);
+		price = savedPrice;
+		powerRequired = savedPower;
 	}
 
 	public List<Block> getBlocks()
@@ -321,6 +444,28 @@ public class Door
 	public void setPowerRequired(boolean powerRequired)
 	{
 		this.powerRequired = powerRequired;
+	}
+
+	/** A door that opens by itself once every teleporter pad is linked at the mainframe (and cannot be bought). */
+	public boolean opensWhenLinked()
+	{
+		return openOnLink;
+	}
+
+	public void setOpensWhenLinked(boolean openOnLink)
+	{
+		this.openOnLink = openOnLink;
+	}
+
+	/** A power door that opens by itself the moment the power is turned on, without anyone buying it. */
+	public boolean opensWithPower()
+	{
+		return autoOpen;
+	}
+
+	public void setOpensWithPower(boolean autoOpen)
+	{
+		this.autoOpen = autoOpen;
 	}
 
 	public boolean requiresPower()

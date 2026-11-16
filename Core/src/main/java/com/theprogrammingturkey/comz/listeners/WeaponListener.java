@@ -29,25 +29,114 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class WeaponListener implements Listener
 {
+	private final DiveListener dive;
+	/** Tick of each player's last left click that was handled (shot), and of their last right click / drop. */
+	private final Map<UUID, Integer> lastFireTick = new HashMap<>();
+	private final Map<UUID, Integer> lastOtherTick = new HashMap<>();
+
+	public WeaponListener(DiveListener dive)
+	{
+		this.dive = dive;
+	}
+
+	/**
+	 * Guns fire on LEFT click (right click no longer shoots). A left click on an entity does not raise a
+	 * PlayerInteractEvent, so that case is handled by onGunAttackEntity below.
+	 */
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerInteractEvent(PlayerInteractEvent event)
 	{
 		if(event.getAction().equals(Action.RIGHT_CLICK_BLOCK) && BlockUtils.isSign(event.getClickedBlock()) && !BlockUtils.isBarrierRepairSign(event.getClickedBlock(), event.getPlayer()))
 			return;
 
-		if(event.getAction().equals(Action.PHYSICAL))
+		if(!event.getAction().equals(Action.LEFT_CLICK_AIR) && !event.getAction().equals(Action.LEFT_CLICK_BLOCK))
+		{
+			lastOtherTick.put(event.getPlayer().getUniqueId(), Bukkit.getCurrentTick());
 			return;
+		}
 
 		if(event.getAction().equals(Action.LEFT_CLICK_BLOCK) && BlockUtils.isBarrierRepairSign(event.getClickedBlock(), event.getPlayer()))
 			return;
 
+		fireHeldGun(event.getPlayer());
+	}
+
+	/** Left-clicking a mob with a gun fires the gun instead of doing vanilla melee damage. */
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onGunAttackEntity(io.papermc.paper.event.player.PrePlayerAttackEntityEvent event)
+	{
 		Player player = event.getPlayer();
+		if(!GameManager.INSTANCE.isPlayerInGame(player))
+			return;
+		Game game = GameManager.INSTANCE.getGame(player);
+		PlayerWeaponManager gunManager = game.getPlayersWeapons(player);
+		if(game.getStatus() != GameStatus.INGAME || gunManager == null || !gunManager.isHeldItemGun())
+			return;
+		event.setCancelled(true);
+		fireHeldGun(player);
+	}
+
+	/** Suppress the broadcast arm-swing animation while a gun is held (the client skips its own). */
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onGunSwingAnimation(org.bukkit.event.player.PlayerAnimationEvent event)
+	{
+		Player player = event.getPlayer();
+		if(!GameManager.INSTANCE.isPlayerInGame(player))
+			return;
+		PlayerWeaponManager gunManager = GameManager.INSTANCE.getGame(player).getPlayersWeapons(player);
+		if(gunManager == null || !gunManager.isHeldItemGun())
+			return;
+		event.setCancelled(true);
+		if(event.getAnimationType() != org.bukkit.event.player.PlayerAnimationType.ARM_SWING)
+			return;
+		// A left click right on a zombie sometimes raises neither the attack nor the click-air event (it is too close for
+		// one and counts as hitting an entity for the other), so the gun did not fire. The swing always comes: fire from it
+		// when nothing else did this tick, the click was not a right click or a drop, and a zombie is in the crosshair.
+		int now = Bukkit.getCurrentTick();
+		UUID id = player.getUniqueId();
+		if(lastFireTick.getOrDefault(id, -10) >= now - 1 || lastOtherTick.getOrDefault(id, -10) >= now - 1)
+			return;
+		Game game = GameManager.INSTANCE.getGame(player);
+		if(game.getStatus() != GameStatus.INGAME)
+			return;
+		Location eye = dive.getWeaponOrigin(player);
+		org.bukkit.util.RayTraceResult hit = player.getWorld().rayTraceEntities(eye, eye.getDirection(), 6, 0.3,
+				e -> e instanceof Mob && game.spawnManager.getEntities().contains(e));
+		if(hit != null)
+			fireHeldGun(player);
+	}
+
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onDropForSwing(org.bukkit.event.player.PlayerDropItemEvent event)
+	{
+		lastOtherTick.put(event.getPlayer().getUniqueId(), Bukkit.getCurrentTick());
+	}
+
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onInteractEntityForSwing(org.bukkit.event.player.PlayerInteractEntityEvent event)
+	{
+		lastOtherTick.put(event.getPlayer().getUniqueId(), Bukkit.getCurrentTick());
+	}
+
+	@EventHandler
+	public void onQuitForSwing(org.bukkit.event.player.PlayerQuitEvent event)
+	{
+		lastFireTick.remove(event.getPlayer().getUniqueId());
+		lastOtherTick.remove(event.getPlayer().getUniqueId());
+	}
+
+	private void fireHeldGun(Player player)
+	{
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{
+			lastFireTick.put(player.getUniqueId(), Bukkit.getCurrentTick());
 			Game game = GameManager.INSTANCE.getGame(player);
 			if(game.getStatus() != GameStatus.INGAME)
 				return;
@@ -70,18 +159,19 @@ public class WeaponListener implements Listener
 
 						for(int shot = 0; shot < shots; shot++)
 						{
-							Vector dirVec = event.getPlayer().getEyeLocation().getDirection();
+							Location shotOrigin = dive.getWeaponOrigin(player);
+							Vector dirVec = shotOrigin.getDirection();
 
 							if(shots > 1)
 								dirVec.add(new Vector(COMZombies.rand.nextDouble(0.5) - 0.25, COMZombies.rand.nextDouble(0.5) - 0.25, COMZombies.rand.nextDouble(0.5) - 0.25));
 
-							RayTrace rayTrace = new RayTrace(event.getPlayer().getEyeLocation().toVector(), dirVec);
+							RayTrace rayTrace = new RayTrace(shotOrigin.toVector(), dirVec);
 							double distance = gun.getType().distance;
-							List<RayTrace.RayEntityIntersection> hitEnts = rayTrace.getZombieIntersects(event.getPlayer().getWorld(), game.spawnManager.getEntities(), distance, game);
+							List<RayTrace.RayEntityIntersection> hitEnts = rayTrace.getZombieIntersects(player.getWorld(), game.spawnManager.getEntities(), distance, game);
 
 							if(hitEnts.isEmpty())
 							{
-								rayTrace.showParticles(event.getPlayer().getWorld(), distance, 0.5f, gun.getType().particleColor);
+								rayTrace.showParticles(player.getWorld(), distance, 0.5f, gun.getType().particleColor);
 								continue;
 							}
 
@@ -109,7 +199,7 @@ public class WeaponListener implements Listener
 							}
 
 
-							rayTrace.showParticles(event.getPlayer().getWorld(), dist, 0.5f, gun.getType().particleColor);
+							rayTrace.showParticles(player.getWorld(), dist, 0.5f, gun.getType().particleColor);
 
 							float damage = (float) gun.getType().damage / shots;
 
@@ -130,16 +220,20 @@ public class WeaponListener implements Listener
 									for(Player pl : game.getPlayersInGame())
 										pl.playSound(pl.getLocation(), Sound.BLOCK_LAVA_POP, 1.0F, 0.0F);
 
+									boolean headshot = false;
 									double zombieHitLocY = toDamageIntesect.intersection.getY() - entToDamage.getLocation().getY();
 									double eyeHeight = ((Mob) entToDamage).getEyeHeight();
 									if(zombieHitLocY > eyeHeight - (entToDamage.getHeight() - eyeHeight))
 									{
+										headshot = true;
 										damage *= 1.5f;
 										for(int i = 0; i < 20; i++)
-											event.getPlayer().getWorld().spawnParticle(Particle.ENCHANTED_HIT, entToDamage.getLocation().getX(), entToDamage.getLocation().getY() + eyeHeight, entToDamage.getLocation().getZ(), 0, COMZombies.rand.nextDouble(2d) - 1d, COMZombies.rand.nextDouble(2d) - 1d, COMZombies.rand.nextDouble(2d) - 1d, 1);
+											player.getWorld().spawnParticle(Particle.ENCHANTED_HIT, entToDamage.getLocation().getX(), entToDamage.getLocation().getY() + eyeHeight, entToDamage.getLocation().getZ(), 0, COMZombies.rand.nextDouble(2d) - 1d, COMZombies.rand.nextDouble(2d) - 1d, COMZombies.rand.nextDouble(2d) - 1d, 1);
 									}
 
-									game.damageMob(mob, player, damage);
+									com.theprogrammingturkey.comz.util.BloodMessages.nextHit(toDamageIntesect.intersection.clone(), dirVec.clone(),
+											headshot ? com.theprogrammingturkey.comz.util.BloodMessages.HEADSHOT : com.theprogrammingturkey.comz.util.BloodMessages.SHOT);
+									game.damageMob(mob, player, damage, headshot);
 								}
 							}
 						}
@@ -149,29 +243,24 @@ public class WeaponListener implements Listener
 		}
 	}
 
-	@EventHandler
-	public void onGunReload(PlayerInteractEvent e)
+	/**
+	 * Reloads the gun the player is holding. Triggered by the R key: the Tactical Movement client mod sends a
+	 * "tacticalmovement:reload" plugin message (registered in COMZombies). Left click no longer reloads.
+	 */
+	public static void reloadHeldGun(Player player)
 	{
-		if(e.getAction().equals(Action.LEFT_CLICK_AIR) || e.getAction().equals(Action.LEFT_CLICK_BLOCK))
-		{
-			Player player = e.getPlayer();
-			if(GameManager.INSTANCE.isPlayerInGame(player))
-			{
-				Game game = GameManager.INSTANCE.getGame(player);
-				if(game.getStatus() != GameStatus.INGAME)
-					return;
+		if(!GameManager.INSTANCE.isPlayerInGame(player))
+			return;
+		Game game = GameManager.INSTANCE.getGame(player);
+		if(game.getStatus() != GameStatus.INGAME)
+			return;
 
-				if(game.getPlayersWeapons(player) != null)
-				{
-					PlayerWeaponManager gunManager = game.getPlayersWeapons(player);
-					if(gunManager.isHeldItemGun())
-					{
-						GunInstance gun = gunManager.getGun(player.getInventory().getHeldItemSlot());
-						gun.reload();
-						gun.updateWeapon();
-					}
-				}
-			}
+		PlayerWeaponManager gunManager = game.getPlayersWeapons(player);
+		if(gunManager != null && gunManager.isHeldItemGun())
+		{
+			GunInstance gun = gunManager.getGun(player.getInventory().getHeldItemSlot());
+			gun.reload();
+			gun.updateWeapon();
 		}
 	}
 
@@ -263,3 +352,5 @@ public class WeaponListener implements Listener
 		}
 	}
 }
+
+

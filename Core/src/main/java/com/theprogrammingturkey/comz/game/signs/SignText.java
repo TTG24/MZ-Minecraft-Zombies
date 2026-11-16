@@ -33,6 +33,7 @@ public class SignText
 		DEFAULTS.put("ammo_crate", Arrays.asList("&c[Zombies]", "&bAmmo Crate", "{price}", ""));
 		DEFAULTS.put("grenade", Arrays.asList("&c[Zombies]", "&bGrenade", "{price}", ""));
 		DEFAULTS.put("teleporter", Arrays.asList("&c[Zombies]", "&bTeleporter", "{teleporter}", "{price}"));
+		DEFAULTS.put("mainframe", Arrays.asList("&c[Zombies]", "&bMainframe", "&7Link teleporters", ""));
 		DEFAULTS.put("gun", Arrays.asList("&e[Zombies]", "&aGun", "&9{gun}", "&c{price} / {refill}"));
 		DEFAULTS.put("perk", Arrays.asList("&c[Zombies]", "&bPerk Machine", "&a{perk}", "&e{price}"));
 		DEFAULTS.put("pack_a_punch", Arrays.asList("&c[Zombies]", "&5Pack-a-Punch", "&6{price}", ""));

@@ -68,6 +68,7 @@ public class ConfigManager
 
 		mainConfig.setup();
 		SignRegistry.INSTANCE.load();
+		com.theprogrammingturkey.comz.game.signs.SignStyles.load();
 	}
 
 	public static CustomConfig getConfig(COMZConfig comzConfig)

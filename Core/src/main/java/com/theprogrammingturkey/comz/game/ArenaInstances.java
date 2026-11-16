@@ -34,10 +34,33 @@ public final class ArenaInstances
 	private int queueTask = -1;
 	private int soloWatchdog = -1;
 
+	// Pool slots past the first of each arena, prepared in the background a few ticks apart (see loadPools)
+	private record PendingSlot(Game template, int slot, ArenaSelectionCopy snapshot) {}
+	private final java.util.ArrayDeque<PendingSlot> pending = new java.util.ArrayDeque<>();
+	// The arena snapshots the pending slots paste from; closed once every slot is done (or on shutdown)
+	private final List<ArenaSelectionCopy> openSnapshots = new ArrayList<>();
+	private int prepareTask = -1;
+
 	private static <T> void copyGameRule(World source, World destination, org.bukkit.GameRule<T> rule)
 	{
 		if(rule == null) return;
 		destination.setGameRule(rule, source.getGameRuleValue(rule));
+	}
+
+	/** config.gameSettings.instanceDifficulty, or the source world's difficulty for SOURCE (or anything unknown). */
+	private static org.bukkit.Difficulty instanceDifficulty(World source)
+	{
+		String name = COMZombies.getPlugin().getConfig().getString("config.gameSettings.instanceDifficulty", "EASY");
+		try
+		{
+			if(name != null && !name.equalsIgnoreCase("SOURCE"))
+				return org.bukkit.Difficulty.valueOf(name.trim().toUpperCase(java.util.Locale.ROOT));
+		}
+		catch(IllegalArgumentException e)
+		{
+			COMZombies.log.log(Level.WARNING, "Unknown instanceDifficulty {0}; using the arena world''s difficulty", new Object[]{name});
+		}
+		return source.getDifficulty();
 	}
 
 	public boolean hasQueue(String template)
@@ -107,6 +130,9 @@ public final class ArenaInstances
 
 	public void loadPools()
 	{
+		stopPrepareTask();
+		closeSnapshots();
+		List<List<PendingSlot>> perArena = new ArrayList<>();
 		for(Game template : new ArrayList<>(GameManager.INSTANCE.getGames()))
 		{
 			if(!template.isInstance() && template.getInstanceCount() == 0)
@@ -136,22 +162,79 @@ public final class ArenaInstances
 				COMZombies.log.log(Level.SEVERE, "Could not capture template " + template.getName(), failure);
 				continue;
 			}
-			try(snapshot)
+			openSnapshots.add(snapshot);
+			List<PendingSlot> later = new ArrayList<>();
+			for(int slotIndex = 1; slotIndex <= template.getInstanceCount(); slotIndex++)
 			{
-				for(int slotIndex = 1; slotIndex <= template.getInstanceCount(); slotIndex++)
+				final int slot = slotIndex;
+				String name = template.getName() + "~" + slot;
+				if(GameManager.INSTANCE.getGames().stream().anyMatch(g -> g.getName().equalsIgnoreCase(name)))
 				{
-					final int slot = slotIndex;
-					String name = template.getName() + "~" + slot;
-					if(GameManager.INSTANCE.getGames().stream().anyMatch(g -> g.getName().equalsIgnoreCase(name)))
-					{
-						COMZombies.log.log(Level.WARNING, "Instance name conflicts with existing arena: {0}", new Object[]{name});
-						continue;
-					}
-					if(createInstanceWorld(template, slot) == null)
+					COMZombies.log.log(Level.WARNING, "Instance name conflicts with existing arena: {0}", new Object[]{name});
+					continue;
+				}
+				// The first copy of each arena is ready right away, so every arena can be joined as soon as loading is done
+				if(slot == 1)
+				{
+					if(createInstanceWorld(template, slot, snapshot) == null)
 						COMZombies.log.log(Level.SEVERE, "Failed to prepare {0}; this slot is unavailable", new Object[]{name});
 				}
+				else
+					later.add(new PendingSlot(template, slot, snapshot));
 			}
+			perArena.add(later);
 		}
+		// The other copies take turns between the arenas (dr~2, ndu~2, ..., dr~3, ...), one every few ticks, so the server
+		// keeps running while they are made instead of freezing for all of them at once.
+		while(perArena.stream().anyMatch(l -> !l.isEmpty()))
+			for(List<PendingSlot> l : perArena)
+				if(!l.isEmpty())
+					pending.add(l.remove(0));
+		if(pending.isEmpty())
+		{
+			closeSnapshots();
+			return;
+		}
+		long interval = Math.max(1, COMZombies.getPlugin().getConfig().getLong("config.instances.prepareIntervalTicks", 5));
+		COMZombies.log.log(Level.INFO, "Preparing {0} more arena copies in the background", new Object[]{pending.size()});
+		prepareTask = COMZombies.scheduleTask(interval, interval, this::prepareNext);
+	}
+
+	/** Makes the next background copy; stops (and frees the snapshots) once all are made. */
+	private void prepareNext()
+	{
+		PendingSlot next = pending.poll();
+		if(next != null && GameManager.INSTANCE.getGames().contains(next.template()))
+		{
+			String name = next.template().getName() + "~" + next.slot();
+			if(GameManager.INSTANCE.getGames().stream().anyMatch(g -> g.getName().equalsIgnoreCase(name)))
+				COMZombies.log.log(Level.WARNING, "Instance name conflicts with existing arena: {0}", new Object[]{name});
+			else if(createInstanceWorld(next.template(), next.slot(), next.snapshot()) == null)
+				COMZombies.log.log(Level.SEVERE, "Failed to prepare {0}; this slot is unavailable", new Object[]{name});
+		}
+		if(pending.isEmpty())
+		{
+			stopPrepareTask();
+			closeSnapshots();
+			COMZombies.log.log(Level.INFO, "All arena copies are ready");
+		}
+	}
+
+	private void stopPrepareTask()
+	{
+		if(prepareTask != -1)
+		{
+			Bukkit.getScheduler().cancelTask(prepareTask);
+			prepareTask = -1;
+		}
+		pending.clear();
+	}
+
+	private void closeSnapshots()
+	{
+		for(ArenaSelectionCopy snapshot : openSnapshots)
+			snapshot.close();
+		openSnapshots.clear();
 	}
 
 	/**
@@ -162,6 +245,12 @@ public final class ArenaInstances
 	 * @return the created game, or null on failure
 	 */
 	private Game createInstanceWorld(Game template, int slot)
+	{
+		return createInstanceWorld(template, slot, null);
+	}
+
+	/** @param snapshot the arena copy to paste (shared by every pool slot), or null to take a fresh one */
+	private Game createInstanceWorld(Game template, int slot, ArenaSelectionCopy snapshot)
 	{
 		String name = template.getName() + "~" + slot;
 		String worldName = "mz_instance_" + ownerId(template.getName()) + "_" + slot;
@@ -186,14 +275,24 @@ public final class ArenaInstances
 			worlds.put(worldName, world);
 			if(!world.getWorldFolder().toPath().toRealPath().equals(destination.toRealPath()))
 				throw new IOException("Server loaded " + world.getWorldFolder() + " instead of copied instance directory " + destination);
-			world.setDifficulty(source.getDifficulty());
+			world.setDifficulty(instanceDifficulty(source));
 			world.setTime(source.getTime());
 			for(String rule : source.getGameRules())
 				copyGameRule(source, world, com.theprogrammingturkey.comz.util.GameRuleCompat.getByName(rule));
+			// The arena world may have fall damage off (e.g. for building); matches use config.gameSettings.playerFallDamage
+			if(com.theprogrammingturkey.comz.util.ApiCompat.FALL_DAMAGE != null)
+				world.setGameRule(com.theprogrammingturkey.comz.util.ApiCompat.FALL_DAMAGE,
+						COMZombies.getPlugin().getConfig().getBoolean("config.gameSettings.playerFallDamage", true));
 			if(worldGuard)
 				WorldGuardInstances.copy(source, world, template.arena.getWorldGuardRegionId());
-			ArenaSelectionCopy capture = ArenaSelectionCopy.capture(template);
-			try(capture) { capture.paste(world); }
+			if(snapshot != null)
+				snapshot.paste(world);
+			else
+			{
+				ArenaSelectionCopy capture = ArenaSelectionCopy.capture(template);
+				try(capture) { capture.paste(world); }
+			}
+			copyBlockBlockerBarriers(source, world);
 			JsonObject data = template.saveGame().deepCopy();
 			data.getAsJsonObject("save_data").addProperty("world_name", worldName);
 			data.getAsJsonObject("settings").addProperty("instance_count", 0);
@@ -220,6 +319,26 @@ public final class ArenaInstances
 			InstanceWorldFiles.deleteOwnedQuietly(worldName);
 			COMZombies.log.log(Level.SEVERE, "Failed to prepare " + name, failure);
 			return null;
+		}
+	}
+
+	/**
+	 * BlockBlocker barriers are not blocks, so the arena paste does not carry them. If the BlockBlocker plugin is installed,
+	 * ask it to copy the template world's barriers into the instance (same coordinates; temporary, removed when the instance
+	 * world unloads). Called by reflection so MZ has no hard dependency on BlockBlocker, and a failure never breaks an instance.
+	 */
+	private static void copyBlockBlockerBarriers(World source, World instance)
+	{
+		try
+		{
+			org.bukkit.plugin.Plugin blockBlocker = Bukkit.getPluginManager().getPlugin("BlockBlocker");
+			if(blockBlocker == null || !blockBlocker.isEnabled())
+				return;
+			blockBlocker.getClass().getMethod("copyBarriers", String.class, String.class).invoke(blockBlocker, source.getName(), instance.getName());
+		}
+		catch(Throwable t)
+		{
+			COMZombies.log.log(Level.WARNING, "Could not copy BlockBlocker barriers into " + instance.getName(), t);
 		}
 	}
 
@@ -420,6 +539,8 @@ public final class ArenaInstances
 	/** Called after matches end, before replacing game objects or disabling the plugin. */
 	public void shutdown()
 	{
+		stopPrepareTask();
+		closeSnapshots();
 		stopQueueTask();
 		for(Set<UUID> queue : queues.values())
 			for(UUID id : queue)

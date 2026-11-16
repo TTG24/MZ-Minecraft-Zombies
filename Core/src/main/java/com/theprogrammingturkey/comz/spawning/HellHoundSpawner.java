@@ -89,10 +89,11 @@ public class HellHoundSpawner extends RoundSpawner
 				BlockUtils.setBlockToAir(location);
 		});
 
-		Wolf wolf = (Wolf) world.spawnEntity(location, EntityType.WOLF);
+		Wolf wolf = (Wolf) ownSpawn(() -> world.spawnEntity(location, EntityType.WOLF));
 		wolf.setFireTicks(99999999);
 		wolf.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 99999, 1, true));
-		setFollowDistance(wolf, 512);
+		setFollowDistance(wolf, MAX_FOLLOW_RANGE);
+		setFallTolerance(wolf);
 
 		// Wave-based strength formula; balance tuning may still be desired.
 		float strength = ((wave * 100f) + 50) / 50f;

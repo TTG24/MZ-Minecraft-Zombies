@@ -22,5 +22,97 @@
         "volume": 1.0
       }
     ]
+  },
+  "ambient": {
+    "sounds": [
+      {
+        "name": "mz:ambient",
+        "volume": 1.0
+      }
+    ]
+  },
+  "repair": {
+    "sounds": [
+      {
+        "name": "mz:repair_1",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:repair_2",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:repair_3",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:repair_4",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:repair_5",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:repair_6",
+        "volume": 1.0
+      }
+    ]
+  },
+  "zombie_damage": {
+    "sounds": [
+      {
+        "name": "mz:snap_1",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:snap_2",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:snap_3",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:snap_4",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:snap_5",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:snap_6",
+        "volume": 1.0
+      }
+    ]
+  },
+  "power_on": {
+    "sounds": [
+      {
+        "name": "mz:power_on",
+        "volume": 1.0
+      }
+    ]
+  },
+  "zap": {
+    "sounds": [
+      {
+        "name": "mz:zap_1",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:zap_2",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:zap_3",
+        "volume": 1.0
+      },
+      {
+        "name": "mz:zap_4",
+        "volume": 1.0
+      }
+    ]
   }
 }

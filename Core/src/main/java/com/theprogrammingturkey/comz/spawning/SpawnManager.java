@@ -1,5 +1,6 @@
 package com.theprogrammingturkey.comz.spawning;
 
+import com.theprogrammingturkey.comz.game.features.Barrier;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -42,6 +43,9 @@ public class SpawnManager
 	private final List<SpawnPoint> points = new ArrayList<>();
 	private final List<Mob> mobs = new ArrayList<>();
 	private final Map<Mob, Long> lastPeacefulAttack = new HashMap<>();
+	// Idle zombies: when each last hit a player (or a barrier, or was close to a player), and when it was last respawned
+	private final Map<Mob, Long> lastActive = new HashMap<>();
+	private final Map<Mob, Long> lastRespawn = new HashMap<>();
 	private int updatesSinceCrackRefresh;
 	private RoundSpawner roundSpawner = new ZombieSpawner();
 	private boolean canSpawn = false;
@@ -68,7 +72,12 @@ public class SpawnManager
 			Location loc = CustomConfig.getLocationWithWorld(spawnElem.getAsJsonObject(), "", game.getWorld());
 			String id = CustomConfig.getString(spawnElem.getAsJsonObject(), "id", "MISSING");
 			if(loc != null && !id.equals("MISSING"))
-				points.add(new SpawnPoint(loc, game, loc.getBlock().getType(), id));
+			{
+				SpawnPoint point = new SpawnPoint(loc, game, loc.getBlock().getType(), id);
+				JsonObject spawnJson = spawnElem.getAsJsonObject();
+				point.setAlwaysActive(spawnJson.has("always_active") && spawnJson.get("always_active").getAsBoolean());
+				points.add(point);
+			}
 			else
 				COMZombies.log.log(Level.WARNING, "Failed to load zombie spawn! ID: {0} w/ Loc: {1}", new Object[]{id, loc});
 		}
@@ -81,6 +90,8 @@ public class SpawnManager
 		{
 			JsonObject spawnJson = CustomConfig.locationToJson(spawn.getLocation());
 			spawnJson.addProperty("id", spawn.getID());
+			if(spawn.isAlwaysActive())
+				spawnJson.addProperty("always_active", true);
 			spawnsSaveJson.add(spawnJson);
 		}
 
@@ -156,6 +167,8 @@ public class SpawnManager
 
 		mobs.remove(mob);
 		lastPeacefulAttack.remove(mob);
+		lastActive.remove(mob);
+		lastRespawn.remove(mob);
 
 		if(mobs.isEmpty() && mobsSpawned >= mobsToSpawn)
 			game.nextWave();
@@ -222,8 +235,73 @@ public class SpawnManager
 		return results;
 	}
 
+	/**
+	 * A random spawn among the open ones closest to the location, a different floor counting three times as far (a spawn
+	 * right above or below is not "close"). Closer ones are picked a bit more often.
+	 *
+	 * @return null if no spawn is open
+	 */
+	private SpawnPoint nearOpenSpawn(Location at)
+	{
+		int count = Math.max(1, COMZombies.getPlugin().getConfig().getInt("config.gameSettings.spawnNearestCount", 4));
+		List<SpawnPoint> open = new ArrayList<>();
+		for(SpawnPoint sp : points)
+			if(canSpawn(sp) && sp.getLocation().getWorld() != null && sp.getLocation().getWorld().equals(at.getWorld()))
+				open.add(sp);
+		if(open.isEmpty())
+			return null;
+		java.util.function.ToDoubleFunction<SpawnPoint> dist = sp ->
+		{
+			Location l = sp.getLocation();
+			double dx = l.getX() - at.getX(), dz = l.getZ() - at.getZ(), dy = (l.getY() - at.getY()) * 3;
+			return dx * dx + dy * dy + dz * dz;
+		};
+		open.sort(java.util.Comparator.comparingDouble(dist));
+		List<SpawnPoint> closest = open.subList(0, Math.min(count, open.size()));
+		// Weighted: the closest is the likeliest (weights count, count-1, ... 1)
+		int total = 0;
+		for(int i = 0; i < closest.size(); i++)
+			total += closest.size() - i;
+		int roll = COMZombies.rand.nextInt(total);
+		for(int i = 0; i < closest.size(); i++)
+		{
+			roll -= closest.size() - i;
+			if(roll < 0)
+				return closest.get(i);
+		}
+		return closest.get(0);
+	}
+
+	/** Bumped whenever a round is (re)started, so spawn loops left over from an earlier round stop themselves. */
+	private int spawnGen = 0;
+
+	/** Debug: drops the current round's mobs and spawn counters so a new round can be started right away. */
+	public void resetForForcedRound(int round)
+	{
+		// The spawn delay shrinks a little every round that is played, so jumping ahead has to shrink it as well, otherwise a
+		// forced round 50 spawns at the speed of round 2. nextWave() divides once more, so this is the value before that.
+		double base = COMZombies.getPlugin().getConfig().getInt("config.gameSettings.zombieSpawnDelay");
+		spawnInterval = Math.max(0.5, base / Math.pow(spawnDelayFactor, Math.max(0, round - 1)));
+		spawnGen++;
+		canSpawn = false;
+		mobsSpawned = 0;
+		mobsToSpawn = 0;
+	}
+
+	/**
+	 * Ticks between two spawns. Whole seconds as before, but never 0: below one second the old (int) cast gave 0 ticks, so
+	 * the spawn loop re-ran inside the same server tick, and froze the server once the zombie cap was reached.
+	 */
+	private long spawnDelayTicks()
+	{
+		if(spawnInterval >= 1)
+			return (int) spawnInterval * 20L;
+		return Math.max(1L, (long) (spawnInterval * 20));
+	}
+
 	private void smartSpawn(final int wave)
 	{
+		final int gen = spawnGen;
 		if(!this.canSpawn || wave != game.getWave())
 			return;
 		if(game.getStatus() != GameStatus.INGAME)
@@ -233,7 +311,12 @@ public class SpawnManager
 
 		if(mobs.size() >= ConfigManager.getMainConfig().maxZombies)
 		{
-			game.scheduleMatchTask((int) spawnInterval * 20L, () -> smartSpawn(wave));
+			// Waiting for room: check back at most twice a second, never in the same tick (that would spin the server)
+			game.scheduleMatchTask(Math.max(10L, spawnDelayTicks()), () ->
+			{
+				if(gen == spawnGen)
+					smartSpawn(wave);
+			});
 			return;
 		}
 
@@ -243,6 +326,22 @@ public class SpawnManager
 		Player player = game.getPlayersInGame().get(COMZombies.rand.nextInt(playersSize));
 
 		List<SpawnPoint> nearest = getNearestPoints(player.getLocation(), mobsToSpawn);
+		// Only the spawns nearest to a player are normally used, which in early rounds never includes a spawn that is far
+		// from everyone. So some of the time any open spawn is picked, whatever its distance.
+		double farChance = COMZombies.getPlugin().getConfig().getDouble("config.gameSettings.farSpawnChance", 0.25);
+		if(farChance > 0 && COMZombies.rand.nextDouble() < farChance)
+		{
+			List<SpawnPoint> open = new ArrayList<>();
+			for(SpawnPoint sp : game.spawnManager.getPoints())
+				if(canSpawn(sp))
+					open.add(sp);
+			if(!open.isEmpty())
+				selectPoint = open.get(COMZombies.rand.nextInt(open.size()));
+		}
+		// Normally: one of the few open spawns closest to the player (config.gameSettings.spawnNearestCount). "Nearest" used
+		// to mean as many spawns as the round has zombies, which from round ~5 on was every spawn of the map.
+		if(selectPoint == null)
+			selectPoint = nearOpenSpawn(player.getLocation());
 		int totalRetries = 0;
 		int curr = 0;
 		while(selectPoint == null)
@@ -264,9 +363,9 @@ public class SpawnManager
 		}
 
 		final SpawnPoint finalPoint = selectPoint;
-		game.scheduleMatchTask((int) spawnInterval * 20L, () ->
+		game.scheduleMatchTask(spawnDelayTicks(), () ->
 		{
-			if(!this.canSpawn || wave != game.getWave())
+			if(gen != spawnGen || !this.canSpawn || wave != game.getWave())
 				return;
 
 			Mob ent = roundSpawner.spawnEntity(game, finalPoint, wave);
@@ -293,7 +392,9 @@ public class SpawnManager
 				Mob mob = mobs.get(i);
 				if(mob.isDead())
 					removeEntity(mob);
-				else if(!game.barrierManager.isHeldBack(mob))
+				else if(checkIdle(mob))
+					continue;
+				else if(!game.barrierManager.isHeldBack(mob) && !com.theprogrammingturkey.comz.game.ZombiePathing.isSteering(mob))
 				{
 					Player target = getNearestPlayer(mob);
 					if(PeacefulArenaMobs.needsControlledCombat(mob))
@@ -319,6 +420,83 @@ public class SpawnManager
 		});
 	}
 
+	/** The zombie hit a player (or a barrier): it is not idle. */
+	public void markActive(Mob mob)
+	{
+		if(mobs.contains(mob))
+			lastActive.put(mob, System.currentTimeMillis());
+	}
+
+	// A zombie this close to a player is in the fight (e.g. chasing a player who runs), not stuck
+	private static final double ENGAGED_RANGE_SQUARED = 8 * 8;
+
+	/**
+	 * A zombie that has not hit anyone for config.gameSettings.idleRespawnSeconds (30) is respawned at a spawn near a
+	 * player (it rises again there, same health); one that has not hit anyone for config.gameSettings.idleKillSeconds
+	 * (120) despite that is removed, and counts as gone for the round. Hitting a barrier or being close to a player counts
+	 * as fighting.
+	 *
+	 * @return true if the zombie was removed
+	 */
+	private boolean checkIdle(Mob mob)
+	{
+		long now = System.currentTimeMillis();
+		if(mob instanceof org.bukkit.entity.Zombie z && com.theprogrammingturkey.comz.game.ZombieRise.isRising(z))
+		{
+			lastActive.putIfAbsent(mob, now);
+			return false;
+		}
+		// Close to a player with nothing between them (a zombie stuck behind a fence or wall next to a player is not fighting)
+		for(Player p : game.getPlayersInGame())
+			if(p.getWorld().equals(mob.getWorld()) && p.getLocation().distanceSquared(mob.getLocation()) <= ENGAGED_RANGE_SQUARED
+					&& com.theprogrammingturkey.comz.game.ZombiePathing.canHit(mob, p, null))
+			{
+				lastActive.put(mob, now);
+				return false;
+			}
+		var config = COMZombies.getPlugin().getConfig();
+		long respawnMs = (long) (config.getDouble("config.gameSettings.idleRespawnSeconds", 30) * 1000);
+		long killMs = (long) (config.getDouble("config.gameSettings.idleKillSeconds", 120) * 1000);
+		long idle = now - lastActive.computeIfAbsent(mob, m -> now);
+		if(killMs > 0 && idle >= killMs)
+		{
+			killMob(mob);
+			return true;
+		}
+		long sinceRespawn = now - lastRespawn.getOrDefault(mob, 0L);
+		if(respawnMs > 0 && idle >= respawnMs && sinceRespawn >= respawnMs)
+		{
+			lastRespawn.put(mob, now);
+			respawnNearPlayer(mob);
+		}
+		return false;
+	}
+
+	/** Moves the zombie to a spawn near a player, where it rises again and picks its barrier afresh. */
+	private void respawnNearPlayer(Mob mob)
+	{
+		List<Player> players = game.getPlayersInGame();
+		if(players.isEmpty())
+			return;
+		Player player = players.get(COMZombies.rand.nextInt(players.size()));
+		SpawnPoint point = nearOpenSpawn(player.getLocation());
+		if(point == null || point.getLocation().getWorld() == null)
+			return;
+		Barrier held = game.barrierManager.heldBy(mob);
+		if(held != null)
+			held.forget(mob);
+		for(Barrier b : game.barrierManager.getBarriers())
+			b.forget(mob);
+		Location at = point.getLocation().getBlock().getLocation().add(0.5, 0, 0.5);
+		mob.setTarget(null);
+		mob.teleport(at);
+		Barrier b = game.barrierManager.chooseBarrierFor(mob, point);
+		if(b != null)
+			b.initBarrier(mob);
+		if(mob instanceof org.bukkit.entity.Zombie z)
+			com.theprogrammingturkey.comz.game.ZombieRise.start(z, getNearestPlayer(mob));
+	}
+
 	private void updatePeacefulCombat(Mob mob, Player target)
 	{
 		if(target == null || !mob.isValid())
@@ -326,8 +504,8 @@ public class SpawnManager
 		PaperPathfinding.moveTo(mob, target.getLocation());
 		long now = System.nanoTime();
 		if(mob.getLocation().distanceSquared(target.getLocation()) <= 4
-				&& mob.hasLineOfSight(target)
-				&& now - lastPeacefulAttack.getOrDefault(mob, 0L) >= 1_000_000_000L)
+				&& now - lastPeacefulAttack.getOrDefault(mob, 0L) >= 1_000_000_000L
+				&& com.theprogrammingturkey.comz.game.ZombiePathing.canHit(mob, target, null))
 		{
 			lastPeacefulAttack.put(mob, now);
 			PeacefulArenaMobs.attackPlayer(mob, target);
@@ -361,10 +539,18 @@ public class SpawnManager
 		this.spawnInterval = interval;
 	}
 
+	/** Is the spawn in use: always active, in no door's room, or in the room of a door that is open? */
+	public boolean isSpawnActive(SpawnPoint point)
+	{
+		return canSpawn(point);
+	}
+
 	private boolean canSpawn(SpawnPoint point)
 	{
 		if(point == null)
 			return false;
+		if(point.isAlwaysActive())
+			return true;
 		boolean isContained = false;
 		boolean maySpawn = false;
 		for(Door door : game.doorManager.getDoors())

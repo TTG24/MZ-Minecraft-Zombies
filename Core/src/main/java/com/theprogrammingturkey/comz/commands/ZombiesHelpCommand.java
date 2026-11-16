@@ -76,7 +76,7 @@ public class ZombiesHelpCommand
 		if(page == 1)
 		{
 			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "----------" + Colors.RED + " Sign Help - Page " + page + " " + Colors.DARK_GREEN + "----------");
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Signs always need [Zombies] on the first line!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Signs always need [Zombies] (or just Zombies) on the first line!");
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "MysteryBox" + Colors.GRAY + " - second line = box |third line (Box Price) | fourth line is empty!");
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Wall gun" + Colors.GRAY + " - second line = gun | third line = (gun name) | fourth line = (gun price / ammo price)");
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Perk" + Colors.GRAY + " - second line = perk | third line = (Perk Name) | fourth line is (Perk Price)!");

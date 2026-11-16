@@ -49,6 +49,10 @@ public class OnOutsidePlayerInteractEvent implements Listener
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{
 			event.setCancelled(true);
+			// Q reloads: players without the client mod can't send R (the server never sees that key), and dropping is
+			// blocked in matches anyway. Next tick, once the cancelled drop has put the gun back in the hand.
+			org.bukkit.Bukkit.getScheduler().runTask(com.theprogrammingturkey.comz.COMZombies.getPlugin(),
+					() -> com.theprogrammingturkey.comz.listeners.WeaponListener.reloadHeldGun(player));
 		}
 		Location loc = player.getLocation();
 		if(GameManager.INSTANCE.isLocationInGame(loc))

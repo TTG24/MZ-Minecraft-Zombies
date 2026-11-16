@@ -138,6 +138,9 @@ public class Game
 	/** Task id that returns {@link #gameOverSpectators} to their pre-match location. */
 	private int gameOverReturnTask = -1;
 
+	/** Repeating task id for the looping ambient track; -1 means none is running. */
+	private int ambientMusicTask = -1;
+
 	/** Per-match kill/revive/death counts accumulated while the match is live. */
 	private final Map<UUID, PlayerMatchStats> matchStats = new HashMap<>();
 
@@ -246,6 +249,7 @@ public class Game
 	 * contains all of the teleporters in the game
 	 */
 	public TeleporterManager teleporterManager;
+	public com.theprogrammingturkey.comz.game.managers.LinkManager linkManager;
 
 	/**
 	 * contains all of the downed players in the game
@@ -292,6 +296,7 @@ public class Game
 		perkManager = new PerkManager();
 		powerUpManager = new PowerUpManager();
 		teleporterManager = new TeleporterManager(this);
+		linkManager = new com.theprogrammingturkey.comz.game.managers.LinkManager(this);
 		downedPlayerManager = new DownedPlayerManager();
 		signManager = new SignManager(this);
 
@@ -373,14 +378,58 @@ public class Game
 	 */
 	public void turnOnPower()
 	{
-		powerOn = true;
+		turnOnPower(null);
+	}
 
+	/**
+	 * Turns on the power. Lightning strikes a few times around the power switch (at), at random moments over a couple of
+	 * seconds, each strike with an electric zap (mz:zap, from the pack), and everyone in the match hears the power surge
+	 * (mz:power_on): a charge whine, the arc snapping on, then the mains buzzing and spitting sparks.
+	 */
+	public void turnOnPower(Location at)
+	{
+		powerOn = true;
+		Location centre = at != null ? at : arena.getPlayerTPLocation();
 		for(Player pl : getPlayersAndSpectators())
+			pl.playSound(pl.getLocation(), "mz:power_on", org.bukkit.SoundCategory.MASTER, 1.0f, 1.0f);
+		if(centre != null && centre.getWorld() != null)
 		{
-			World world = pl.getLocation().getWorld();
-			if(world != null)
-				world.playSound(pl.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1L, 1L);
+			int strikes = 3 + COMZombies.rand.nextInt(3);
+			long when = 14; // the first one as the arc snaps on in the sound
+			for(int i = 0; i < strikes; i++)
+			{
+				final boolean first = i == 0;
+				scheduleMatchTask(when, () -> strikePower(centre, first));
+				when += 6 + COMZombies.rand.nextInt(18);
+			}
 		}
+
+		// Power doors set to open with the power swing open by themselves
+		for(com.theprogrammingturkey.comz.game.features.Door door : doorManager.getDoors())
+			if(door.requiresPower() && door.opensWithPower() && !door.isOpened())
+			{
+				door.openDoor();
+				door.playerDoorOpenSound();
+			}
+
+	}
+
+	/** One power-on strike: lightning (just the effect: no fire, no damage) somewhere near the switch, and a zap there. */
+	private void strikePower(Location centre, boolean first)
+	{
+		World world = centre.getWorld();
+		if(world == null)
+			return;
+		double a = COMZombies.rand.nextDouble() * Math.PI * 2, r = first ? 0 : 3 + COMZombies.rand.nextDouble() * 9;
+		int x = (int) Math.floor(centre.getX() + Math.cos(a) * r), z = (int) Math.floor(centre.getZ() + Math.sin(a) * r);
+		// On the roof / ground above that spot (the bolt comes down from the sky)
+		Location hit = new Location(world, x + 0.5, world.getHighestBlockYAt(x, z) + 1, z + 0.5);
+		world.strikeLightningEffect(hit);
+		world.playSound(hit, "mz:zap", org.bukkit.SoundCategory.MASTER, 3.0f, 0.85f + COMZombies.rand.nextFloat() * 0.3f);
+		// Everyone in the match also hears it crackle, a bit quieter, wherever they are
+		for(Player pl : getPlayersAndSpectators())
+			if(pl.getWorld().equals(world) && pl.getLocation().distanceSquared(hit) > 48 * 48)
+				pl.playSound(pl.getLocation(), "mz:zap", org.bukkit.SoundCategory.MASTER, 0.5f, 0.9f + COMZombies.rand.nextFloat() * 0.2f);
 	}
 
 	/**
@@ -399,6 +448,23 @@ public class Game
 	public int getWave()
 	{
 		return this.waveNumber;
+	}
+
+	/** This match's kill/revive/death counts for {@code player}, or null before they have any (tab list placeholders). */
+	public PlayerMatchStats getMatchStats(UUID player)
+	{
+		return matchStats.get(player);
+	}
+
+	/** Zombies still to come this round: not yet spawned plus alive. */
+	public int getZombiesLeft()
+	{
+		return (spawnManager.getMobsToSpawn() - spawnManager.getMobsSpawned()) + spawnManager.getZombiesAlive();
+	}
+
+	public boolean isPlayerDowned(Player player)
+	{
+		return downedPlayerManager.isDownedPlayer(player);
 	}
 
 	/**
@@ -501,9 +567,13 @@ public class Game
 		waveNumber = 0;
 		changingRound = false;
 		status = GameStatus.INGAME;
+		// Start the looping ambient track for everyone in the match (normal arenas and solo
+		// instances alike, since both route through startArena); it stops in endGame().
+		startAmbientMusic();
+		assignWarps(getPlayersInGame());
 		for(Player player : getPlayersInGame())
 		{
-			player.teleport(arena.getPlayerTPLocation());
+			player.teleport(getPlayerWarp(player));
 			player.setAllowFlight(false);
 			player.setFlying(false);
 			player.setHealth(20D);
@@ -662,6 +732,29 @@ public class Game
 		scheduleMatchTask(1, () -> freezeLateJoiner(player, tick + 1));
 	}
 
+	private int roundToken = 0;
+
+	/**
+	 * Debug: jumps straight to the given round. Kills the mobs, cancels the current round's spawning and starts the new
+	 * round (with the usual 10 second countdown).
+	 */
+	public boolean forceRound(int round)
+	{
+		if(status != GameStatus.INGAME || round < 1 || getPlayersInGame().isEmpty())
+			return false;
+		changingRound = true; // keeps mob removals below from starting a round themselves
+		roundToken++;
+		// Going back to an earlier round (to retest) starts it with whole barriers, as a fresh game would
+		if(round <= waveNumber)
+			barrierManager.unloadAllBarriers();
+		spawnManager.resetForForcedRound(round);
+		spawnManager.nuke();
+		waveNumber = round - 1;
+		changingRound = false;
+		nextWave();
+		return true;
+	}
+
 	/**
 	 * Spawns in the next wave of zombies.
 	 */
@@ -710,25 +803,38 @@ public class Game
 			KitManager.giveOutKitRoundRewards(this);
 			for(Player pl : getPlayersAndSpectators())
 			{
+				// Players with the tactical mod see the round as tally marks in the corner instead: the old count blinks
+				// and goes away now, and comes back with the new round when it starts (and they get no portal sound)
+				if(com.theprogrammingturkey.comz.util.RoundMessages.send(pl, -(waveNumber - 1)))
+					continue;
 				pl.playSound(pl.getLocation(), Sound.BLOCK_PORTAL_AMBIENT, ConfigManager.getMainConfig().roundSoundVolume, 1);
-				pl.showTitle(Title.title(Colors.legacy(Colors.RED + "Round " + waveNumber), Colors.legacy(Colors.GRAY + "starting in 10 seconds"), 10, 60, 10));
+				com.theprogrammingturkey.comz.util.TitleHold.show(pl, Colors.legacy(Colors.RED + "Round " + waveNumber), Colors.legacy(Colors.GRAY + "starting in 10 seconds"), 10, 60, 10);
 			}
 			delay = 200;
 		}
 
 		RoundSpawnType spawnType = spawnManager.nextWave(waveNumber, getPlayersInGame());
 
+		final int token = ++roundToken;
 		scheduleMatchTask(delay, () ->
 		{
+			// A forced round (debug) replaced this one while it was counting down
+			if(token != roundToken)
+				return;
 			// The wave is actually starting now, so this also covers the first round
 			// right after the arena (or the lobby-less instant start) begins.
 			playRoundMusic("round_start");
 			for(Player pl : getPlayersAndSpectators())
 			{
-				pl.showTitle(Title.title(Colors.legacy(Colors.RED + "Round " + waveNumber), Component.empty(), 10, 60, 10));
+				boolean modded = com.theprogrammingturkey.comz.util.RoundMessages.send(pl, waveNumber);
+				if(!modded)
+					com.theprogrammingturkey.comz.util.TitleHold.show(pl, Colors.legacy(Colors.RED + "Round " + waveNumber), Component.empty(), 10, 60, 10);
 				switch(spawnType)
 				{
-					case REGULAR -> pl.playSound(pl.getLocation(), Sound.BLOCK_PORTAL_TRAVEL, ConfigManager.getMainConfig().roundSoundVolume, 1);
+					case REGULAR -> {
+						if(!modded)
+							pl.playSound(pl.getLocation(), Sound.BLOCK_PORTAL_TRAVEL, ConfigManager.getMainConfig().roundSoundVolume, 1);
+					}
 					case HELL_HOUNDS -> pl.playSound(pl.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, ConfigManager.getMainConfig().roundSoundVolume, 1);
 				}
 			}
@@ -752,10 +858,66 @@ public class Game
 		if(volume <= 0)
 			return;
 
-		for(Player pl : getPlayersAndSpectators())
-			pl.playSound(pl.getLocation(), "mz:" + file, volume, 1f);
+		// Dead players (waiting out the round in spectator mode) hear the stingers too, game over included.
+		for(GamePlayer gp : gamePlayers.values())
+			if((gp.isInGame() || gp.isSpectating() || gp.isDead()) && gp.getPlayer().isOnline())
+				gp.getPlayer().playSound(gp.getPlayer().getLocation(), "mz:" + file, volume, 1f);
 	}
 
+	/**
+	 * Starts the bundled ambient track (mz:ambient) for the life of the match. It ships in the
+	 * same resource pack as the round stingers; clients without it hear nothing. The track is
+	 * replayed on a loop so it keeps playing for the whole match, and is stopped in
+	 * {@link #endGame()}. Volume is re-read each loop, so /zombies reload changes apply live.
+	 */
+	private void startAmbientMusic()
+	{
+		if(ConfigManager.getMainConfig().ambientMusicVolume <= 0)
+			return;
+		if(ambientMusicTask != -1)
+			return; // already looping for this game
+		// Play once immediately so there is no initial wait, then keep replaying on a loop.
+		playAmbientLoop();
+		// The track is ~308 s long; replay at 305 s (6100 ticks) so consecutive loops overlap
+		// a little rather than leaving an audible gap.
+		ambientMusicTask = COMZombies.scheduleTask(6100, 6100, this::playAmbientLoop);
+	}
+
+	private void playAmbientLoop()
+	{
+		float volume = ConfigManager.getMainConfig().ambientMusicVolume;
+		if(volume <= 0)
+			return;
+		for(Player pl : getPlayersInGame())
+			if(pl.isOnline())
+				pl.playSound(pl.getLocation(), "mz:ambient", volume, 1f);
+	}
+
+	private void stopAmbientMusic()
+	{
+		if(ambientMusicTask != -1)
+		{
+			Bukkit.getScheduler().cancelTask(ambientMusicTask);
+			ambientMusicTask = -1;
+		}
+	}
+
+
+	/** The game mode players play a match in: config.gameSettings.playerGameMode (ADVENTURE by default). */
+	public static GameMode playGameMode()
+	{
+		String name = COMZombies.getPlugin().getConfig().getString("config.gameSettings.playerGameMode", "ADVENTURE");
+		try
+		{
+			GameMode mode = GameMode.valueOf(name == null ? "ADVENTURE" : name.trim().toUpperCase(java.util.Locale.ROOT));
+			if(mode == GameMode.SURVIVAL || mode == GameMode.ADVENTURE)
+				return mode;
+		}
+		catch(IllegalArgumentException ignored)
+		{
+		}
+		return GameMode.ADVENTURE;
+	}
 
 	private void internalAddPlayer(Player player, int points)
 	{
@@ -768,10 +930,12 @@ public class Game
 		player.getInventory().setArmorContents(null);
 		player.setExp(0);
 		player.setLevel(0);
-		player.teleport(arena.getLobbyLocation());
+		// No lobby: they wait at (or, respawning or joining a running match, go to) their own game warp
+		player.teleport(arena.hasLobbyLocation() ? arena.getLobbyLocation() : getPlayerWarp(player));
 		PointManager.INSTANCE.setPoints(player, points);
 		assignPlayerInventory(player);
-		player.setGameMode(GameMode.SURVIVAL);
+		player.setGameMode(playGameMode());
+		player.setInvulnerable(false); // a leftover from being downed in an earlier match
 
 		COMZombies plugin = COMZombies.getPlugin();
 		for(Player pl : getPlayersInGame())
@@ -807,6 +971,10 @@ public class Game
 	{
 		if(isTemplate())
 			return;
+		// Joining while still watching another match's ending: that ending stops for them first
+		Game watching = GameManager.INSTANCE.getGameOverSpectatingGame(player);
+		if(watching != null)
+			watching.releaseGameOverSpectator(player);
 		switch(status)
 		{
 			case WAITING, STARTING ->
@@ -867,8 +1035,13 @@ public class Game
 		setPlayerSpectatorMode(player);
 	}
 
+	/** Where each player died this match (before being moved to the spectate spot), for the game-over cutscene. */
+	private final Map<UUID, Location> deathSpots = new HashMap<>();
+
 	public void setDead(Player player)
 	{
+		if(status == GameStatus.INGAME && player.getGameMode() != GameMode.SPECTATOR)
+			deathSpots.put(player.getUniqueId(), player.getLocation().clone());
 		gamePlayers.computeIfAbsent(player, GamePlayer::new).setState(PlayerState.DEAD);
 		setPlayerSpectatorMode(player);
 	}
@@ -889,7 +1062,11 @@ public class Game
 	public void removePlayer(Player player)
 	{
 		if(downedPlayerManager.isDownedPlayer(player))
+		{
 			setDead(player);
+			// Leaving while downed must not leave them invulnerable or with the crawl speed.
+			downedPlayerManager.removeDownedPlayer(player);
+		}
 		if(soloInstance)
 		{
 			// Mark them out of the match (even if dead) so the solo match can end, then let
@@ -906,7 +1083,10 @@ public class Game
 		if(status != GameStatus.DISABLED)
 			sendMessageToPlayers(player.getName() + " has left the game! Only " + getPlayersInGame().size() + "/" + this.maxPlayers + " player(s) left!");
 
-		if(getPlayersInGame().isEmpty() && status != GameStatus.WAITING && status != GameStatus.DISABLED)
+		// Players waiting out the round (dead, or rejoined mid-match) are not playing: when nobody is left alive and
+		// active, the match is over instead of running on with an empty arena.
+		boolean nobodyActive = getPlayersInGame().isEmpty() || gamePlayers.values().stream().noneMatch(GamePlayer::isInGame);
+		if(nobodyActive && status != GameStatus.WAITING && status != GameStatus.DISABLED)
 			endGame();
 	}
 
@@ -944,12 +1124,20 @@ public class Game
 
 	private void resetPlayer(Player player)
 	{
+		// Leaving (or being sent home): a game-over cutscene still playing for them stops at once
+		com.theprogrammingturkey.comz.util.GameOverMessages.stop(player);
 		for(PotionEffectType t : Registry.POTION_EFFECT_TYPE)
 			player.removePotionEffect(t);
 
 		player.removePotionEffect(PotionEffectType.SPEED);
-		player.getInventory().clear();
-		CachedPlayerInfo.restorePlayerInfo(player);
+		// Only swap the game kit for their own things while those are still waiting: a second reset (the match ending
+		// right after they left) must not wipe the inventory they already got back.
+		if(CachedPlayerInfo.hasSavedInfo(player.getUniqueId()))
+		{
+			player.getInventory().clear();
+			CachedPlayerInfo.restorePlayerInfo(player);
+		}
+		player.setInvulnerable(false);
 		player.setHealth(20);
 		player.setWalkSpeed(0.2F);
 		scoreboard.removePlayer(player);
@@ -988,6 +1176,55 @@ public class Game
 		arena.setPlayerTPLocation(loc);
 		if(arena.isSetupComplete())
 			GameManager.INSTANCE.saveAllGames();
+	}
+
+	/** Sets (or with null removes) the second game warp. */
+	public void setSecondPlayerTPLocation(Location loc)
+	{
+		arena.setSecondPlayerTPLocation(loc);
+		if(arena.isSetupComplete())
+			GameManager.INSTANCE.saveAllGames();
+	}
+
+	/** Which game warp each player of this match was given (only with two warps). */
+	private final Map<java.util.UUID, Integer> warpSide = new HashMap<>();
+
+	/**
+	 * The game warp of a player: with a second warp the players are split between the two when the match starts (a
+	 * player joining later goes to the side with fewer players), otherwise everyone uses the one warp.
+	 */
+	public Location getPlayerWarp(Player player)
+	{
+		if(!arena.hasSecondPlayerTPLocation())
+			return arena.getPlayerTPLocation();
+		Integer side = warpSide.get(player.getUniqueId());
+		if(side == null)
+		{
+			int one = 0, two = 0;
+			for(Player p : getPlayersInGame())
+			{
+				Integer s = warpSide.get(p.getUniqueId());
+				if(s != null && s == 2)
+					two++;
+				else if(s != null)
+					one++;
+			}
+			side = two < one ? 2 : 1;
+			warpSide.put(player.getUniqueId(), side);
+		}
+		return side == 2 ? arena.getSecondPlayerTPLocation() : arena.getPlayerTPLocation();
+	}
+
+	/** Splits the players between the two game warps (shuffled, alternating, so the sides differ by at most one). */
+	private void assignWarps(List<Player> players)
+	{
+		warpSide.clear();
+		if(!arena.hasSecondPlayerTPLocation())
+			return;
+		List<Player> order = new ArrayList<>(players);
+		java.util.Collections.shuffle(order);
+		for(int i = 0; i < order.size(); i++)
+			warpSide.put(order.get(i).getUniqueId(), i % 2 == 0 ? 1 : 2);
 	}
 
 	/**
@@ -1093,6 +1330,7 @@ public class Game
 		starter = new AutoStart(this, 60);
 		matchGeneration++;
 		powerUpManager.clear();
+		stopAmbientMusic();
 
 		// A match can end (admin command, reload, remove) while post-match spectators are
 		// still lingering; cancel their pending return so nothing runs against a fresh state.
@@ -1125,7 +1363,7 @@ public class Game
 		{
 			Player player = v.getPlayer();
 			boolean linger = realGameOver && !v.hasLeftGame() && player.isOnline()
-					&& (v.isInGame() || v.isSpectating());
+					&& (v.isInGame() || v.isSpectating() || v.isDead());
 			if(v.isInGame() || v.hasLeftGame() || v.isDead())
 			{
 				PointManager.INSTANCE.playerLeaveGame(player);
@@ -1133,11 +1371,19 @@ public class Game
 				com.theprogrammingturkey.comz.game.managers.DoorProximityManager.INSTANCE.clearPlayer(player);
 			}
 			if(linger)
+			{
 				keepSpectating.add(player);
-			else
-				resetPlayer(player);
+				// Players with the tactical mod get a cutscene where they went down (still there if they were the last one
+				// or were downed; the others died earlier and were moved to the spectate spot)
+				Location downAt = v.isDead() ? deathSpots.get(player.getUniqueId()) : player.getLocation();
+				if(downAt != null && downAt.getWorld() == player.getWorld())
+					com.theprogrammingturkey.comz.util.GameOverMessages.send(player, downAt, finalRoundReached);
+			}
+			else if(!v.hasLeftGame())
+				resetPlayer(player); // players who left were already sent home (with their things) by removePlayer
 		}
 
+		deathSpots.clear();
 		spawnManager.killAll(false);
 		spawnManager.reset();
 		for(Door door : doorManager.getDoors())
@@ -1147,6 +1393,7 @@ public class Game
 		perkManager.clearPerks();
 		downedPlayerManager.clearDownedPlayers();
 		turnOffPower();
+		TeleporterLinks.reset(this);
 		isFireSale = false;
 		boxManager.loadAllBoxes();
 		barrierManager.unloadAllBarriers();
@@ -1219,6 +1466,8 @@ public class Game
 			resetPlayer(player);
 			if(gamePlayers.containsKey(player))
 				gamePlayers.remove(player);
+			// The post-match board goes away with them (as it does for /z l)
+			player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
 		}
 		gameOverSpectators.clear();
 		matchStats.clear();
@@ -1241,6 +1490,28 @@ public class Game
 	}
 
 	/** Sends one lingering post-match spectator home immediately, e.g. via {@code /z l}. */
+	/**
+	 * Stops a player watching this game's ending because they are joining another match right away: unlike
+	 * skipGameOverSpectate they are NOT sent home (their saved home and things stay saved for when that match is over).
+	 * Without this they were in two games at once: still held in this one's world while playing the other.
+	 */
+	public void releaseGameOverSpectator(Player player)
+	{
+		if(!gameOverSpectators.remove(player))
+			return;
+		com.theprogrammingturkey.comz.util.GameOverMessages.stop(player);
+		gamePlayers.remove(player);
+		player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+		if(gameOverSpectators.isEmpty() && gameOverReturnTask != -1)
+		{
+			Bukkit.getScheduler().cancelTask(gameOverReturnTask);
+			gameOverReturnTask = -1;
+			matchStats.clear();
+			if(soloInstance)
+				ArenaInstances.INSTANCE.onSoloMatchEnded(this);
+		}
+	}
+
 	public void skipGameOverSpectate(Player player)
 	{
 		if(!gameOverSpectators.remove(player))
@@ -1407,6 +1678,9 @@ public class Game
 		if(arenaSaveJson.has("teleporters"))
 			teleporterManager.loadAllTeleportersToGame(arenaSaveJson.get("teleporters").getAsJsonArray());
 
+		if(arenaSaveJson.has("link_regions") && arenaSaveJson.get("link_regions").isJsonObject())
+			linkManager.load(arenaSaveJson.getAsJsonObject("link_regions"));
+
 		signManager.updateGame();
 
 		return true;
@@ -1439,6 +1713,7 @@ public class Game
 		arenaSaveJson.add("barriers", barrierManager.save());
 		arenaSaveJson.add("doors", doorManager.save());
 		arenaSaveJson.add("teleporters", teleporterManager.save());
+		arenaSaveJson.add("link_regions", linkManager.save());
 
 		return gamejson;
 	}
@@ -1552,7 +1827,7 @@ public class Game
 	public void assignPlayerInventory(Player player)
 	{
 		player.getInventory().clear();
-		ItemStack knife = getUnbreakableItem(Material.IRON_SWORD);
+		ItemStack knife = getUnbreakableItem(Material.END_ROD);
 		ItemMeta kMeta = knife.getItemMeta();
 		if(kMeta != null)
 			kMeta.displayName(Colors.legacy(Colors.RED + "Knife"));
@@ -1640,13 +1915,32 @@ public class Game
 
 	public void damageMob(Mob mob, Player player, float damageAmount)
 	{
+		damageMob(mob, player, damageAmount, false);
+	}
+
+	/** A zombie's death: the headshot sound when it died to a headshot, otherwise the death sound (both from the pack). */
+	private void playZombieDeath(Mob mob, boolean headshot, Player killer)
+	{
+		// Read by TacticalMovementPlugin when the zombie is removed (right after this), to play the matching BetterModel
+		// death animation for players without the client mod: "headshot" or "body", and who shot it (which way it falls).
+		org.bukkit.plugin.Plugin plugin = COMZombies.getPlugin();
+		mob.setMetadata("mz_killed", new org.bukkit.metadata.FixedMetadataValue(plugin, headshot ? "headshot" : "body"));
+		if(killer != null)
+			mob.setMetadata("mz_killer", new org.bukkit.metadata.FixedMetadataValue(plugin, killer.getUniqueId().toString()));
+		mob.getWorld().playSound(mob.getLocation(), headshot ? "mz:zombie_headshot" : "mz:zombie_death", org.bukkit.SoundCategory.HOSTILE, 1f, 1f);
+	}
+
+	public void damageMob(Mob mob, Player player, float damageAmount, boolean headshot)
+	{
 		double mobHealth = mob.getHealth() - damageAmount;
+		// Blood for players with the tactical mod (health is set directly here, so Minecraft sends no hurt flash for it)
+		com.theprogrammingturkey.comz.util.BloodMessages.hit(mob, isInstaKill() || mobHealth < 1);
 		// Each branch below plays the appropriate hurt/death sound for the mob type.
 
 		if(isInstaKill())
 		{
 			if(mob instanceof Zombie)
-				player.getWorld().playSound(mob.getLocation(), Sound.ENTITY_ZOMBIE_DEATH, 1f, 1f);
+				playZombieDeath(mob, headshot, player);
 			else
 				player.getWorld().playSound(mob.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
 
@@ -1673,7 +1967,7 @@ public class Game
 		else if(mobHealth < 1)
 		{
 			if(mob instanceof Zombie)
-				player.getWorld().playSound(mob.getLocation(), Sound.ENTITY_ZOMBIE_DEATH, 1f, 1f);
+				playZombieDeath(mob, headshot, player);
 			else
 				player.getWorld().playSound(mob.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
 
@@ -1743,7 +2037,9 @@ public class Game
 
 		// The last player down (whether a solo match or a full one) ends the match; the
 		// post-match spectate in endGame keeps them in the arena to hear the ending.
-		if(downedPlayerManager.numDownedPlayers() + 1 == getPlayersInGame().size())
+		// Only players still in the fight count: teammates who already died do not keep the match alive.
+		long active = gamePlayers.values().stream().filter(GamePlayer::isInGame).count();
+		if(downedPlayerManager.numDownedPlayers() + 1 >= active)
 		{
 			// The downed timer never runs for the final player (the match ends first), so
 			// record their death here or it would be missing from the leaderboard.

@@ -35,7 +35,8 @@ public enum COMZPermission
 	ADD_TELEPORTER(false, "zombies.addteleporter"),
 	REMOVE_TELEPORTER(false, "zombies.removeteleporter"),
 	DISABLE_POWER(false, "zombies.disablepower"),
-	SET_REGION(false, "zombies.setregion");
+	SET_REGION(false, "zombies.setregion"),
+	CROUCH(true, "zombies.crouch");
 
 	private final boolean isUserPerm;
 	private final String[] perms;

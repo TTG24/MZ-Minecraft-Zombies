@@ -46,7 +46,7 @@ public class PowerSign implements IGameSign
 				CommandUtil.sendMessageToPlayer(player, Colors.RED + "The power is already on!");
 				return;
 			}
-			game.turnOnPower();
+			game.turnOnPower(location);
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Power on!");
 		}
 		// Refresh the sign to reflect the new state

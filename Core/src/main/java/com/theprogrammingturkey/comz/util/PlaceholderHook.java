@@ -3,12 +3,15 @@ package com.theprogrammingturkey.comz.util;
 import com.theprogrammingturkey.comz.COMZombies;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.game.GameManager;
+import com.theprogrammingturkey.comz.game.PlayerMatchStats;
+import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.leaderboards.Leaderboard;
 import com.theprogrammingturkey.comz.leaderboards.PlayerStats;
 import com.theprogrammingturkey.comz.leaderboards.StatsCategory;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import java.util.UUID;
 
@@ -100,6 +103,18 @@ public class PlaceholderHook extends PlaceholderExpansion
 	{
 		String[] parts = identifier.split("_");
 
+		// Live, per-viewer game info (used by the TAB header/footer). Read off the main thread by TAB, so a list changing
+		// mid-read just gives an empty value for one refresh instead of an error.
+		try
+		{
+			String live = live(player, identifier);
+			if(live != null)
+				return live;
+		} catch(RuntimeException e)
+		{
+			return "";
+		}
+
 		if(parts[0].equals("leaderboard"))
 		{
 			if(parts.length == 1)
@@ -156,6 +171,65 @@ public class PlaceholderHook extends PlaceholderExpansion
 		}
 
 		return null;
+	}
+
+	/**
+	 * %comz_ingame% (yes/no), %comz_game% (arena), %comz_state% (Waiting/Starting/In game/Spectating/Downed),
+	 * %comz_round%, %comz_points%, %comz_zombies% (left this round), %comz_kills% (this match), %comz_players%
+	 * (in this game), %comz_playing% (in any game, server wide), %comz_games% (matches being played).
+	 * Game values are empty when the player isn't in one.
+	 */
+	private String live(OfflinePlayer offline, String id)
+	{
+		switch(id)
+		{
+			case "playing" -> {
+				int n = 0;
+				for(Game g : GameManager.INSTANCE.getGames())
+					n += g.getPlayersInGame().size();
+				return String.valueOf(n);
+			}
+			case "games" -> {
+				int n = 0;
+				for(Game g : GameManager.INSTANCE.getGames())
+					if(g.getStatus() == Game.GameStatus.INGAME)
+						n++;
+				return String.valueOf(n);
+			}
+			case "ingame", "game", "state", "round", "points", "zombies", "kills", "players" -> {}
+			default -> { return null; }
+		}
+		Player p = offline == null ? null : offline.getPlayer();
+		Game game = p == null ? null : GameManager.INSTANCE.getGame(p);
+		if(id.equals("ingame"))
+			return game == null ? "no" : "yes";
+		if(game == null)
+			// Numbers stay numbers (TAB's player list score needs one); text is just blank
+			return switch(id) { case "round", "points", "zombies", "kills", "players" -> "0"; default -> ""; };
+		boolean live = game.getStatus() == Game.GameStatus.INGAME;
+		return switch(id)
+		{
+			case "game" -> game.getTemplateName();
+			case "state" -> {
+				if(game.isPlayerSpectating(p)) yield "Spectating";
+				if(live && game.isPlayerDowned(p)) yield "Downed";
+				yield switch(game.getStatus())
+				{
+					case INGAME -> "In game";
+					case STARTING -> "Starting";
+					default -> "Waiting";
+				};
+			}
+			case "round" -> String.valueOf(game.getWave());
+			case "points" -> String.valueOf(PointManager.INSTANCE.getPlayersPoints(p));
+			case "zombies" -> live ? String.valueOf(Math.max(0, game.getZombiesLeft())) : "0";
+			case "kills" -> {
+				PlayerMatchStats stats = game.getMatchStats(p.getUniqueId());
+				yield String.valueOf(stats == null ? 0 : stats.getKills());
+			}
+			case "players" -> String.valueOf(game.getPlayersInGame().size());
+			default -> "";
+		};
 	}
 
 	private String getStatForCategory(StatsCategory category, PlayerStats stats)

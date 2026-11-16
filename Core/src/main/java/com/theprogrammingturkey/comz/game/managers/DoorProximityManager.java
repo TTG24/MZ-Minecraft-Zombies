@@ -59,7 +59,7 @@ public class DoorProximityManager
 		Barrier barrier = door == null ? getNearBarrier(player) : null;
 		NearbyTarget target = null;
 		if(door != null)
-			target = new NearbyTarget(door, null, null, minAnchorDistance(door, player.getLocation()));
+			target = new NearbyTarget(door, null, null, doorGap(door, player));
 		else if(barrier != null)
 			target = new NearbyTarget(null, barrier, null, barrierDistanceSquared(barrier, player));
 		MachineProximityManager.Target machine = MachineProximityManager.nearest(game, player);
@@ -263,7 +263,31 @@ public class DoorProximityManager
 
 	private Door nearestDoor(Game game, Player player, double radiusSq)
 	{
-		return nearestDoorIn(game.doorManager.getDoors(), player.getLocation(), radiusSq);
+		double best = radiusSq;
+		Door bestDoor = null;
+		for(Door door : game.doorManager.getDoors())
+		{
+			if(door.isOpened())
+				continue;
+			double d = doorGap(door, player);
+			if(d <= best)
+			{
+				best = d;
+				bestDoor = door;
+			}
+		}
+		return bestDoor;
+	}
+
+	/** Squared gap from the player's body to the door's nearest sign or block (see Reach). */
+	private static double doorGap(Door door, Player player)
+	{
+		double distance = Double.POSITIVE_INFINITY;
+		for(Location anchor : door.getSignsLocations())
+			distance = Math.min(distance, com.theprogrammingturkey.comz.util.Reach.gapSquared(player, anchor));
+		for(Location anchor : door.getBlockLocations())
+			distance = Math.min(distance, com.theprogrammingturkey.comz.util.Reach.gapSquared(player, anchor));
+		return distance;
 	}
 
 	/**
@@ -283,6 +307,8 @@ public class DoorProximityManager
 
 		if(door.isOpened())
 			return format(path + "already_open", "&7Door is already open.", key, priceText);
+		if(door.opensWhenLinked())
+			return format(path + "needs_link", "&eLink every teleporter to the mainframe to open", key, priceText);
 		if(door.requiresPower() && !gameIsPowered(player))
 			return format(path + "no_power", "&cRequires power &7- {price} points", key, priceText);
 		int points = PointManager.INSTANCE.getPlayerPoints(player).getPoints();
@@ -319,11 +345,11 @@ public class DoorProximityManager
 		if(game == null || game.getStatus() != Game.GameStatus.INGAME || game.isPlayerSpectating(player))
 			return null;
 		// Recheck at keypress time instead of trusting the last proximity tick.
-		double radius = COMZombies.getPlugin().getConfig().getDouble("config.doorProximity.radius", 3.0);
+		double radius = COMZombies.getPlugin().getConfig().getDouble("config.doorProximity.radius", 1.0);
 		Door door = nearestDoor(game, player, radius * radius);
 		Barrier barrier = getNearBarrier(player);
 		if(door != null && barrier != null)
-			if(barrierDistanceSquared(barrier, player) <= minAnchorDistance(door, player.getLocation()))
+			if(barrierDistanceSquared(barrier, player) <= doorGap(door, player))
 				return null;
 		return door;
 	}
@@ -336,7 +362,7 @@ public class DoorProximityManager
 		Game game = GameManager.INSTANCE.getGame(player);
 		if(game == null || game.getStatus() != Game.GameStatus.INGAME || game.isPlayerSpectating(player))
 			return null;
-		double radius = COMZombies.getPlugin().getConfig().getDouble("config.barrierProximity.radius", 3.0);
+		double radius = COMZombies.getPlugin().getConfig().getDouble("config.barrierProximity.radius", 1.0);
 		double best = radius * radius;
 		Barrier nearest = null;
 		for(Barrier barrier : game.barrierManager.getBarriers())
@@ -356,7 +382,7 @@ public class DoorProximityManager
 		double best = Double.POSITIVE_INFINITY;
 		for(Block block : barrier.getBlocks())
 			if(player.getWorld().equals(block.getWorld()))
-				best = Math.min(best, block.getLocation().distanceSquared(player.getLocation()));
+				best = Math.min(best, com.theprogrammingturkey.comz.util.Reach.gapSquared(player, block.getLocation()));
 		return best;
 	}
 
@@ -374,7 +400,7 @@ public class DoorProximityManager
 	private boolean canKeepRepairing(Player player, Barrier barrier)
 	{
 		Game game = GameManager.INSTANCE.getGame(player);
-		double radius = COMZombies.getPlugin().getConfig().getDouble("config.barrierProximity.radius", 3.0);
+		double radius = COMZombies.getPlugin().getConfig().getDouble("config.barrierProximity.radius", 1.0);
 		return player.isOnline() && player.isValid() && !player.isDead()
 				&& COMZombies.getPlugin().getConfig().getBoolean("config.barrierProximity.enabled", true)
 				&& game != null && game == barrier.getGame() && game.getStatus() == Game.GameStatus.INGAME
@@ -432,6 +458,11 @@ public class DoorProximityManager
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This door is already open!");
 			return false;
 		}
+		if(door.opensWhenLinked())
+		{
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This door opens once every teleporter is linked to the mainframe!");
+			return false;
+		}
 		if(door.requiresPower() && !gameIsPowered(player))
 		{
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This door requires power to open!");
@@ -449,6 +480,7 @@ public class DoorProximityManager
 		PointManager.INSTANCE.takePoints(player, door.getCost());
 		PointManager.INSTANCE.notifyPlayer(player);
 		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Door opened!");
+		com.theprogrammingturkey.comz.util.MzSounds.purchase(player);
 
 		// Door is open now — clear the tooltip
 		nearDoors.remove(player);
@@ -469,7 +501,30 @@ public class DoorProximityManager
 		{
 			// Translate the legacy ChatColor string to an Adventure component; the String
 			// overload of sendActionBar is deprecated on Paper in favour of the Component one.
-			player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(message));
+			net.kyori.adventure.text.Component text = LegacyComponentSerializer.legacySection().deserialize(message);
+			// A smaller font from the server resource pack, for players who have it (anyone else would see empty boxes)
+			String font = COMZombies.getPlugin().getConfig().getString("config.interaction.promptFont", "mz:small");
+			if(!font.isBlank() && com.theprogrammingturkey.comz.listeners.ResourcePackListener.hasPack(player))
+			{
+				try
+				{
+					text = text.font(net.kyori.adventure.key.Key.key(font.trim()));
+				} catch(RuntimeException ignored)
+				{
+					// not a valid font name: keep the normal font
+				}
+			}
+			String position = COMZombies.getPlugin().getConfig().getString("config.interaction.promptPosition", "subtitle");
+			if(position.equalsIgnoreCase("actionbar"))
+			{
+				player.sendActionBar(text);
+				return;
+			}
+			// The action bar sits right on top of the sprint stamina bar of the tactical movement mod and the server can't move
+			// it, so the prompt is shown as a subtitle instead, which is drawn higher up the screen. No fade in, and it is
+			// resent every few ticks while the player is at the target, so it only lingers a moment after leaving.
+			// The round title, if one is up, stays above the prompt (com.theprogrammingturkey.comz.util.TitleHold).
+			com.theprogrammingturkey.comz.util.TitleHold.prompt(player, text, 600, 150);
 		}
 	}
 }

@@ -43,6 +43,10 @@ public class PlayerListener implements Listener
 			player.showPlayer(COMZombies.getPlugin(), pl);
 		}
 
+		// A player who quit mid-game, crashed, or was online during a server stop can still be standing in an arena world
+		// with their game inventory. Unless they are genuinely still in a game, put their things back and send them home.
+		Bukkit.getScheduler().runTaskLater(COMZombies.getPlugin(), () -> sendStuckPlayerHome(player), 2L);
+
 		Game game = GameManager.INSTANCE.getGame(player);
 		if(game == null)
 			return;
@@ -50,11 +54,24 @@ public class PlayerListener implements Listener
 			CommandUtil.sendClickableMessageToPlayer(player, Colors.RED + "You can reconnect to your last game with /z rejoin or ", "CLICK HERE", "/z rejoin");
 	}
 
+	private void sendStuckPlayerHome(Player player)
+	{
+		if(!player.isOnline() || GameManager.INSTANCE.isPlayerInGame(player))
+			return;
+		if(player.isInvulnerable() && player.getGameMode() == GameMode.SURVIVAL)
+			player.setInvulnerable(false); // stuck from being downed when the match ended or they quit
+		if(com.theprogrammingturkey.comz.game.CachedPlayerInfo.hasSavedInfo(player.getUniqueId()))
+			com.theprogrammingturkey.comz.game.CachedPlayerInfo.restorePlayerInfoNow(player);
+		if(com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.isInstanceWorld(player.getWorld()))
+			player.teleport(Bukkit.getWorlds().getFirst().getSpawnLocation());
+	}
+
 	@EventHandler
 	public void onPlayerLeave(PlayerQuitEvent event)
 	{
 		com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.cancelQueue(event.getPlayer().getUniqueId());
 		Player player = event.getPlayer();
+		com.theprogrammingturkey.comz.game.CachedPlayerInfo.setQuitting(player.getUniqueId(), true);
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{
 			Game game = GameManager.INSTANCE.getGame(player);
@@ -62,6 +79,13 @@ public class PlayerListener implements Listener
 			player.removePotionEffect(PotionEffectType.BLINDNESS);
 			player.removePotionEffect(PotionEffectType.SLOWNESS);
 		}
+		// Also covers post-match spectators (no longer in the game's player map): whatever state they are in, they leave
+		// the arena immediately, so the location saved with their player data is outside it.
+		if(com.theprogrammingturkey.comz.game.CachedPlayerInfo.hasSavedInfo(player.getUniqueId()))
+			com.theprogrammingturkey.comz.game.CachedPlayerInfo.restorePlayerInfoNow(player);
+		if(com.theprogrammingturkey.comz.game.ArenaInstances.INSTANCE.isInstanceWorld(player.getWorld()))
+			player.teleport(Bukkit.getWorlds().getFirst().getSpawnLocation());
+		com.theprogrammingturkey.comz.game.CachedPlayerInfo.setQuitting(player.getUniqueId(), false);
 		for(Player pl : Bukkit.getOnlinePlayers())
 		{
 			player.showPlayer(COMZombies.getPlugin(), pl);
@@ -78,14 +102,16 @@ public class PlayerListener implements Listener
 		Player player = event.getPlayer();
 		Game game = GameManager.INSTANCE.getGame(player);
 		Location toLoc = event.getTo();
-		if(game == null || toLoc == null)
+		// getGame also finds a game the player has already LEFT (it is kept for /z rejoin). Such a player is no longer
+		// bound to the arena, or their way home would be undone by the "do not leave the arena" teleport below.
+		if(game == null || toLoc == null || !GameManager.INSTANCE.isPlayerInGame(player))
 			return;
 
 		if(!game.arena.containsBlock(toLoc))
 		{
 			if(game.getStatus() == Game.GameStatus.INGAME)
 			{
-				player.teleport(game.arena.getPlayerTPLocation());
+				player.teleport(game.getPlayerWarp(player));
 				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Please do not leave the arena!");
 			}
 		}
@@ -93,20 +119,12 @@ public class PlayerListener implements Listener
 
 		// Reviving move check
 		Location change = toLoc.clone().subtract(event.getFrom().clone());
-		if(player.getGameMode() != GameMode.SPECTATOR && game.downedPlayerManager.isDownedPlayer(player) && change.getY() != 0)
+		if(player.getGameMode() != GameMode.SPECTATOR && game.downedPlayerManager.isDownedPlayer(player) && change.getY() > 0.6)
 			event.setCancelled(true);
 
 		float DEAD_ZONE = 0.001f;
 
-		DownedPlayer downedPlayer = game.downedPlayerManager.getDownedPlayerForReviver(player);
-		if(downedPlayer != null)
-		{
-			if(downedPlayer.isPlayerDown() && change.lengthSquared() > DEAD_ZONE)
-			{
-				player.sendMessage(Colors.RED + "You Moved! You are no longer reviving " + downedPlayer.getPlayer().getName());
-				downedPlayer.cancelRevive();
-			}
-		}
+		// Reviving no longer needs the reviver to stand still: DownedPlayer watches the distance instead.
 
 
 		//Barriers move check
@@ -116,11 +134,28 @@ public class PlayerListener implements Listener
 			{
 				if(toLoc.getBlockX() == b.getX() && toLoc.getBlockY() == b.getY() && toLoc.getBlockZ() == b.getZ())
 				{
+					// Already standing in this block (pushed or dropped into it): let them walk out instead of trapping them.
+					Location from = event.getFrom();
+					if(from.getBlockX() == b.getX() && from.getBlockY() == b.getY() && from.getBlockZ() == b.getZ())
+						continue;
+					// A window of bars/panes/fences/walls that is still up stops players by its own (thin) collision: let them
+					// stand right up against it instead of being held off the whole block. (Broken = air: blocked as before.)
+					if(isThinWindow(b))
+						continue;
 					event.setCancelled(true);
 					return;
 				}
 			}
 		}
+	}
+
+	/** Iron bars, glass panes, fences or walls: thin blocks that block players by themselves. Same list as BlockBlocker's. */
+	public static boolean isThinWindow(Block b)
+	{
+		if(b.getType().isAir() || b.isPassable())
+			return false;
+		String n = b.getType().name();
+		return n.endsWith("BARS") || n.endsWith("GLASS_PANE") || n.endsWith("FENCE") || n.endsWith("_WALL");
 	}
 
 	@EventHandler
@@ -190,46 +225,44 @@ public class PlayerListener implements Listener
 			player.setExp(0);
 	}
 
+	/**
+	 * Pressing F (swap hands) next to a downed teammate starts reviving them. The reviver may keep moving, but must stay
+	 * within the revive range; DownedPlayer cancels the revive if they drift out of it.
+	 */
 	@EventHandler
-	public void interact(PlayerInteractAtEntityEvent event)
+	public void reviveWithF(org.bukkit.event.player.PlayerSwapHandItemsEvent event)
 	{
-		if(!(event.getRightClicked() instanceof Player))
-			return;
-
 		Player reviver = event.getPlayer();
-		Player clickedPlayer = (Player) event.getRightClicked();
-
+		if(!GameManager.INSTANCE.isPlayerInGame(reviver))
+			return;
 		Game game = GameManager.INSTANCE.getGame(reviver);
-
-		if(game == null || !game.isPlayerPlaying(clickedPlayer))
+		if(game == null || game.downedPlayerManager.isDownedPlayer(reviver) || !game.getPlayersInGame().contains(reviver))
 			return;
 
-
-		Location clickedPlayerLoc = clickedPlayer.getLocation();
-		if(clickedPlayerLoc.getWorld() == null || !clickedPlayerLoc.getWorld().equals(reviver.getWorld()))
-			return;
-		if(reviver.getLocation().distance(clickedPlayerLoc) > ConfigManager.getMainConfig().reviveRange)
-			return;
-
-		if(game.downedPlayerManager.isDownedPlayer(reviver))
-			return;
-
-		DownedPlayer downedPlayer = game.downedPlayerManager.getDownedPlayer(clickedPlayer);
-		if(downedPlayer == null)
-			return;
-
-		if(downedPlayer.isBeingRevived())
-			return;
-
-		if(!(game.getPlayersInGame().contains(reviver)))
-			return;
-
-		if(GameManager.INSTANCE.isPlayerInGame(reviver))
+		double range = ConfigManager.getMainConfig().reviveRange;
+		DownedPlayer best = null;
+		double bestDistance = Double.MAX_VALUE;
+		for(org.bukkit.entity.Entity nearby : reviver.getNearbyEntities(range, range, range))
 		{
-			reviver.sendMessage(Colors.GRAY + "You are reviving " + clickedPlayer.getName());
-			clickedPlayer.sendMessage(Colors.GRAY + "You are being revived by " + reviver.getName() + "!");
-			downedPlayer.startRevive(reviver);
-			event.setCancelled(true);
+			if(!(nearby instanceof Player other) || !game.isPlayerPlaying(other))
+				continue;
+			DownedPlayer downed = game.downedPlayerManager.getDownedPlayer(other);
+			if(downed == null || downed.isBeingRevived() || !other.getWorld().equals(reviver.getWorld()))
+				continue;
+			double distance = reviver.getLocation().distance(other.getLocation());
+			if(distance <= range && distance < bestDistance)
+			{
+				best = downed;
+				bestDistance = distance;
+			}
 		}
+		if(best == null)
+			return;
+
+		Player downedPlayer = best.getPlayer();
+		reviver.sendMessage(Colors.GRAY + "You are reviving " + downedPlayer.getName() + ". Stay close!");
+		downedPlayer.sendMessage(Colors.GRAY + "You are being revived by " + reviver.getName() + "!");
+		best.startRevive(reviver);
+		event.setCancelled(true);
 	}
 }

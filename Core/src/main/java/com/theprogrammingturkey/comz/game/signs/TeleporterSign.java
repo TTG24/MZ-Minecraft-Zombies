@@ -42,6 +42,10 @@ public class TeleporterSign implements IGameSign
 		Map<String, String> data = new HashMap<>();
 		data.put("teleporter", teleporterName);
 		data.put("price", cost);
+		// Line 2 "pad" (or "teleporter pad" / "link teleporter"): has to be linked at the mainframe before it works
+		String kind = lines[1] == null ? "" : lines[1].trim().toLowerCase();
+		if(kind.equals("pad") || kind.equals("teleporter pad") || kind.equals("link teleporter") || kind.equals("linked teleporter"))
+			data.put("link", "true");
 		return data;
 	}
 
@@ -64,10 +68,24 @@ public class TeleporterSign implements IGameSign
 					return;
 				}
 
+				if("true".equals(data.get("link")) && !com.theprogrammingturkey.comz.game.TeleporterLinks.isLinked(game, location))
+				{
+					com.theprogrammingturkey.comz.game.TeleporterLinks.activate(game, player, location);
+					return;
+				}
+
+				long wait = cooldownLeft(location);
+				if(wait > 0)
+				{
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + "The teleporter is cooling down (" + wait + "s).");
+					return;
+				}
+
 				int points = Integer.parseInt(data.get("price"));
 				if(PointManager.INSTANCE.canBuy(player, points))
 				{
 					player.teleport(destination);
+					startCooldown(location);
 					player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 30, 30));
 
 					for(int i = 0; i < 50; i++)
@@ -88,6 +106,22 @@ public class TeleporterSign implements IGameSign
 				CommandUtil.sendMessageToPlayer(player, Colors.RED + "This teleporter does not exist!");
 			}
 		}
+	}
+
+	private static final Map<String, Long> COOLDOWNS = new HashMap<>();
+
+	/** Seconds until this teleporter sign can be used again (config.gameSettings.teleporterCooldown, 0 = none). */
+	public static long cooldownLeft(Location sign)
+	{
+		Long until = COOLDOWNS.get(sign.getWorld().getName() + ":" + com.theprogrammingturkey.comz.game.TeleporterLinks.key(sign));
+		return until == null ? 0 : Math.max(0, (until - System.currentTimeMillis() + 999) / 1000);
+	}
+
+	private static void startCooldown(Location sign)
+	{
+		int seconds = COMZombies.getPlugin().getConfig().getInt("config.gameSettings.teleporterCooldown", 0);
+		if(seconds > 0)
+			COOLDOWNS.put(sign.getWorld().getName() + ":" + com.theprogrammingturkey.comz.game.TeleporterLinks.key(sign), System.currentTimeMillis() + seconds * 1000L);
 	}
 
 	@Override

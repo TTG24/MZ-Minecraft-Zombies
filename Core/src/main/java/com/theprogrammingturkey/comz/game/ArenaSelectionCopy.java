@@ -71,9 +71,12 @@ public final class ArenaSelectionCopy implements AutoCloseable
 	{
 		var min = template.arena.getMin();
 		var max = template.arena.getMax();
-		CuboidRegion region = new CuboidRegion(BukkitAdapter.adapt(template.getWorld()),
-				BlockVector3.at(min.getBlockX(), min.getBlockY(), min.getBlockZ()),
-				BlockVector3.at(max.getBlockX(), max.getBlockY(), max.getBlockZ()));
+		// A corner set below the bottom of the world (or above its top) just means "all the way down/up"
+		org.bukkit.World w = template.getWorld();
+		int lowY = w.getMinHeight(), highY = w.getMaxHeight() - 1;
+		CuboidRegion region = new CuboidRegion(BukkitAdapter.adapt(w),
+				BlockVector3.at(min.getBlockX(), Math.max(lowY, Math.min(highY, min.getBlockY())), min.getBlockZ()),
+				BlockVector3.at(max.getBlockX(), Math.max(lowY, Math.min(highY, max.getBlockY())), max.getBlockZ()));
 		long limit = com.theprogrammingturkey.comz.COMZombies.getPlugin().getConfig().getLong("config.instances.maxCopyBlocks", 5000000L);
 		if(region.getVolume() > limit)
 			throw new IOException("Arena box contains " + region.getVolume() + " blocks; exceeds config.instances.maxCopyBlocks=" + limit);
@@ -143,7 +146,13 @@ public final class ArenaSelectionCopy implements AutoCloseable
 				if(!region.contains(point))
 					throw new IOException(path + " at " + point + " is outside the arena copy box. Expand the arena's two corners to include it.");
 			}
-			for(var entry : object.entrySet()) validateLocations(entry.getValue(), region, path + "." + entry.getKey());
+			for(var entry : object.entrySet())
+			{
+				// The corners themselves may sit past the world's height (the copy box is clamped to it)
+				if(path.endsWith("save_data") && (entry.getKey().equals("p1") || entry.getKey().equals("p2")))
+					continue;
+				validateLocations(entry.getValue(), region, path + "." + entry.getKey());
+			}
 		}
 		else if(value.isJsonArray())
 		{

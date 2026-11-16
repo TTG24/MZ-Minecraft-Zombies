@@ -26,6 +26,7 @@ public class ArenaSetupAction extends BaseAction
 		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type p1 for point one, and p2 for point two.");
 		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type gw for game warp, lw for lobby warp (optional), and sw for spectator warp.");
 		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type rlw to remove a lobby warp; players will then wait at the game warp.");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type gw2 for a second game warp (players are split between the two), rgw2 to remove it.");
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type cancel to cancel this operation.");
 		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type done when all points have been set where you want them.");
 
@@ -69,6 +70,17 @@ public class ArenaSetupAction extends BaseAction
 		{
 			game.setPlayerTPLocation(player.getLocation());
 			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Player location set for arena : " + game.getName());
+		}
+		else if(message.equalsIgnoreCase("gw2"))
+		{
+			game.setSecondPlayerTPLocation(player.getLocation());
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Second game warp set for arena : " + game.getName()
+					+ ". Players are split between the two warps when a game starts.");
+		}
+		else if(message.equalsIgnoreCase("rgw2"))
+		{
+			game.setSecondPlayerTPLocation(null);
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Second game warp removed for arena : " + game.getName() + ".");
 		}
 		else if(message.equalsIgnoreCase("sw"))
 		{

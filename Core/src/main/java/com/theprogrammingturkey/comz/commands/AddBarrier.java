@@ -31,7 +31,7 @@ public class AddBarrier extends SubCommand
 		{
 			CommandUtil.sendMessageToPlayer(player, "You are currently performing another action and cannot add a barrier right now!");
 		}
-		if(args.length < 2)
+		else if(args.length < 2)
 		{
 			CommandUtil.sendMessageToPlayer(player, "Please specify an arena to add a barrier to!");
 		}

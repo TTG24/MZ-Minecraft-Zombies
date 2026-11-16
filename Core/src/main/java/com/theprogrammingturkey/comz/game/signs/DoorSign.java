@@ -43,6 +43,10 @@ public class DoorSign implements IGameSign
 		{
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This door is already open!");
 		}
+		else if(door.opensWhenLinked())
+		{
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This door opens once every teleporter is linked to the mainframe!");
+		}
 		else if(door.requiresPower() && !game.isPowered())
 		{
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "This door requires power to open!");
@@ -58,6 +62,7 @@ public class DoorSign implements IGameSign
 			PointManager.INSTANCE.takePoints(player, door.getCost());
 			PointManager.INSTANCE.notifyPlayer(player);
 			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Door opened!");
+			com.theprogrammingturkey.comz.util.MzSounds.purchase(player);
 		}
 	}
 

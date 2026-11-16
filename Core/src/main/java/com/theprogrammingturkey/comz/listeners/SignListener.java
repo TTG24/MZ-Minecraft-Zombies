@@ -89,7 +89,7 @@ public class SignListener implements Listener
 		for(int i = 0; i < 4; i++)
 			lines[i] = Colors.plain(front.line(i)).trim();
 
-		IGameSign logic = lines[0].equalsIgnoreCase("[Zombies]") ? GameSigns.fromName(lines[1]) : null;
+		IGameSign logic = BlockUtils.isZombiesHeader(lines[0]) ? GameSigns.fromName(lines[1]) : null;
 		if(logic == null || !logic.isRegistered() || (logic.requiresGame() && game == null))
 			return null;
 
@@ -210,12 +210,16 @@ public class SignListener implements Listener
 			lines[i] = line == null ? "" : Colors.plain(line).trim();
 		}
 
-		if(!lines[0].equalsIgnoreCase("[Zombies]"))
+		if(!BlockUtils.isZombiesHeader(lines[0]))
 			return;
 
 		Location loc = event.getBlock().getLocation();
 		Game game = GameManager.INSTANCE.getGame(loc);
 		IGameSign signLogic = GameSigns.fromName(lines[1]);
+		// Without the brackets, a sign that merely says "Zombies" and is not a game sign is left alone
+		boolean brackets = lines[0].equalsIgnoreCase("[Zombies]");
+		if(signLogic == null && !brackets)
+			return;
 		if(signLogic == null)
 		{
 			event.line(0, Colors.legacy(Colors.RED + String.valueOf(Colors.BOLD) + lines[1]));
@@ -240,6 +244,16 @@ public class SignListener implements Listener
 			signLogic.onCreate(game, event.getPlayer(), loc, data);
 			if(signLogic.isRegistered())
 				SignRegistry.INSTANCE.register(loc, signLogic.getType(), data);
+			// A finished sign gets its category's wood, and disappears if its category is hidden (/z signs); perk signs
+			// disappear unless hidePerkSigns is off. They are used with the interact key near them.
+			String category = signLogic.getType();
+			if(game != null && com.theprogrammingturkey.comz.game.signs.SignStyles.CATEGORIES.contains(category))
+			{
+				if(com.theprogrammingturkey.comz.game.signs.SignStyles.hidesNew(game, category))
+					event.getPlayer().sendMessage(Colors.GRAY + "Sign saved and hidden. /z signs show " + category + " puts it back.");
+				Game created = game;
+				COMZombies.scheduleTask(1, () -> com.theprogrammingturkey.comz.game.signs.SignStyles.onCreated(created, category, loc));
+			}
 
 			String[] text = signLogic.getText(data);
 			if(text != null)

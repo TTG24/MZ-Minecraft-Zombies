@@ -2,7 +2,6 @@ package com.theprogrammingturkey.comz.game.signs;
 
 import com.theprogrammingturkey.comz.util.Colors;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Player;
@@ -67,7 +66,6 @@ public class MysteryBoxSign implements IGameSign
 			if(PointManager.INSTANCE.canBuy(player, points))
 			{
 				box.Start(player, points);
-				player.getLocation().getWorld().playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1, 1);
 			}
 			else
 			{

@@ -45,13 +45,24 @@ public final class PeacefulArenaMobs
 				&& COMZombies.getPlugin().getConfig().getBoolean("config.gameSettings.zombiesInPeaceful", true);
 	}
 
+	/** True while a hit the plugin itself decided on (already checked with ZombiePathing.canHit) is being dealt. */
+	public static boolean dealingCheckedHit = false;
+
 	public static void attackPlayer(Mob mob, Player player)
 	{
 		// A direct attacker keeps the normal EntityDamageByEntityEvent and armor handling.
 		// Leave the causing entity unset so vanilla does not scale damage to zero on Peaceful.
 		DamageSource source = DamageSource.builder(DamageType.MOB_ATTACK).withDirectEntity(mob).build();
 		mob.swingMainHand();
-		player.damage(1, source); // EntityListener applies arena damage, perks, downing, and healing rules.
+		dealingCheckedHit = true;
+		try
+		{
+			player.damage(1, source); // EntityListener applies arena damage, perks, downing, and healing rules.
+		}
+		finally
+		{
+			dealingCheckedHit = false;
+		}
 	}
 
 	/** Called before the zombie is added to the world. Applies even if difficulty changes later. */

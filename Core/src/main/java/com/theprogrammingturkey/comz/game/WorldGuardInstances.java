@@ -42,6 +42,43 @@ public final class WorldGuardInstances
 		catch(Exception failure) { throw new IOException("Could not save instance WorldGuard regions", failure); }
 	}
 
+	/**
+	 * The weather-lock flag that applies at the player's location: TRUE = rain/snow, FALSE = clear, null = no lock.
+	 * WorldGuard only applies it when a player crosses a region boundary, and an instance copy has the same region ids
+	 * as the template, so teleporting into an instance can leave the previous world's weather in place.
+	 */
+	public static Boolean weatherLock(org.bukkit.entity.Player player)
+	{
+		var query = WorldGuard.getInstance().getPlatform().getRegionContainer().createQuery();
+		var type = query.queryValue(BukkitAdapter.adapt(player.getLocation()),
+				com.sk89q.worldguard.bukkit.WorldGuardPlugin.inst().wrapPlayer(player), Flags.WEATHER_LOCK);
+		if(type == null)
+			return null;
+		String id = String.valueOf(type).toLowerCase(java.util.Locale.ROOT);
+		return id.contains("rain") || id.contains("downfall") || id.contains("thunder");
+	}
+
+	/**
+	 * The weather-lock flag set on a region itself (not what applies at a spot): true for rain/snow, false for clear, null
+	 * when the region does not exist or has no weather lock.
+	 */
+	public static Boolean regionWeatherLock(org.bukkit.World world, String regionId)
+	{
+		if(world == null || regionId == null)
+			return null;
+		RegionManager manager = WorldGuard.getInstance().getPlatform().getRegionContainer().get(BukkitAdapter.adapt(world));
+		if(manager == null)
+			return null;
+		ProtectedRegion region = manager.getRegion(regionId);
+		if(region == null)
+			return null;
+		Object type = region.getFlag(Flags.WEATHER_LOCK);
+		if(type == null)
+			return null;
+		String id = String.valueOf(type).toLowerCase(java.util.Locale.ROOT);
+		return id.contains("rain") || id.contains("downfall") || id.contains("thunder");
+	}
+
 	static Map<String, ProtectedRegion> copyRegions(Map<String, ProtectedRegion> originals, String sourceWorld, World target) throws IOException
 	{
 		Map<String, ProtectedRegion> copies = new LinkedHashMap<>();
