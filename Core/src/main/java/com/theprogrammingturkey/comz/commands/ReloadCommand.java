@@ -26,6 +26,11 @@ public class ReloadCommand extends SubCommand
 
 		COMZombies plugin = COMZombies.getPlugin();
 
+		// Players in a match are told why it ended
+		for(Game game : GameManager.INSTANCE.getGames())
+			for(Player p : game.getPlayersInGame())
+				p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',
+						"&8[&4☠&8] &cThe server is reloading the arenas: this match has ended. &7Rejoin in a moment."));
 		for(Game game : GameManager.INSTANCE.getGames())
 			game.endGame();
 		plugin.clearAllSetup();

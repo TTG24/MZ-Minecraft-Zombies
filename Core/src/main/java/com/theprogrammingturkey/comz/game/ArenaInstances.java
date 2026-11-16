@@ -128,8 +128,16 @@ public final class ArenaInstances
 		}
 	}
 
+	/** Tells everyone online (players notice a reload: games end, arenas are rebuilt). */
+	private static void announce(String text)
+	{
+		Bukkit.broadcastMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&8[&4☠&8] &7" + text));
+	}
+
 	public void loadPools()
 	{
+		if(!Bukkit.getOnlinePlayers().isEmpty())
+			announce("The arenas are being rebuilt... &cthe horde regroups.");
 		stopPrepareTask();
 		closeSnapshots();
 		List<List<PendingSlot>> perArena = new ArrayList<>();
@@ -193,10 +201,14 @@ public final class ArenaInstances
 		if(pending.isEmpty())
 		{
 			closeSnapshots();
+			if(!Bukkit.getOnlinePlayers().isEmpty())
+				announce("All arenas are ready. &cThe dead are waiting.");
 			return;
 		}
 		long interval = Math.max(1, COMZombies.getPlugin().getConfig().getLong("config.instances.prepareIntervalTicks", 5));
 		COMZombies.log.log(Level.INFO, "Preparing {0} more arena copies in the background", new Object[]{pending.size()});
+		if(!Bukkit.getOnlinePlayers().isEmpty())
+			announce("Every arena can be joined again; more copies are being prepared in the background.");
 		prepareTask = COMZombies.scheduleTask(interval, interval, this::prepareNext);
 	}
 
@@ -217,6 +229,8 @@ public final class ArenaInstances
 			stopPrepareTask();
 			closeSnapshots();
 			COMZombies.log.log(Level.INFO, "All arena copies are ready");
+			if(!Bukkit.getOnlinePlayers().isEmpty())
+				announce("All arenas are ready. &cThe dead are waiting.");
 		}
 	}
 

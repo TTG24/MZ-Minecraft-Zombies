@@ -76,6 +76,10 @@ public class MysteryBoxSign implements IGameSign
 		{
 			box.pickUpWeapon(player);
 		}
+		else
+		{
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Someone else is using the mystery box!");
+		}
 	}
 
 	@Override

@@ -218,6 +218,7 @@ public class COMZombies extends JavaPlugin
 		// R-to-reload: the Tactical Movement client mod sends this empty plugin message when R is pressed.
 		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:reload",
 			(channel, player, message) -> WeaponListener.reloadHeldGun(player));
+		com.theprogrammingturkey.comz.util.Backups.start();
 	}
 
 	/**

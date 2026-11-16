@@ -48,6 +48,8 @@ public class AmmoCrateSign implements IGameSign
 				GunInstance gun = manager.getGun(player.getInventory().getHeldItemSlot());
 				gun.clipAmmo = gun.getType().clipAmmo;
 				gun.maxAmmo();
+				CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Ammo refilled!");
+				com.theprogrammingturkey.comz.util.MzSounds.purchase(player);
 			}
 			else
 			{

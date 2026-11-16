@@ -1,4 +1,8 @@
 config:
+  #Daily zip of the world, plugin settings/data and server config into backups/daily (the last keepDays are kept)
+  backups:
+    enabled: true
+    keepDays: 14
   instances:
     #Maximum volume of the two-corner map snapshot (including air), captured once per template.
     maxCopyBlocks: 5000000
