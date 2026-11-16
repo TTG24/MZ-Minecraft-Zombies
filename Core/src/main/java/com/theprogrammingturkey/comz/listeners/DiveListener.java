@@ -39,9 +39,7 @@ import com.theprogrammingturkey.comz.game.GameManager;
  *       posture after the thrust (default 1).</li>
  * </ul>
  *
- * <p>The dive is suppressed while the player is out of stamina (see
- * {@link StaminaListener#isExhausted(Player)}), so it can't be chained to skip the
- * sprint lockout, and it does not apply to spectators.
+ * <p>The dive does not apply to spectators. (Stamina is handled by the Tactical Movement plugin.)
  */
 public class DiveListener implements Listener
 {
@@ -50,10 +48,6 @@ public class DiveListener implements Listener
 	 */
 	private final java.util.logging.Logger log = COMZombies.getPlugin().getLogger();
 
-	/**
-	 * The stamina listener, consulted so an exhausted player can't dive.
-	 */
-	private final StaminaListener stamina;
 	/**
 	 * ms-since-epoch of the last dive per player, enforcing the cooldown.
 	 */
@@ -136,21 +130,13 @@ public class DiveListener implements Listener
 	public static final String STAND_MARKER_PREFIX = "mzprone:stand:";
 
 	/**
-	 * Creates a dive listener that defers to the given stamina listener for the
-	 * exhaustion check.
-	 *
-	 * @param stamina the stamina listener to consult, or null to allow dives even
-	 *        when out of stamina.
-	 */
-	/**
 	 * The live dive/crouch listener instance, exposed so commands (e.g. {@code /zombies
 	 * crouch}) can drive the crouch stance without needing a plugin reference.
 	 */
 	public static DiveListener INSTANCE;
 
-	public DiveListener(StaminaListener stamina)
+	public DiveListener()
 	{
-		this.stamina = stamina;
 		INSTANCE = this;
 		// No per-tick task: the old dive/prone system is superseded by the Tactical Movement plugin.
 	}
@@ -244,8 +230,6 @@ public class DiveListener implements Listener
 		}
 		p.setSprinting(false);
 		p.setSneaking(false);
-		if(stamina != null && !stamina.isExhausted(p))
-			p.removePotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
 		sendStandSignal(p);
 		log.info("[mz-prone] PRONE ENDED for " + p.getName() + (crouchPlayers.contains(id) ? " (staying in crouch)" : " — restored speed"));
 	}
@@ -562,8 +546,6 @@ public class DiveListener implements Listener
 				block = "sneak held too briefly (< " + SNEAK_HOLD_MS + "ms) or no sneak-toggle seen";
 			else if(!inActiveGame(p))
 				block = "not in an active game";
-			else if(stamina != null && stamina.isExhausted(p))
-				block = "out of stamina";
 		}
 		if(block == null)
 		{

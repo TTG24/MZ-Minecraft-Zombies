@@ -436,35 +436,6 @@ public final class ArenaInstances
 		return "mz_instance_" + ownerId(template.getName()) + "_" + slot;
 	}
 
-	/**
-	 * Copies the template's box into a fresh void world and registers the resulting match, all at once (solo arenas).
-	 *
-	 * @return the created game, or null on failure
-	 */
-	private Game createInstanceWorld(Game template, int slot)
-	{
-		String name = template.getName() + "~" + slot;
-		World world = null;
-		try
-		{
-			world = beginWorld(template, slot);
-			ArenaSelectionCopy capture = snapshots.get(template.getName());
-			if(capture != null)
-				capture.paste(world);
-			else
-				try(ArenaSelectionCopy fresh = ArenaSelectionCopy.capture(template)) { fresh.paste(world); }
-			return finishWorld(template, slot, world);
-		}
-		catch(Exception | LinkageError failure)
-		{
-			if(world != null)
-				cleanUpFailed(world.getName(), name, failure);
-			else
-				COMZombies.log.log(Level.SEVERE, "Failed to prepare " + name, failure);
-			return null;
-		}
-	}
-
 	/** The empty instance world, with the arena world's rules and the WorldGuard region; the arena is pasted after. */
 	private World beginWorld(Game template, int slot) throws IOException
 	{

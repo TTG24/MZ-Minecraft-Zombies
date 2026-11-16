@@ -397,35 +397,6 @@ public class BarrierManager
 		return length;
 	}
 
-	/**
-	 * Should this zombie take an already-broken barrier to the players instead of breaking one itself? Only when a real
-	 * route to the nearest player exists right now (Paper's pathfinder says so), and then only some of the time
-	 * (config.gameSettings.openRouteChance), so zombies keep working on barriers as well.
-	 */
-	public boolean wantsOpenRoute(org.bukkit.entity.Mob mob)
-	{
-		var config = COMZombies.getPlugin().getConfig();
-		double chance = config.getDouble("config.gameSettings.openRouteChance", 0.35);
-		if(chance <= 0 || random.nextDouble() >= chance)
-			return false;
-		// Early rounds stay orderly: every zombie breaks a barrier
-		if(game.getWave() < config.getInt("config.gameSettings.openRouteMinRound", 5))
-			return false;
-		Player target = game.spawnManager.getNearestPlayer(mob);
-		if(target == null)
-			return false;
-
-		// Only when the open way is not a big detour: it used to be taken whenever any route existed, even one all the way
-		// around a building. The route may be at most openRouteMaxDetour times the straight distance (plus a little slack).
-		double route = reallyReaches(mob, target.getLocation())
-				? com.theprogrammingturkey.comz.util.PaperPathfinding.routeLength(mob, target.getLocation()) : -1;
-		if(route < 0)
-			return false;
-		double maxDetour = config.getDouble("config.gameSettings.openRouteMaxDetour", 1.5);
-		double straight = mob.getLocation().distance(target.getLocation());
-		return route <= straight * maxDetour + 6;
-	}
-
 	/** A barrier other than {@code self} that the mob is currently touching (a broken one wins over an intact one), or null. */
 	public Barrier barrierBeside(Barrier self, org.bukkit.entity.Mob mob)
 	{

@@ -197,45 +197,6 @@ public class SpawnManager
 		return game;
 	}
 
-	private List<SpawnPoint> getNearestPoints(Location loc, int numToGet)
-	{
-		List<SpawnPoint> spawnPoints = game.spawnManager.getPoints();
-		if(numToGet < 0)
-			throw new IllegalArgumentException("numToGet should not be less than zero");
-		if(numToGet == 0)
-			return new ArrayList<>();
-
-		int numPoints = Math.min(numToGet, spawnPoints.size());
-		List<SpawnPoint> results = new ArrayList<>(numPoints);
-		for(int i = 0; i < numPoints; i++)
-			results.add(spawnPoints.get(i));
-
-		List<Double> distances = new ArrayList<>();
-		for(int i = 0; i < numToGet; i++)
-			distances.add(Double.POSITIVE_INFINITY);
-
-		for(SpawnPoint point : spawnPoints)
-		{
-			Location spawnLoc = point.getLocation();
-			double dx = spawnLoc.getBlockX() - loc.getBlockX();
-			double dy = spawnLoc.getBlockY() - loc.getBlockY();
-			double dz = spawnLoc.getBlockZ() - loc.getBlockZ();
-			double dist2 = (dx * dx) + (dy * dy) + (dz * dz);
-			for(int resultIndex = 0; resultIndex < results.size(); resultIndex++)
-			{
-				if(dist2 >= distances.get(resultIndex))
-					continue;
-
-				distances.add(resultIndex, dist2);
-				results.add(resultIndex, point);
-				results.remove(numPoints);
-				distances.remove(numPoints);
-				break;
-			}
-		}
-		return results;
-	}
-
 	/**
 	 * A random spawn among the open ones closest to the location, a different floor counting three times as far (a spawn
 	 * right above or below is not "close"). Closer ones are picked a bit more often.
@@ -576,16 +537,6 @@ public class SpawnManager
 		if(!isContained)
 			return true;
 		return maySpawn;
-	}
-
-	private void oopsWeHadAnError()
-	{
-		if(game.getStatus() != GameStatus.INGAME)
-			return;
-
-		for(Player pl : game.getPlayersInGame())
-			pl.sendMessage(Colors.RED + "Well..  I guess we had an error trying to pick a spawn point out of the many we had! We'll have to end your game because of our lack of skillez.");
-		game.endGame();
 	}
 
 	public RoundSpawnType nextWave(int wave, final List<Player> players)

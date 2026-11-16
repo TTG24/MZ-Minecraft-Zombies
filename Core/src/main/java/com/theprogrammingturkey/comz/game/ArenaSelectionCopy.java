@@ -189,7 +189,7 @@ public final class ArenaSelectionCopy implements AutoCloseable
 	/** Pastes one slab (blocks and biomes, no entities) at the same coordinates. */
 	public void pasteSlice(World destination, CuboidRegion slice) throws IOException
 	{
-		try(var session = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(destination)))
+		try(var session = pasteSession(destination))
 		{
 			ForwardExtentCopy copy = new ForwardExtentCopy(clipboard, slice, session, slice.getMinimumPoint());
 			copy.setCopyingEntities(false);
@@ -204,11 +204,27 @@ public final class ArenaSelectionCopy implements AutoCloseable
 	 * the full paste uses (which placed them fine), with a mask that matches no block, so only the entities are copied.
 	 * (Creating them one by one failed with "Error creating entity" for every one.)
 	 */
+	/**
+	 * An edit session for pasting a copy: no undo history (FAWE otherwise saves an undo file for every paste, hundreds of
+	 * MB that are never used, since a copy is thrown away, never undone).
+	 */
+	private static com.sk89q.worldedit.EditSession pasteSession(World destination)
+	{
+		return WorldEdit.getInstance().newEditSessionBuilder().world(BukkitAdapter.adapt(destination))
+				.changeSetNull().limitUnlimited().build();
+	}
+
 	public void pasteEntities(World destination) throws IOException
 	{
 		if(clipboard.getEntities().isEmpty())
 			return;
-		try(var session = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(destination)))
+		// The chunks they go in are loaded first (placing an entity in a chunk that is not loaded fails)
+		for(Entity entity : clipboard.getEntities())
+		{
+			var loc = entity.getLocation();
+			destination.getChunkAt((int) Math.floor(loc.x()) >> 4, (int) Math.floor(loc.z()) >> 4);
+		}
+		try(var session = pasteSession(destination))
 		{
 			ForwardExtentCopy copy = new ForwardExtentCopy(clipboard, clipboard.getRegion(), session, clipboard.getOrigin());
 			copy.setSourceMask(com.sk89q.worldedit.function.mask.Masks.alwaysFalse());
@@ -227,7 +243,7 @@ public final class ArenaSelectionCopy implements AutoCloseable
 		// buffer. This snapshot is pasted once per instance slot, so it must stay open
 		// until every slot is done; only the EditSession is closed here, and the single
 		// shared clipboard is closed exactly once by the caller (ArenaInstances).
-		try(var session = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(destination)))
+		try(var session = pasteSession(destination))
 		{
 			ForwardExtentCopy copy = new ForwardExtentCopy(clipboard, clipboard.getRegion(), session, clipboard.getOrigin());
 			// Entity copying is safe here: the source is the clipboard (which FAWE never warns

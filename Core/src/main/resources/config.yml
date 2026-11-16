@@ -45,23 +45,10 @@ config:
     #Zombies normally spawn at one of this many open spawn points closest to a (random) player, the closest most often.
     #A spawn on another floor counts as much farther. Higher = more spread out, lower = closer to the players.
     spawnNearestCount: 4
-    #Chance (0 to 1) that a zombie takes an already-broken barrier to reach the players instead of breaking one, whenever a
-    #real route to a player is open. 0 means zombies always break the barrier they chose first.
-    openRouteChance: 0.35
-    #Spawns with their own way to the players that needs no barrier (like Der Riese, where zombies can drop down or go to
-    #the window): the chance (0 to 1) a zombie takes that way, when it is at most openWayMaxExtra blocks longer than going
-    #through the barrier. Longer open ways use openRouteChance/openRouteMinRound/openRouteMaxDetour instead.
-    openWayChance: 0.5
-    openWayMaxExtra: 10
     #The hurt sound plays when a hit leaves a player with this percent of their maximum health or less. 0 turns it off.
     hurtSoundPercent: 30
     #Height in blocks of the blue light beam above the mystery box that is active right now. 0 turns it off.
     boxBeaconHeight: 40
-    #Open routes are not used before this round, so early rounds always break barriers.
-    openRouteMinRound: 5
-    #An open route is only taken if it is at most this many times the straight distance to the player (plus 6 blocks), so
-    #zombies never walk all the way around a building. Lower = shorter detours only. 1.0 almost never takes an open route.
-    openRouteMaxDetour: 1.5
     #How close (in blocks) a player has to be for a zombie working on a barrier to hit them through it. 0 turns it off.
     barrierAttackRange: 2.2
     #How far (in blocks) zombies and hellhounds are willing to drop down a ledge while chasing. Minecraft's default is 3,
@@ -137,13 +124,6 @@ config:
     #Volume for the ambient track that plays once when a match starts (mz:ambient), delivered
     #through the same resource pack. 0 disables it.
     ambientMusicVolume: 1.0
-    #Sprint stamina (active matches only). While sprinting the bar drains over
-    #staminaMaxSeconds; at zero the player is forced to walk until the bar has fully
-    #refilled over staminaRegenSeconds while they are not sprinting.
-    #Set staminaEnabled to false to turn the mechanic off entirely.
-    staminaEnabled: true
-    staminaMaxSeconds: 5.0
-    staminaRegenSeconds: 3.0
 
     #Dolphin dive (active matches only): sneak + jump thrusts you forward in the
     #direction you're facing, then holds a low "prone" posture for a moment.

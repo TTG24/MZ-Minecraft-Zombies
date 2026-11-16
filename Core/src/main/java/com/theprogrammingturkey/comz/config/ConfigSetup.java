@@ -114,22 +114,8 @@ public class ConfigSetup
 	 */
 	public float ambientMusicVolume;
 
-	/**
-	 * Whether sprint stamina is enforced in active matches. When enabled, sprinting
-	 * drains a 0..1 bar sized by {@link #staminaMaxSeconds}; at zero the player is forced
-	 * to walk until the bar has fully recovered over {@link #staminaRegenSeconds}.
-	 */
-	public boolean staminaEnabled;
 
-	/**
-	 * Seconds of full sprint the player can sustain before the bar empties.
-	 */
-	public double staminaMaxSeconds;
 
-	/**
-	 * Seconds (while not sprinting) to fully refill an empty bar.
-	 */
-	public double staminaRegenSeconds;
 
 	/**
 	 * Whether the sneak-jump dive (forward lunge) is enabled in active matches.
@@ -206,9 +192,6 @@ public class ConfigSetup
 		roundSoundVolume = (float) plugin.getConfig().getDouble("config.gameSettings.roundSoundVolume");
 		roundMusicVolume = (float) plugin.getConfig().getDouble("config.gameSettings.roundMusicVolume", 1.0);
 		ambientMusicVolume = (float) plugin.getConfig().getDouble("config.gameSettings.ambientMusicVolume", 1.0);
-		staminaEnabled = plugin.getConfig().getBoolean("config.gameSettings.staminaEnabled", true);
-		staminaMaxSeconds = plugin.getConfig().getDouble("config.gameSettings.staminaMaxSeconds", 5.0);
-		staminaRegenSeconds = plugin.getConfig().getDouble("config.gameSettings.staminaRegenSeconds", 3.0);
 		diveEnabled = plugin.getConfig().getBoolean("config.gameSettings.diveEnabled", true);
 		diveCooldownSeconds = plugin.getConfig().getDouble("config.gameSettings.diveCooldownSeconds", 2.0);
 		diveLungeStrength = plugin.getConfig().getDouble("config.gameSettings.diveLungeStrength", 0.4);

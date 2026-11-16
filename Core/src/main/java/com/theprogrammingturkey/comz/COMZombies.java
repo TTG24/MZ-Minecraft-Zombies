@@ -37,7 +37,6 @@ import com.theprogrammingturkey.comz.listeners.PlayerListener;
 import com.theprogrammingturkey.comz.listeners.PowerUpDropListener;
 import com.theprogrammingturkey.comz.listeners.ScopeListener;
 import com.theprogrammingturkey.comz.listeners.SignListener;
-import com.theprogrammingturkey.comz.listeners.StaminaListener;
 import com.theprogrammingturkey.comz.listeners.WeaponListener;
 import com.theprogrammingturkey.comz.support.compat.BukkitApiUtil;
 import com.theprogrammingturkey.comz.util.Colors;
@@ -213,9 +212,9 @@ public class COMZombies extends JavaPlugin
 		m.registerEvents(new com.theprogrammingturkey.comz.listeners.ResourcePackListener(), this);
 		m.registerEvents(new com.theprogrammingturkey.comz.listeners.HurtSoundListener(), this);
 		// Sprint stamina and the sneak-jump dive/prone are now provided by the TacticalMovementPlugin + client mod,
-		// so the old StaminaListener (stamina bar + Slowness lockout) and DiveListener events are no longer registered.
+		// so MZ's own copy of stamina was removed and the DiveListener events are no longer registered.
 		// DiveListener is still constructed because WeaponListener / CrouchCommand reference it.
-		DiveListener dive = new DiveListener(null);
+		DiveListener dive = new DiveListener();
 		m.registerEvents(new WeaponListener(dive), this);
 		// R-to-reload: the Tactical Movement client mod sends this empty plugin message when R is pressed.
 		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:reload",
