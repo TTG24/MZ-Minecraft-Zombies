@@ -162,8 +162,9 @@ public final class ZombiePathing
 		if(nodes == null || nodes.size() < 2)
 		{
 			PLANS.remove(mob.getUniqueId());
-			// Nothing better than what it does already: leave it be for a while
-			NEXT_CHECK.put(mob.getUniqueId(), tick + 40);
+			// Nothing better than what it does already (no way to the player at all, e.g. they are walled in): leave it be
+			// for a while, a failed search is the most costly one
+			NEXT_CHECK.put(mob.getUniqueId(), tick + 100);
 			return true;
 		}
 		Plan plan = new Plan();
@@ -548,10 +549,12 @@ public final class ZombiePathing
 	private static boolean moveBlocked(World world, int x, int y, int z, int nx, int ny, int nz)
 	{
 		int top = Math.max(y, ny);
-		for(double h : new double[] {y + 0.3, y + 1.2, top + 0.3, top + 1.2})
-			if(segmentBlocked(world, x + 0.5, h, z + 0.5, nx + 0.5, h, nz + 0.5))
-				return true;
-		return false;
+		if(segmentBlocked(world, x + 0.5, y + 0.3, z + 0.5, nx + 0.5, y + 0.3, nz + 0.5)
+				|| segmentBlocked(world, x + 0.5, y + 1.2, z + 0.5, nx + 0.5, y + 1.2, nz + 0.5))
+			return true;
+		// A step up: also at the height it steps up to (a flat step has nothing more to check)
+		return top != y && (segmentBlocked(world, x + 0.5, top + 0.3, z + 0.5, nx + 0.5, top + 0.3, nz + 0.5)
+				|| segmentBlocked(world, x + 0.5, top + 1.2, z + 0.5, nx + 0.5, top + 1.2, nz + 0.5));
 	}
 
 	/**
