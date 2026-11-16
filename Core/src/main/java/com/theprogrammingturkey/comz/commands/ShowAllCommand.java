@@ -26,7 +26,7 @@ import java.util.UUID;
 /**
  * /zombies showall (sa) [arena]: toggles an outline of EVERYTHING set up in the arena at once, through walls, only for you:
  * barriers, zombie spawns, doors, mystery boxes, game signs (perks, weapons, power, pack-a-punch...), teleporters, the
- * player/spectator/lobby warps and the arena's corner box. Uses the same colours as the single show commands. Run it again
+ * player/spectator/lobby warps, teleporter links and the mainframe, and the arena's corner box. Uses the same colours as the single show commands. Run it again
  * to turn it off. Without an arena, the one you are standing in.
  */
 public class ShowAllCommand extends SubCommand
@@ -57,7 +57,8 @@ public class ShowAllCommand extends SubCommand
 		// If anything is outlined (this, or /z barriers, showdoors, showspawns, showboxes...), turn all of it off
 		UUID id = player.getUniqueId();
 		boolean wasOn = SHOWING.remove(id) | BarriersCommand.stopShowing(id) | ShowDoorsCommand.stopShowing(id)
-				| ShowMysteryBoxCommand.stopShowing(id) | ShowSpawnsCommand.stopShowing(id) | AlwaysSpawnCommand.stopShowing(id);
+				| ShowMysteryBoxCommand.stopShowing(id) | ShowSpawnsCommand.stopShowing(id) | AlwaysSpawnCommand.stopShowing(id)
+				| LinkCommand.stopShowing(id);
 		if(wasOn)
 		{
 			Highlight.clear(player);
@@ -87,6 +88,9 @@ public class ShowAllCommand extends SubCommand
 				+ "): white (perks, weapons, power, pack-a-punch...)");
 		player.sendMessage(Colors.GRAY + " - " + Colors.LIGHT_PURPLE + "Teleporters" + Colors.GRAY + " (" + game.teleporterManager.getTeleporters().size()
 				+ "): pink");
+		player.sendMessage(Colors.GRAY + " - " + Colors.AQUA + "Links" + Colors.GRAY + " (" + game.linkManager.getLinks().size()
+				+ "): cyan, a line to where each teleports; " + Colors.LIGHT_PURPLE + "mainframe" + Colors.GRAY + " pink ("
+				+ (game.linkManager.getMainframe() == null ? "not set" : "set") + ")");
 		player.sendMessage(Colors.GRAY + " - " + Colors.YELLOW + "Warps" + Colors.GRAY + " (" + warps + "): pale yellow (player spawn, spectator, lobby)");
 		player.sendMessage(Colors.GRAY + " - " + Colors.GREEN + "Arena corners" + Colors.GRAY + ": blue box");
 		SHOWING.add(player.getUniqueId());
@@ -140,6 +144,7 @@ public class ShowAllCommand extends SubCommand
 			warp(player, a.getLobbyLocation());
 		if(a.hasMin() && a.hasMax())
 			bounds(player, a.getMin(), a.getMax());
+		LinkCommand.drawLinks(player, game);
 		COMZombies.scheduleTask(10, () -> loop(player, game));
 	}
 

@@ -189,6 +189,19 @@ public class LinkCommand extends SubCommand
 			SHOWING.remove(player.getUniqueId());
 			return;
 		}
+		drawLinks(player, game);
+		COMZombies.scheduleTask(10, () -> loop(player, game));
+	}
+
+	/** Turns this outline off for the player (used by /z showall to turn every outline off). */
+	public static boolean stopShowing(UUID id)
+	{
+		return SHOWING.remove(id);
+	}
+
+	/** One frame of the link outlines: every link (cyan), a line to where each teleports, and the mainframe (pink). */
+	public static void drawLinks(Player player, Game game)
+	{
 		for(LinkManager.LinkRegion r : game.linkManager.getLinks())
 		{
 			LinkRegionAction.drawBox(player, game.getWorld(), r.minX, r.minY, r.minZ, r.maxX, r.maxY, r.maxZ, LinkRegionAction.LINK, 2);
@@ -202,7 +215,6 @@ public class LinkCommand extends SubCommand
 		LinkManager.LinkRegion main = game.linkManager.getMainframe();
 		if(main != null)
 			LinkRegionAction.drawBox(player, game.getWorld(), main.minX, main.minY, main.minZ, main.maxX, main.maxY, main.maxZ, LinkRegionAction.MAINFRAME, 2);
-		COMZombies.scheduleTask(10, () -> loop(player, game));
 	}
 
 	private static final org.bukkit.Color CONNECTED = org.bukkit.Color.fromRGB(60, 255, 60);
