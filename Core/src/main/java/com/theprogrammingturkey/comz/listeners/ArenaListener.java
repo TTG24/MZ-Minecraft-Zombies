@@ -123,8 +123,8 @@ public class ArenaListener implements Listener
 	@EventHandler
 	public void onBlockHangingBreak(HangingBreakByEntityEvent event)
 	{
-		Player player = (Player) event.getRemover();
-		if(GameManager.INSTANCE.isPlayerInGame(player))
+		// Removed by a mob, an arrow, an explosion...: not a player, nothing to check (this used to throw)
+		if(event.getRemover() instanceof Player player && GameManager.INSTANCE.isPlayerInGame(player))
 			event.setCancelled(true);
 	}
 

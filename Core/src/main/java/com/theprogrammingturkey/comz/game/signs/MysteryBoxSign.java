@@ -26,7 +26,7 @@ public class MysteryBoxSign implements IGameSign
 	public Map<String, String> parse(Game game, Player player, String[] lines)
 	{
 		String cost = lines[2];
-		if(!cost.matches("[0-9]+"))
+		if(!cost.matches("[0-9]{1,6}"))
 			cost = "950";
 
 		Map<String, String> data = new HashMap<>();
@@ -37,7 +37,24 @@ public class MysteryBoxSign implements IGameSign
 	@Override
 	public void onCreate(Game game, Player player, Location location, Map<String, String> data)
 	{
-		BlockFace facing = ((Directional) location.getBlock().getBlockData()).getFacing();
+		// A wall sign faces a side; a standing (floor) sign has a rotation instead (casting it to Directional used to throw)
+		var blockData = location.getBlock().getBlockData();
+		BlockFace facing;
+		if(blockData instanceof Directional directional)
+			facing = directional.getFacing();
+		else if(blockData instanceof org.bukkit.block.data.Rotatable rotatable)
+			facing = rotatable.getRotation();
+		else
+			facing = player.getFacing().getOppositeFace();
+		// The box's sign is redrawn as a wall sign, which only faces north, east, south or west
+		facing = switch(facing)
+		{
+			case NORTH, NORTH_NORTH_EAST, NORTH_NORTH_WEST -> BlockFace.NORTH;
+			case EAST, EAST_NORTH_EAST, EAST_SOUTH_EAST, NORTH_EAST -> BlockFace.EAST;
+			case SOUTH, SOUTH_SOUTH_EAST, SOUTH_SOUTH_WEST, SOUTH_EAST -> BlockFace.SOUTH;
+			case WEST, WEST_NORTH_WEST, WEST_SOUTH_WEST, SOUTH_WEST, NORTH_WEST -> BlockFace.WEST;
+			default -> player.getFacing().getOppositeFace();
+		};
 		RandomBox box = new RandomBox(location, facing, game, game.boxManager.getNextBoxName(), Integer.parseInt(data.get("price")));
 		game.boxManager.addBox(box);
 		player.sendMessage(Colors.DARK_GREEN + "Random Weapon Box Created!");

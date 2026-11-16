@@ -118,10 +118,9 @@ public class PlayerWeaponManager
 	}
 
 	public void updateWeapons() {
-		for (WeaponInstance weapon : weapons) {
+		for (WeaponInstance weapon : weapons)
 			weapon.updateWeapon();
-			player.updateInventory();
-		}
+		player.updateInventory(); // once, not once per weapon
 	}
 
 	/**

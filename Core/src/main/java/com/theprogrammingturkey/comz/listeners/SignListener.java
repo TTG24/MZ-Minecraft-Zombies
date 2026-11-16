@@ -220,6 +220,13 @@ public class SignListener implements Listener
 		boolean brackets = lines[0].equalsIgnoreCase("[Zombies]");
 		if(signLogic == null && !brackets)
 			return;
+		// Only arena editors make game signs (a player could otherwise write a free gun or mystery box sign)
+		if(!com.theprogrammingturkey.comz.util.COMZPermission.EDIT_ARENA.hasPerm(event.getPlayer()))
+		{
+			event.setCancelled(true);
+			event.getPlayer().sendMessage(COMZombies.PREFIX + Colors.RED + "Only arena editors can make Zombies signs.");
+			return;
+		}
 		if(signLogic == null)
 		{
 			event.line(0, Colors.legacy(Colors.RED + String.valueOf(Colors.BOLD) + lines[1]));

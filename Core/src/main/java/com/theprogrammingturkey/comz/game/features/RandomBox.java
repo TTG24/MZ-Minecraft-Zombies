@@ -145,6 +145,12 @@ public class RandomBox
 			@Override
 			public void run()
 			{
+				// The match ended mid-spin: put the box back (this task used to keep running, doing nothing)
+				if(boxGame.getStatus() != Game.GameStatus.INGAME)
+				{
+					reset();
+					return;
+				}
 				item.setTicksLived(5960);
 				item.setPickupDelay(1000);
 				item.setVelocity(new Vector(0, 0, 0));
@@ -176,7 +182,9 @@ public class RandomBox
 								boxGame.scheduleMatchTask(60, () ->
 								{
 									boxGame.boxManager.teddyBear();
-									PointManager.INSTANCE.addPoints(player, pointsNeeded);
+									// Refund only to a player still in this match (one who left would get a stray points entry)
+									if(boxGame.getPlayersInGame().contains(player))
+										PointManager.INSTANCE.addPoints(player, pointsNeeded);
 									reset();
 								});
 							});

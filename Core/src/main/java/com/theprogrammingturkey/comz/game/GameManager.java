@@ -232,6 +232,8 @@ public class GameManager
 	{
 		return games.stream()
 				.filter(g -> !g.isTemplate() && (template == null || g.getTemplateName().equalsIgnoreCase(template)))
+				// Not someone's solo arena (about to be removed), nor a copy whose last players are still on the end board
+				.filter(g -> !g.isSoloInstance() && !g.hasGameOverSpectators())
 				.filter(g -> g.getStatus() == GameStatus.WAITING || g.getStatus() == GameStatus.STARTING)
 				.filter(g -> !g.spawnManager.getPoints().isEmpty() && g.getPlayersInGame().size() < g.maxPlayers)
 				.max(java.util.Comparator.comparingInt(g -> g.getPlayersInGame().size())).orElse(null);

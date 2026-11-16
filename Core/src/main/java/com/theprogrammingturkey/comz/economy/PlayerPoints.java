@@ -38,6 +38,18 @@ public class PlayerPoints
 		plugin.saveConfig();
 	}
 
+	/** Stores everyone's points with a single read and write of config.yml (it used to be one of each per player). */
+	public static void storeAll(java.util.Collection<PlayerPoints> all)
+	{
+		if(all.isEmpty())
+			return;
+		COMZombies plugin = COMZombies.getPlugin();
+		plugin.reloadConfig();
+		for(PlayerPoints p : all)
+			plugin.getConfig().set("Players." + p.player.getName() + ".points", p.points);
+		plugin.saveConfig();
+	}
+
 	// Call this when a player joins a game only!
 	public void constructPoints()
 	{

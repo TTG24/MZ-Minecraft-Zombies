@@ -13,8 +13,10 @@ public class DownedPlayerManager
 
 	public void clearDownedPlayers()
 	{
-		for(DownedPlayer downedPlayer : downedPlayers)
+		for(DownedPlayer downedPlayer : new ArrayList<>(downedPlayers))
 			downedPlayer.clearDownedState();
+		// Nobody is down in the next match (the list used to keep them, so they started it "downed")
+		downedPlayers.clear();
 	}
 
 	public int numDownedPlayers()

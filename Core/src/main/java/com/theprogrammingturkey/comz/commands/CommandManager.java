@@ -379,7 +379,9 @@ public class CommandManager implements TabExecutor
 
 	public void onRemoteCommand(Player player, String[] args)
 	{
-		this.commandList.get(args[0]).onCommand(player, args);
+		SubCommand sub = args.length == 0 ? null : this.commandList.get(args[0].toLowerCase());
+		if(sub != null)
+			sub.onCommand(player, args);
 	}
 
 	@Override
@@ -406,13 +408,23 @@ public class CommandManager implements TabExecutor
 			{
 				if(!player.isOp())
 					return true;
+				// (missing or bad arguments used to throw; a good run also fell through to "No such command!")
+				if(args.length < 3 || !args[2].matches("[0-9]{1,4}"))
+				{
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + "Usage: /zombies setround <arena> <round>");
+					return true;
+				}
 				Game arena = GameManager.INSTANCE.getGame(args[1]);
 				if(arena == null)
+				{
+					CommandUtil.sendMessageToPlayer(player, Colors.RED + args[1] + " is not a valid arena!");
 					return true;
+				}
 
 				for(int i = 0; i < Integer.parseInt(args[2]); i++)
 					arena.nextWave();
 				CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Setting wave to: " + Colors.RED + args[2]);
+				return true;
 			}
 			else if(args[0].equalsIgnoreCase("version"))
 			{
@@ -460,7 +472,11 @@ public class CommandManager implements TabExecutor
 		}
 		else if(args.length > 1)
 		{
-			List<String> list = this.commandList.get(args[0]) != null ? this.commandList.get(args[0]).onTabComplete((Player) sender, args) : null;
+			// The console has no arena-specific suggestions (this used to throw for it)
+			if(!(sender instanceof Player player))
+				return null;
+			SubCommand sub = this.commandList.get(args[0].toLowerCase());
+			List<String> list = sub != null ? sub.onTabComplete(player, args) : null;
 			if(list == null)
 				return GameManager.INSTANCE.getArenas().stream().filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
 			else

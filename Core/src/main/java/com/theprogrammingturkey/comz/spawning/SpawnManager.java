@@ -134,8 +134,8 @@ public class SpawnManager
 		if(entity == null || entity instanceof Player)
 			return;
 
-		while(!entity.isDead())
-			entity.remove();
+		// Once: remove() on an entity that is already gone does not make it "dead", so a loop here could spin forever
+		entity.remove();
 
 		this.removeEntity(entity);
 	}
@@ -150,9 +150,10 @@ public class SpawnManager
 		for(int i = mobs.size() - 1; i >= 0; i--)
 			killMob(this.mobs.get(i));
 
+		mobs.clear();
+		// (removeEntity already moves on when the round is done; only force it when asked and it has not happened yet)
 		if(nextWave)
 			game.nextWave();
-		mobs.clear();
 	}
 
 	public List<Mob> getEntities()
@@ -299,6 +300,8 @@ public class SpawnManager
 		return Math.max(1L, (long) (spawnInterval * 20));
 	}
 
+	private boolean noOpenSpawnWarned;
+
 	private void smartSpawn(final int wave)
 	{
 		final int gen = spawnGen;
@@ -321,11 +324,11 @@ public class SpawnManager
 		}
 
 		int playersSize = game.getPlayersInGame().size();
+		if(playersSize == 0)
+			return;
 
 		SpawnPoint selectPoint = null;
 		Player player = game.getPlayersInGame().get(COMZombies.rand.nextInt(playersSize));
-
-		List<SpawnPoint> nearest = getNearestPoints(player.getLocation(), mobsToSpawn);
 		// Only the spawns nearest to a player are normally used, which in early rounds never includes a spawn that is far
 		// from everyone. So some of the time any open spawn is picked, whatever its distance.
 		double farChance = COMZombies.getPlugin().getConfig().getDouble("config.gameSettings.farSpawnChance", 0.25);
@@ -342,24 +345,24 @@ public class SpawnManager
 		// to mean as many spawns as the round has zombies, which from round ~5 on was every spawn of the map.
 		if(selectPoint == null)
 			selectPoint = nearOpenSpawn(player.getLocation());
-		int totalRetries = 0;
-		int curr = 0;
-		while(selectPoint == null)
+		// Any other player (one in another spot may have open spawns near them)
+		for(int i = 0; selectPoint == null && i < playersSize; i++)
+			selectPoint = nearOpenSpawn(game.getPlayersInGame().get(i).getLocation());
+		if(selectPoint == null)
 		{
-			if(curr == nearest.size())
+			// No spawn is open right now (e.g. every spawn is behind a closed door): try again in 2 seconds. This used to
+			// loop on the spot until it found one, which froze the whole server when there was none.
+			if(!noOpenSpawnWarned)
 			{
-				player = game.getPlayersInGame().get(COMZombies.rand.nextInt(playersSize));
-				nearest = getNearestPoints(player.getLocation(), mobsToSpawn / playersSize);
-				curr = 0;
-				continue;
+				noOpenSpawnWarned = true;
+				COMZombies.log.log(java.util.logging.Level.WARNING, "No open zombie spawn in {0}; check that a spawn is linked outside the doors", new Object[]{game.getName()});
 			}
-			selectPoint = nearest.get(COMZombies.rand.nextInt(nearest.size()));
-			if(!(canSpawn(selectPoint)))
-				selectPoint = null;
-			curr++;
-			if(totalRetries > 1000)
-				oopsWeHadAnError();
-			totalRetries++;
+			game.scheduleMatchTask(40L, () ->
+			{
+				if(gen == spawnGen)
+					smartSpawn(wave);
+			});
+			return;
 		}
 
 		final SpawnPoint finalPoint = selectPoint;
@@ -446,6 +449,11 @@ public class SpawnManager
 			lastActive.putIfAbsent(mob, now);
 			return false;
 		}
+		// Counted as fighting in the last 2 seconds: no need to check again yet (the line-of-sight check is costly, and the
+		// idle timers are tens of seconds long)
+		Long active = lastActive.get(mob);
+		if(active != null && now - active < 2000)
+			return false;
 		// Close to a player with nothing between them (a zombie stuck behind a fence or wall next to a player is not fighting)
 		for(Player p : game.getPlayersInGame())
 			if(p.getWorld().equals(mob.getWorld()) && p.getLocation().distanceSquared(mob.getLocation()) <= ENGAGED_RANGE_SQUARED
@@ -515,7 +523,7 @@ public class SpawnManager
 	public Player getNearestPlayer(Entity e)
 	{
 		Player closestPlayer = null;
-		double dist = Integer.MAX_VALUE;
+		double dist = Double.MAX_VALUE;
 		for(Player pl : game.getPlayersInGame())
 		{
 			if(!pl.isOnline() || pl.isDead() || !pl.getWorld().equals(e.getWorld())
@@ -524,7 +532,7 @@ public class SpawnManager
 			if(game.downedPlayerManager.isDownedPlayer(pl))
 				continue;
 
-			double dist2 = pl.getLocation().distance(e.getLocation());
+			double dist2 = pl.getLocation().distanceSquared(e.getLocation()); // (squared: same order, no square root)
 			if(dist > dist2)
 			{
 				closestPlayer = pl;
@@ -651,6 +659,11 @@ public class SpawnManager
 	public void reset()
 	{
 		this.mobs.clear();
+		// Per-zombie timers: a zombie that left the list another way would otherwise stay here (and keep its world loaded)
+		lastPeacefulAttack.clear();
+		lastActive.clear();
+		lastRespawn.clear();
+		noOpenSpawnWarned = false;
 		this.canSpawn = false;
 		this.mobsSpawned = 0;
 		this.mobsToSpawn = 0;

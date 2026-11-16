@@ -161,6 +161,9 @@ public class Game
 
 	public void retire() { retired = true; matchGeneration++; starter.endTimer(); powerUpManager.clear(); }
 
+	/** Changes whenever a match ends (or the game is retired): delayed work checks it is still the same match. */
+	public long getMatchGeneration() { return retired ? -1 : matchGeneration; }
+
 	/** Discard delayed work from a finished match or an arena replaced by reload. */
 	public int scheduleMatchTask(long delay, Runnable action)
 	{
@@ -760,6 +763,9 @@ public class Game
 	 */
 	public void nextWave()
 	{
+		// Only a running match changes rounds (endGame's clean-up kills the last zombies, which used to call this again)
+		if(status != GameStatus.INGAME)
+			return;
 		if(getPlayersInGame().isEmpty())
 		{
 			this.endGame();

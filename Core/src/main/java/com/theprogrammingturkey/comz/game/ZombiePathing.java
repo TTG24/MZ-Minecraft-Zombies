@@ -34,6 +34,8 @@ public final class ZombiePathing
 	private static final int MAX_NODES = 3000;
 	private static final int MAX_RANGE = 64;
 	private static final int SEARCHES_PER_TICK = 2;
+	/** Minecraft path searches ("can its own pathfinder get there?") per tick, over every arena. */
+	private static final int FIND_PATHS_PER_TICK = 8;
 	private static final int[][] DIRS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
 
 	private static final class Plan
@@ -45,12 +47,19 @@ public final class ZombiePathing
 		int pushTicks;
 		// Planned because Minecraft's route only got NEAR the goal (a wall, fence, glass... in between), not for a drop
 		boolean chase;
+		// The node it was last sent to, and when (it is only sent again when that changes, or now and then)
+		int sentAim = -1;
+		long sentTick;
 	}
 
 	private static final Map<UUID, Plan> PLANS = new HashMap<>();
 	private static final Map<UUID, Long> NEXT_CHECK = new HashMap<>();
 	private static long budgetTick = -1;
 	private static int searchesLeft;
+	private static long findPathTick = -1;
+	private static int findPathsLeft;
+	// Which arena goes first this tick: turns round, so the first arenas do not use up every tick's budget
+	private static int gameOffset;
 
 	private static Object blockBlocker;
 	private static Method isBarrierCell;
@@ -75,8 +84,12 @@ public final class ZombiePathing
 	private static void tick()
 	{
 		long tick = Bukkit.getCurrentTick();
-		for(Game game : GameManager.INSTANCE.getGames())
+		List<Game> games = GameManager.INSTANCE.getGames();
+		int count = games.size();
+		gameOffset = count == 0 ? 0 : (gameOffset + 1) % count;
+		for(int gi = 0; gi < count; gi++)
 		{
+			Game game = games.get((gi + gameOffset) % count);
 			if(game.getStatus() != Game.GameStatus.INGAME)
 				continue;
 			for(Mob mob : new ArrayList<>(game.spawnManager.getEntities()))
@@ -124,7 +137,8 @@ public final class ZombiePathing
 		// Already there, nothing in between: its own AI does the rest
 		if(goal.distanceSquared(mob.getLocation()) < 4 && arrivesAt(mob.getLocation(), goal))
 			return;
-		if(reaches(mob, goal))
+		// (no path budget left this tick: checked again in a moment)
+		if(reaches(mob, goal) != 0)
 			return;
 		if(plan(mob, goal, tick))
 		{
@@ -134,14 +148,28 @@ public final class ZombiePathing
 		}
 	}
 
-	/** Can its own pathfinder get (about) there? */
-	private static boolean reaches(Mob mob, Location goal)
+	/**
+	 * Can its own pathfinder get (about) there? A new path search is limited to a few per tick over every arena (each one is
+	 * a full Minecraft path search).
+	 *
+	 * @return 1 yes, 0 no, -1 not known yet (no search budget left this tick)
+	 */
+	private static int reaches(Mob mob, Location goal)
 	{
 		Pathfinder.PathResult path = mob.getPathfinder().getCurrentPath();
 		if(path != null && path.getFinalPoint() != null && path.canReachFinalPoint() && arrivesAt(path.getFinalPoint(), goal))
-			return true;
+			return 1;
+		long tick = Bukkit.getCurrentTick();
+		if(findPathTick != tick)
+		{
+			findPathTick = tick;
+			findPathsLeft = FIND_PATHS_PER_TICK;
+		}
+		if(findPathsLeft <= 0)
+			return -1;
+		findPathsLeft--;
 		path = mob.getPathfinder().findPath(goal);
-		return path != null && path.getFinalPoint() != null && path.canReachFinalPoint() && arrivesAt(path.getFinalPoint(), goal);
+		return path != null && path.getFinalPoint() != null && path.canReachFinalPoint() && arrivesAt(path.getFinalPoint(), goal) ? 1 : 0;
 	}
 
 	/** @return false when this tick's search budget was used up (try again next tick) */
@@ -193,18 +221,24 @@ public final class ZombiePathing
 		}
 		if(goal.distanceSquared(plan.goal) > 16 || tick - plan.madeTick > 80)
 		{
-			if(mob.isOnGround() && reaches(mob, goal))
+			int own = mob.isOnGround() ? reaches(mob, goal) : 0;
+			if(own == 1)
 			{
 				PLANS.remove(mob.getUniqueId());
 				return;
 			}
-			boolean chase = plan.chase;
-			if(mob.isOnGround() && !plan(mob, goal, tick))
-				plan.madeTick = tick - 70; // no budget: try again in a moment, keep following meanwhile
-			plan = PLANS.get(mob.getUniqueId());
-			if(plan == null)
-				return;
-			plan.chase = plan.chase || chase;
+			if(own == -1)
+				plan.madeTick = tick - 70; // not known yet: ask again in a moment, keep following meanwhile
+			else
+			{
+				boolean chase = plan.chase;
+				if(mob.isOnGround() && !plan(mob, goal, tick))
+					plan.madeTick = tick - 70; // no budget: try again in a moment, keep following meanwhile
+				plan = PLANS.get(mob.getUniqueId());
+				if(plan == null)
+					return;
+				plan.chase = plan.chase || chase;
+			}
 		}
 		while(plan.index < plan.nodes.size())
 		{
@@ -256,8 +290,15 @@ public final class ZombiePathing
 				break;
 			aim = k;
 		}
-		int[] n = plan.nodes.get(aim);
-		mob.getPathfinder().moveTo(new Location(at.getWorld(), n[0] + 0.5, n[1], n[2] + 0.5), 1.0);
+		// Sent again only when it aims at a new node, has lost its path, or now and then: every moveTo is a full path search,
+		// and this used to run every tick for every zombie on a route
+		if(aim != plan.sentAim || !mob.getPathfinder().hasPath() || tick - plan.sentTick >= 20)
+		{
+			int[] n = plan.nodes.get(aim);
+			mob.getPathfinder().moveTo(new Location(at.getWorld(), n[0] + 0.5, n[1], n[2] + 0.5), 1.0);
+			plan.sentAim = aim;
+			plan.sentTick = tick;
+		}
 	}
 
 	// ------------------------------------------------------------------ A*
@@ -488,35 +529,40 @@ public final class ZombiePathing
 		return result;
 	}
 
+	/** Finds BlockBlocker's methods once (both lookups below need them). */
+	private static void lookUp()
+	{
+		if(lookedUp)
+			return;
+		lookedUp = true;
+		try
+		{
+			Plugin bb = Bukkit.getPluginManager().getPlugin("BlockBlocker");
+			if(bb != null && bb.isEnabled())
+			{
+				isBarrierCell = bb.getClass().getMethod("isBarrierCell", World.class, int.class, int.class, int.class);
+				blockBlocker = bb;
+				try
+				{
+					crossesBarrier = bb.getClass().getMethod("crossesBarrier", World.class, double.class, double.class, double.class,
+							double.class, double.class, double.class);
+				}
+				catch(NoSuchMethodException older)
+				{
+					crossesBarrier = null;
+				}
+			}
+		}
+		catch(ReflectiveOperationException | LinkageError ignored)
+		{
+			isBarrierCell = null;
+		}
+	}
+
 	/** Asks BlockBlocker (if installed) whether the cell is part of one of its barriers. */
 	private static boolean barrierCell(World world, int x, int y, int z)
 	{
-		if(!lookedUp)
-		{
-			lookedUp = true;
-			try
-			{
-				Plugin bb = Bukkit.getPluginManager().getPlugin("BlockBlocker");
-				if(bb != null && bb.isEnabled())
-				{
-					isBarrierCell = bb.getClass().getMethod("isBarrierCell", World.class, int.class, int.class, int.class);
-					blockBlocker = bb;
-					try
-					{
-						crossesBarrier = bb.getClass().getMethod("crossesBarrier", World.class, double.class, double.class, double.class,
-								double.class, double.class, double.class);
-					}
-					catch(NoSuchMethodException older)
-					{
-						crossesBarrier = null;
-					}
-				}
-			}
-			catch(ReflectiveOperationException | LinkageError ignored)
-			{
-				isBarrierCell = null;
-			}
-		}
+		lookUp();
 		if(isBarrierCell == null)
 			return false;
 		try
@@ -532,7 +578,7 @@ public final class ZombiePathing
 	/** Does a straight move from a to b go through a BlockBlocker barrier (thin pieces included)? False without BlockBlocker. */
 	private static boolean segmentBlocked(World world, double ax, double ay, double az, double bx, double by, double bz)
 	{
-		barrierCell(world, 0, -10000, 0); // makes sure BlockBlocker was looked up
+		lookUp(); // (this used to ask BlockBlocker about a made-up cell just to make sure it was looked up)
 		if(crossesBarrier == null)
 			return false;
 		try

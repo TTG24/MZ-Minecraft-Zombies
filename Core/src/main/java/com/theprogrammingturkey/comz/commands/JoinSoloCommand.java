@@ -40,15 +40,8 @@ public class JoinSoloCommand extends SubCommand
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Specify a fully configured arena.");
 			return true;
 		}
-		Game match = ArenaInstances.INSTANCE.createSolo(player, template);
-		if(match == null)
-			return true;
-
-		// Creating the copy can take a moment on large arenas; tell the player before
-		// they are teleported in so the pause is not a surprise.
-		player.sendRawMessage(COMZombies.PREFIX + "Your solo arena is ready!");
-		match.addPlayer(player);
-		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You joined your solo arena " + match.getName() + "!");
+		// The copy is made over a few seconds; the player is put in as soon as it is ready
+		ArenaInstances.INSTANCE.createSolo(player, template);
 		return true;
 	}
 }

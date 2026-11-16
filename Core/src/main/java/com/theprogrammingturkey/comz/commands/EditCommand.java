@@ -37,8 +37,27 @@ public class EditCommand extends SubCommand
 		else if(GameManager.INSTANCE.isValidArena(args[1]))
 		{
 			Game game = GameManager.INSTANCE.getGame(args[1]);
+			if(game.isInstance())
+			{
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + game.getName() + " is a temporary copy; edit " + game.getTemplateName() + " instead.");
+				return true;
+			}
+			// Editing stops every match on this map: never by accident while people are playing
+			int playing = 0;
+			for(Game g : GameManager.INSTANCE.getGames())
+				if(g == game || g.isInstance() && g.getTemplateName().equals(game.getName()))
+					playing += g.getPlayersInGame().size();
+			if(playing > 0 && !(args.length > 2 && args[2].equalsIgnoreCase("force")))
+			{
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + playing + " player(s) are playing " + game.getName()
+						+ " right now; editing ends their matches. Use /z edit " + game.getName() + " force to do it anyway.");
+				return true;
+			}
+			boolean wasOpen = game.getStatus() != com.theprogrammingturkey.comz.game.Game.GameStatus.DISABLED;
 			game.setDisabled();
-			plugin.activeActions.put(player, new ArenaSetupAction(player, game));
+			ArenaSetupAction action = new ArenaSetupAction(player, game);
+			action.reopenOnCancel = wasOpen;
+			plugin.activeActions.put(player, action);
 		}
 		else
 		{

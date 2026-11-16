@@ -36,6 +36,10 @@ public final class ArenaInstances
 
 	// One snapshot per arena, kept while the plugin runs: every copy (made at startup or later, on demand) pastes from it
 	private final Map<String, ArenaSelectionCopy> snapshots = new LinkedHashMap<>();
+	// Snapshots of arenas without a pool, taken the first time someone starts a solo match there
+	private final Map<String, ArenaSelectionCopy> soloSnapshots = new LinkedHashMap<>();
+	// Players whose solo arena is being made (one at a time each)
+	private final Set<UUID> soloPending = new java.util.HashSet<>();
 	/** A copy being made, a part per tick (see buildTick). */
 	private static final class BuildJob
 	{
@@ -45,6 +49,8 @@ public final class ArenaInstances
 		World world;
 		List<com.sk89q.worldedit.regions.CuboidRegion> slices;
 		int next;
+		// Called with the finished match (null if it failed); used by solo arenas
+		java.util.function.Consumer<Game> onDone;
 
 		BuildJob(Game template, int slot, ArenaSelectionCopy snapshot)
 		{
@@ -104,7 +110,16 @@ public final class ArenaInstances
 		cancelQueue(player.getUniqueId());
 		LinkedHashSet<UUID> queue = queues.computeIfAbsent(template.getName(), key -> new LinkedHashSet<>());
 		queue.add(player.getUniqueId());
-		tell(player, "Creating arena... &cyou'll be thrown in as soon as it's ready. &8(/zombies leave to cancel)");
+		// A new copy only comes when one can be made: otherwise they wait for a match to end, and are told so
+		int copies = poolCopies(template).size();
+		// (a solo copy being made is someone else's)
+		boolean building = active != null && active.template == template && active.onDone == null
+				|| jobs.stream().anyMatch(j -> j.template == template && j.onDone == null);
+		boolean canMake = snapshots.containsKey(template.getName()) && copies < Math.max(1, template.getInstanceCount());
+		if(building || canMake)
+			tell(player, "Creating arena... &cyou'll be thrown in as soon as it's ready. &8(/zombies leave to cancel)");
+		else
+			tell(player, "Every " + template.getName() + " arena is full right now. &cYou're next in line &7when a match ends. &8(/zombies leave to cancel)");
 		if(queueTask == -1)
 			queueTask = COMZombies.scheduleTask(20, 20, this::drainQueues);
 	}
@@ -149,10 +164,20 @@ public final class ArenaInstances
 		}
 	}
 
-	/** Tells everyone online (players notice a reload: games end, arenas are rebuilt). */
-	private static void announce(String text)
+	/**
+	 * Tells the people a reload concerns: admins who can reload, players in or queued for a match, and players standing in an
+	 * arena. Everyone else on the server is left alone (this used to go to the whole server).
+	 */
+	private void announce(String text)
 	{
-		Bukkit.broadcastMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&8[&4☠&8] &7" + text));
+		String line = org.bukkit.ChatColor.translateAlternateColorCodes('&', "&8[&4☠&8] &7" + text);
+		java.util.Set<UUID> queued = new java.util.HashSet<>();
+		for(Set<UUID> q : queues.values())
+			queued.addAll(q);
+		for(Player p : Bukkit.getOnlinePlayers())
+			if(com.theprogrammingturkey.comz.util.COMZPermission.RELOAD.hasPerm(p) || queued.contains(p.getUniqueId())
+					|| GameManager.INSTANCE.isPlayerInGame(p) || isInstanceWorld(p.getWorld()) || GameManager.INSTANCE.isLocationInGame(p.getLocation()))
+				p.sendMessage(line);
 	}
 
 	private static void tell(Player player, String text)
@@ -337,7 +362,8 @@ public final class ArenaInstances
 		String name = job.template.getName() + "~" + job.slot;
 		try
 		{
-			if(!GameManager.INSTANCE.getGames().contains(job.template) || !snapshots.containsValue(job.snapshot))
+			if(!GameManager.INSTANCE.getGames().contains(job.template)
+					|| !snapshots.containsValue(job.snapshot) && !soloSnapshots.containsValue(job.snapshot))
 				throw new IOException("The arena was removed while its copy was being made");
 			if(job.world == null)
 			{
@@ -353,11 +379,19 @@ public final class ArenaInstances
 				return;
 			}
 			job.snapshot.pasteEntities(job.world);
-			finishWorld(job.template, job.slot, job.world);
+			Game made = finishWorld(job.template, job.slot, job.world);
+			if(job.onDone != null)
+				job.onDone.accept(made);
 		}
 		catch(Exception | LinkageError failure)
 		{
-			cleanUpFailed(job.world != null ? job.world.getName() : worldNameOf(job.template, job.slot), name, failure);
+			// Only a world this job made itself is taken down (a name clash means the world belongs to another match)
+			if(job.world != null)
+				cleanUpFailed(job.world.getName(), name, failure);
+			else
+				COMZombies.log.log(Level.SEVERE, "Failed to prepare " + name, failure);
+			if(job.onDone != null)
+				job.onDone.accept(null);
 		}
 		active = null;
 		gapTicks = (int) Math.max(0, COMZombies.getPlugin().getConfig().getLong("config.instances.prepareIntervalTicks", 5));
@@ -375,7 +409,12 @@ public final class ArenaInstances
 			Bukkit.getScheduler().cancelTask(buildTask);
 			buildTask = -1;
 		}
+		for(BuildJob j : jobs)
+			if(j.onDone != null)
+				j.onDone.accept(null);
 		jobs.clear();
+		if(active != null && active.onDone != null)
+			active.onDone.accept(null);
 		if(active != null && active.world != null)
 			cleanUpFailed(active.world.getName(), active.template.getName() + "~" + active.slot, null);
 		active = null;
@@ -387,6 +426,9 @@ public final class ArenaInstances
 		for(ArenaSelectionCopy snapshot : snapshots.values())
 			snapshot.close();
 		snapshots.clear();
+		for(ArenaSelectionCopy snapshot : soloSnapshots.values())
+			snapshot.close();
+		soloSnapshots.clear();
 	}
 
 	private static String worldNameOf(Game template, int slot)
@@ -402,10 +444,10 @@ public final class ArenaInstances
 	private Game createInstanceWorld(Game template, int slot)
 	{
 		String name = template.getName() + "~" + slot;
-		String worldName = worldNameOf(template, slot);
+		World world = null;
 		try
 		{
-			World world = beginWorld(template, slot);
+			world = beginWorld(template, slot);
 			ArenaSelectionCopy capture = snapshots.get(template.getName());
 			if(capture != null)
 				capture.paste(world);
@@ -415,7 +457,10 @@ public final class ArenaInstances
 		}
 		catch(Exception | LinkageError failure)
 		{
-			cleanUpFailed(worldName, name, failure);
+			if(world != null)
+				cleanUpFailed(world.getName(), name, failure);
+			else
+				COMZombies.log.log(Level.SEVERE, "Failed to prepare " + name, failure);
 			return null;
 		}
 	}
@@ -441,6 +486,21 @@ public final class ArenaInstances
 			throw new IOException("Could not load " + worldName);
 		world.setAutoSave(false);
 		worlds.put(worldName, world);
+		try
+		{
+			setUpWorld(template, world, source, destination, worldGuard);
+		}
+		catch(IOException | RuntimeException | LinkageError failure)
+		{
+			// Made here, so taken down here (the caller only knows about worlds that were fully set up)
+			cleanUpFailed(worldName, template.getName() + "~" + slot, null);
+			throw failure;
+		}
+		return world;
+	}
+
+	private void setUpWorld(Game template, World world, World source, Path destination, boolean worldGuard) throws IOException
+	{
 		if(!world.getWorldFolder().toPath().toRealPath().equals(destination.toRealPath()))
 			throw new IOException("Server loaded " + world.getWorldFolder() + " instead of copied instance directory " + destination);
 		world.setDifficulty(instanceDifficulty(source));
@@ -453,7 +513,6 @@ public final class ArenaInstances
 					COMZombies.getPlugin().getConfig().getBoolean("config.gameSettings.playerFallDamage", true));
 		if(worldGuard)
 			WorldGuardInstances.copy(source, world, template.arena.getWorldGuardRegionId());
-		return world;
 	}
 
 	/** Once the arena is pasted: BlockBlocker barriers, the match itself and its signs. */
@@ -522,53 +581,110 @@ public final class ArenaInstances
 	 * @param template  the arena to copy
 	 * @return the created solo match, or null on failure (the player has been told why)
 	 */
-	public Game createSolo(Player requester, Game template)
+	public boolean createSolo(Player requester, Game template)
 	{
 		if(!COMZombies.getPlugin().getConfig().getBoolean("config.instances.soloInstances", true))
 		{
 			requester.sendMessage(COMZombies.PREFIX + "Solo arenas are disabled on this server.");
-			return null;
+			return false;
 		}
 		if(template == null || template.isInstance() || !template.arena.isSetupComplete() || template.spawnManager.getPoints().isEmpty())
 		{
 			requester.sendMessage(COMZombies.PREFIX + "That arena is not set up to run a solo match.");
-			return null;
+			return false;
 		}
 		if(GameManager.INSTANCE.isPlayerInGame(requester))
 		{
 			requester.sendMessage(COMZombies.PREFIX + "Leave your current game before starting a solo arena.");
-			return null;
+			return false;
 		}
 		if(!com.theprogrammingturkey.comz.util.COMZPermission.SOLO_ARENA.hasPerm(requester, template.getName()))
 		{
 			com.theprogrammingturkey.comz.util.CommandUtil.noPermission(requester, "start a solo arena");
-			return null;
+			return false;
 		}
 		if(!(Bukkit.getPluginManager().isPluginEnabled("FastAsyncWorldEdit") || Bukkit.getPluginManager().isPluginEnabled("WorldEdit")))
 		{
 			requester.sendMessage(COMZombies.PREFIX + "Arena copies need FastAsyncWorldEdit or WorldEdit installed.");
-			return null;
+			return false;
 		}
-		// Solo slots live in 1000-9999 so their world folders can never collide with the
-		// persistent pool slots (1-16); retry a handful of times if one happens to be loaded.
+		if(!soloPending.add(requester.getUniqueId()))
+		{
+			tell(requester, "Your solo arena is still being made...");
+			return false;
+		}
+		ArenaSelectionCopy snapshot = snapshots.get(template.getName());
+		if(snapshot == null)
+		{
+			snapshot = soloSnapshots.get(template.getName());
+			if(snapshot == null)
+			{
+				try { snapshot = ArenaSelectionCopy.capture(template); }
+				catch(Exception | LinkageError failure)
+				{
+					soloPending.remove(requester.getUniqueId());
+					COMZombies.log.log(Level.SEVERE, "Could not capture template " + template.getName(), failure);
+					requester.sendMessage(COMZombies.PREFIX + "Could not create your solo arena; check the console for details.");
+					return false;
+				}
+				soloSnapshots.put(template.getName(), snapshot);
+			}
+		}
+		// Solo slots live in 1000-9999 so their world folders can never collide with the persistent pool slots (1-16)
 		java.util.Random random = new java.util.Random();
 		int slot = 1000 + random.nextInt(9000);
-		for(int i = 0; i < 10 && Bukkit.getWorld("mz_instance_" + ownerId(template.getName()) + "_" + slot) != null; i++)
+		for(int i = 0; i < 20 && soloSlotTaken(template, slot); i++)
 			slot = 1000 + random.nextInt(9000);
-		Game created = createInstanceWorld(template, slot);
-		if(created == null)
+		if(soloSlotTaken(template, slot))
 		{
-			requester.sendMessage(COMZombies.PREFIX + "Could not create your solo arena; check the console for details.");
-			return null;
+			soloPending.remove(requester.getUniqueId());
+			requester.sendMessage(COMZombies.PREFIX + "Could not find a free solo slot; try again in a moment.");
+			return false;
 		}
-		created.setSoloInstance(true);
-		// A solo copy always starts instantly for its single player.
-		created.arena.setLobbyLocation(null);
-		created.minPlayers = 1;
-		created.maxPlayers = 1;
-		if(soloWatchdog == -1)
-			soloWatchdog = COMZombies.scheduleTask(200, 200, this::soloWatchdog);
-		return created;
+		// Made like every other copy, a slice per tick, so it does not freeze the server for everyone else
+		BuildJob job = new BuildJob(template, slot, snapshot);
+		UUID who = requester.getUniqueId();
+		job.onDone = created ->
+		{
+			soloPending.remove(who);
+			Player player = Bukkit.getPlayer(who);
+			if(created == null)
+			{
+				if(player != null)
+					player.sendMessage(COMZombies.PREFIX + "Could not create your solo arena; check the console for details.");
+				return;
+			}
+			created.setSoloInstance(true);
+			// A solo copy always starts instantly for its single player.
+			created.arena.setLobbyLocation(null);
+			created.minPlayers = 1;
+			created.maxPlayers = 1;
+			if(soloWatchdog == -1)
+				soloWatchdog = COMZombies.scheduleTask(200, 200, this::soloWatchdog);
+			if(player == null || !player.isOnline() || GameManager.INSTANCE.isPlayerInGame(player))
+			{
+				// They left (or joined another game) meanwhile: nobody needs this copy
+				disposeSolo(created);
+				return;
+			}
+			tell(player, "Your solo arena is ready. &cGood luck.");
+			created.addPlayer(player);
+		};
+		jobs.addFirst(job);
+		if(buildTask == -1)
+			buildTask = COMZombies.scheduleTask(1, 1, this::buildTick);
+		tell(requester, "Creating arena... &cdigging your own grave.");
+		return true;
+	}
+
+	private boolean soloSlotTaken(Game template, int slot)
+	{
+		if(Bukkit.getWorld(worldNameOf(template, slot)) != null)
+			return true;
+		for(BuildJob j : jobs)
+			if(j.template == template && j.slot == slot)
+				return true;
+		return active != null && active.template == template && active.slot == slot;
 	}
 
 	/** Called from {@link Game#removePlayer}; tears the instance down when the last person is gone. */
@@ -638,6 +754,7 @@ public final class ArenaInstances
 		if(world == null)
 		{
 			worlds.remove(game.getWorld().getName());
+			game.retire();
 			GameManager.INSTANCE.getGames().remove(game);
 			return;
 		}
@@ -651,6 +768,8 @@ public final class ArenaInstances
 		}
 		worlds.remove(world.getName());
 		InstanceWorldFiles.deleteOwnedQuietly(world.getName());
+		// Its timers and delayed work stop with it (it used to keep its start timer and power-ups going)
+		game.retire();
 		GameManager.INSTANCE.getGames().remove(game);
 		COMZombies.log.log(Level.INFO, "Removed {0} {1}", new Object[]{what, game.getName()});
 	}

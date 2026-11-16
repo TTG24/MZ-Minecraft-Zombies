@@ -36,6 +36,15 @@ public class ScopeListener implements Listener
 	// Helmets swapped out for the sniper scope overlay, to put back when un-zooming
 	private final Map<Player, ItemStack> savedHelmets = new HashMap<>();
 
+	/** Logging off while zoomed: speed and helmet are put back first (the player is saved right after this event). */
+	@EventHandler
+	public void onQuit(org.bukkit.event.player.PlayerQuitEvent e)
+	{
+		unzoom(e.getPlayer());
+		savedSpeeds.remove(e.getPlayer());
+		savedHelmets.remove(e.getPlayer());
+	}
+
 	@EventHandler
 	public void onPlayerSneak(final PlayerToggleSneakEvent e)
 	{

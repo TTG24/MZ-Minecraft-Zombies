@@ -22,9 +22,10 @@ public class PerkManager
 
 	public void removePerkEffect(Player player, PerkType effect)
 	{
-		if(playersPerks.get(player).contains(effect))
+		List<PerkType> perks = playersPerks.get(player);
+		if(perks != null && perks.contains(effect))
 		{
-			playersPerks.get(player).remove(effect);
+			perks.remove(effect);
 			PerkType perk = PerkType.DEADSHOT_DAIQ;
 			ItemStack stack = new ItemStack(perk.getPerkItem(effect));
 			player.getInventory().remove(stack);

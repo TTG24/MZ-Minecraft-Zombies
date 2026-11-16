@@ -36,7 +36,7 @@ public class TeleporterSign implements IGameSign
 			throw new SignParseException(Colors.RED + "" + Colors.BOLD + "No such", Colors.RED + "" + Colors.BOLD + "teleporter!");
 
 		String cost = lines[3];
-		if(!cost.matches("[0-9]+"))
+		if(!cost.matches("[0-9]{1,6}"))
 			cost = "500";
 
 		Map<String, String> data = new HashMap<>();

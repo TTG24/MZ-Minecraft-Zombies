@@ -126,19 +126,23 @@ public class PlayerChatListener implements Listener
 		{
 			if(message.equalsIgnoreCase("done"))
 			{
-				Location loc = plugin.isEditingASign.get(player);
-				Sign sign = (Sign) loc.getBlock().getState();
-				plugin.isEditingASign.remove(player);
-				// Build the modern List<Component> form from the sign's current
-				// front-side lines so the event behaves identically for downstream listeners.
-				org.bukkit.block.sign.SignSide front = sign.getSide(Side.FRONT);
-				List<Component> lines = new ArrayList<>();
-				for(int i = 0; i < 4; i++)
-					lines.add(front.line(i));
-				Bukkit.getServer().getPluginManager().callEvent(new SignChangeEvent(sign.getBlock(), player, lines, Side.FRONT));
-				CommandUtil.sendMessageToPlayer(player, "You are no longer editing a sign!");
 				playerChat.setCancelled(true);
-				sign.update();
+				// Chat arrives off the main thread: the sign is read and saved (and the sign event fired) on the main thread
+				Location loc = plugin.isEditingASign.remove(player);
+				COMZombies.scheduleTask(1, () ->
+				{
+					if(loc == null || !(loc.getBlock().getState() instanceof Sign sign))
+						return;
+					// Build the modern List<Component> form from the sign's current
+					// front-side lines so the event behaves identically for downstream listeners.
+					org.bukkit.block.sign.SignSide front = sign.getSide(Side.FRONT);
+					List<Component> lines = new ArrayList<>();
+					for(int i = 0; i < 4; i++)
+						lines.add(front.line(i));
+					Bukkit.getServer().getPluginManager().callEvent(new SignChangeEvent(sign.getBlock(), player, lines, Side.FRONT));
+					CommandUtil.sendMessageToPlayer(player, "You are no longer editing a sign!");
+					sign.update();
+				});
 			}
 		}
 	}

@@ -284,20 +284,8 @@ public class BarrierManager
 			cost.put(b, routeCost(at, b, player));
 		ranked.sort(java.util.Comparator.comparingDouble(cost::get));
 
-		// A spawn with its own way to the players that needs no barrier at all (Der Riese: drop down, or go through the
-		// window): when that way is not much longer than through the barrier, some zombies take it.
-		if(player != null)
-		{
-			double open = openWayLength(mob, player.getLocation());
-			if(open >= 0)
-			{
-				var config = COMZombies.getPlugin().getConfig();
-				double chance = config.getDouble("config.gameSettings.openWayChance", 0.5);
-				double slack = config.getDouble("config.gameSettings.openWayMaxExtra", 10);
-				if(open <= cost.get(ranked.get(0)) + slack ? random.nextDouble() < chance : wantsOpenRoute(mob))
-					return null;
-			}
-		}
+		// (A zombie with an open way to the player already went for the player above, so there is no open-way choice to make
+		// here; the check that used to be here ran another full path search per spawn and could never pass.)
 
 		if(com.theprogrammingturkey.comz.util.PaperPathfinding.isAvailable())
 		{

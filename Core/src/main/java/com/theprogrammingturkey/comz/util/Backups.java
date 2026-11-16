@@ -35,6 +35,30 @@ public final class Backups
 	private static final long MAX_FILE_BYTES = 50L * 1024 * 1024;
 
 	private static volatile boolean running;
+	private static org.bukkit.scheduler.BukkitTask task;
+	private static volatile boolean stopping;
+
+	/** On plugin stop: ends a backup that is still being written (it would carry on with the plugin's code unloaded). */
+	public static void stop()
+	{
+		stopping = true;
+		if(task != null)
+			task.cancel();
+		task = null;
+		autosaveBack();
+		running = false;
+	}
+
+	// Worlds whose autosave a backup switched off (switched back on when it is done, or the plugin stops)
+	private static final List<World> autosaveOff = new ArrayList<>();
+
+	private static void autosaveBack()
+	{
+		for(World w : autosaveOff)
+			if(Bukkit.getWorld(w.getUID()) != null)
+				w.setAutoSave(true);
+		autosaveOff.clear();
+	}
 
 	private Backups()
 	{
@@ -43,6 +67,7 @@ public final class Backups
 	/** Starts the daily check (every hour: makes today's backup if it does not exist yet). */
 	public static void start()
 	{
+		stopping = false;
 		FileConfiguration config = COMZombies.getPlugin().getConfig();
 		if(!config.getBoolean("config.backups.enabled", true))
 			return;
@@ -68,40 +93,71 @@ public final class Backups
 		if(Files.exists(target))
 			return;
 		running = true;
-		// Worlds are saved first (main thread), then zipped in the background
+		// Worlds are saved first (main thread). The server writes the saved chunks in the background, so the zip starts 10
+		// seconds later, with autosave off meanwhile, so it never copies a region file half-written.
+		List<World> saved = new ArrayList<>();
+		List<String> extraWorlds = new ArrayList<>();
 		for(World w : Bukkit.getWorlds())
 			if(!w.getName().startsWith("mz_instance_"))
+			{
 				w.save();
-		Bukkit.getScheduler().runTaskAsynchronously(COMZombies.getPlugin(), () ->
+				if(w.isAutoSave())
+				{
+					w.setAutoSave(false);
+					saved.add(w);
+				}
+				// Every arena world, not just the one named "world"
+				Path folder = w.getWorldFolder().getAbsoluteFile().toPath();
+				if(folder.startsWith(serverRoot()))
+					extraWorlds.add(serverRoot().relativize(folder).toString());
+			}
+		int keep = Math.max(1, COMZombies.getPlugin().getConfig().getInt("config.backups.keepDays", 14));
+		autosaveOff.addAll(saved);
+		Runnable autosaveBack = Backups::autosaveBack;
+		COMZombies.scheduleTask(200, () -> task = Bukkit.getScheduler().runTaskAsynchronously(COMZombies.getPlugin(), () ->
 		{
 			try
 			{
-				write(target);
-				prune();
+				write(target, extraWorlds);
+				prune(keep);
 			} catch(Exception e)
 			{
 				COMZombies.log.log(Level.WARNING, "Daily backup failed", e);
 			} finally
 			{
 				running = false;
+				if(COMZombies.getPlugin().isEnabled())
+					Bukkit.getScheduler().runTask(COMZombies.getPlugin(), autosaveBack);
 			}
-		});
+		}));
 	}
 
-	private static void write(Path target) throws IOException
+	private static void write(Path target, List<String> extraWorlds) throws IOException
 	{
 		Files.createDirectories(target.getParent());
 		Path root = serverRoot();
 		Path temp = target.resolveSibling(target.getFileName() + ".part");
 		int[] count = {0};
-		try(OutputStream out = Files.newOutputStream(temp); ZipOutputStream zip = new ZipOutputStream(out))
+		try
 		{
-			for(String name : SERVER_FILES)
+			try(OutputStream out = Files.newOutputStream(temp); ZipOutputStream zip = new ZipOutputStream(out))
 			{
-				Path p = root.resolve(name);
-				if(Files.exists(p))
-					add(zip, root, p, count);
+				if(stopping)
+					throw new IOException("Server stopping");
+				java.util.Set<String> names = new java.util.LinkedHashSet<>(List.of(SERVER_FILES));
+				names.addAll(extraWorlds);
+				for(String name : names)
+				{
+					Path p = root.resolve(name);
+					if(Files.exists(p))
+						add(zip, root, p, count);
+				}
 			}
+		}
+		catch(IOException e)
+		{
+			Files.deleteIfExists(temp); // no half-written zip left behind
+			throw e;
 		}
 		Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 		COMZombies.log.log(Level.INFO, "Daily backup made: {0} ({1} files, {2} KB)",
@@ -110,6 +166,8 @@ public final class Backups
 
 	private static void add(ZipOutputStream zip, Path root, Path path, int[] count) throws IOException
 	{
+		if(stopping)
+			throw new IOException("Server stopping");
 		String fileName = path.getFileName().toString();
 		if(Files.isDirectory(path))
 		{
@@ -142,9 +200,8 @@ public final class Backups
 	}
 
 	/** Keeps the newest {@code config.backups.keepDays} backups. */
-	private static void prune() throws IOException
+	private static void prune(int keep) throws IOException
 	{
-		int keep = Math.max(1, COMZombies.getPlugin().getConfig().getInt("config.backups.keepDays", 14));
 		List<Path> all = new ArrayList<>();
 		try(Stream<Path> s = Files.list(folder()))
 		{

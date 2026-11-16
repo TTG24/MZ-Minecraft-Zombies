@@ -63,7 +63,8 @@ public class COMZombies extends JavaPlugin
 	/**
 	 * Players currently performing some sort of action or maintenance
 	 */
-	public HashMap<Player, BaseAction> activeActions = new HashMap<>();
+	// Read from the chat thread as well: thread-safe
+	public java.util.concurrent.ConcurrentHashMap<Player, BaseAction> activeActions = new java.util.concurrent.ConcurrentHashMap<>();
 
 
 	/**
@@ -71,7 +72,7 @@ public class COMZombies extends JavaPlugin
 	 * sign, the value that corresponds to the player is the sign that the
 	 * player is editing.
 	 */
-	public HashMap<Player, Location> isEditingASign = new HashMap<>();
+	public java.util.concurrent.ConcurrentHashMap<Player, Location> isEditingASign = new java.util.concurrent.ConcurrentHashMap<>();
 
 	/**
 	 * Called when the plugin is reloading to cancel every remove spawn, create
@@ -228,6 +229,7 @@ public class COMZombies extends JavaPlugin
 	@Override
 	public void onDisable()
 	{
+		com.theprogrammingturkey.comz.util.Backups.stop();
 		// Persist current session points before endAll() clears them from the map.
 		PointManager.INSTANCE.saveAll();
 		DoorProximityManager.INSTANCE.stop();

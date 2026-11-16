@@ -555,6 +555,16 @@ public class Barrier
 			return;
 		// Aim at walkable spaces beside the barrier, rather than inside a solid barrier block.
 		List<Location> approaches = ownSideApproaches(mob);
+		// Already on its way to one of them: leave its path alone (a new one is a full path search, every half second for
+		// every zombie walking to a barrier)
+		var current = mob.getPathfinder().getCurrentPath();
+		if(current != null && current.getFinalPoint() != null)
+		{
+			Location end = current.getFinalPoint();
+			for(Location approach : approaches)
+				if(approach.getWorld() == end.getWorld() && approach.distanceSquared(end) < 2.25)
+					return;
+		}
 		for(Location approach : approaches)
 			if(PaperPathfinding.moveTo(mob, approach))
 				return;

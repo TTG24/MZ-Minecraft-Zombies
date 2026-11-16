@@ -158,15 +158,44 @@ public class PlayerListener implements Listener
 		return n.endsWith("BARS") || n.endsWith("GLASS_PANE") || n.endsWith("FENCE") || n.endsWith("_WALL");
 	}
 
+	/** Players in a fall long enough for PHD Flopper (it goes off when they land). */
+	private final java.util.Set<java.util.UUID> phdFalling = new java.util.HashSet<>();
+
+	@EventHandler
+	public void phdQuit(org.bukkit.event.player.PlayerQuitEvent event)
+	{
+		phdFalling.remove(event.getPlayer().getUniqueId());
+		// An admin who logs off mid-setup: the setup is cancelled (its particle loop and half-made arena used to stay)
+		com.theprogrammingturkey.comz.COMZombies plugin = com.theprogrammingturkey.comz.COMZombies.getPlugin();
+		com.theprogrammingturkey.comz.game.actions.BaseAction action = plugin.activeActions.remove(event.getPlayer());
+		if(action != null)
+			action.cancelAction();
+		plugin.isEditingASign.remove(event.getPlayer());
+		com.theprogrammingturkey.comz.listeners.OnBlockInteractEvent.forget(event.getPlayer());
+		// Points belong to a match: a player who logs off is no longer in it
+		if(!GameManager.INSTANCE.isPlayerInGame(event.getPlayer()))
+			com.theprogrammingturkey.comz.economy.PointManager.INSTANCE.unloadPlayer(event.getPlayer());
+	}
+
 	@EventHandler
 	public void OnPlayerVelocityEvent(PlayerMoveEvent event)
 	{
 		Player player = event.getPlayer();
-		if(GameManager.INSTANCE.isPlayerInGame(player))
+		if(!GameManager.INSTANCE.isPlayerInGame(player))
+		{
+			phdFalling.remove(player.getUniqueId());
+			return;
+		}
 		{
 			player.setFoodLevel(20);
-			int fallDistance = (int) player.getFallDistance();
-			if(fallDistance > 2)
+			// PHD Flopper goes off once, when a fall of more than 2 blocks lands (it used to go off on every move of the fall)
+			if(!player.isOnGround())
+			{
+				if(player.getFallDistance() > 2)
+					phdFalling.add(player.getUniqueId());
+				return;
+			}
+			if(phdFalling.remove(player.getUniqueId()))
 			{
 				Game game = GameManager.INSTANCE.getGame(player);
 				if(game.perkManager.getPlayersPerks(player).contains(PerkType.PHD_FLOPPER))
@@ -183,9 +212,10 @@ public class PlayerListener implements Listener
 						player.getWorld().spawnParticle(Particle.FIREWORK, loc.getX(), loc.getY(), loc.getZ(), 1, x, y, z, 1);
 					}
 
+					// Only this match's zombies
 					for(Entity e : player.getNearbyEntities(5, 5, 5))
-						if(e instanceof Mob)
-							game.damageMob((Mob) e, player, 12);
+						if(e instanceof Mob mob && game.spawnManager.isEntitySpawned(mob))
+							game.damageMob(mob, player, 12);
 
 					player.setHealth(pHealth);
 				}

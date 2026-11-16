@@ -112,8 +112,18 @@ public class GunInstance extends WeaponInstance
 			return;
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{
+			// Nothing to reload: say why instead of doing nothing
 			if(gun.clipAmmo == clipAmmo)
+			{
+				player.sendActionBar(com.theprogrammingturkey.comz.util.Colors.legacy(Colors.GRAY + "Clip is full"));
 				return;
+			}
+			if(totalAmmo <= 0)
+			{
+				player.sendActionBar(com.theprogrammingturkey.comz.util.Colors.legacy(Colors.RED + "No ammo left to reload"));
+				player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
+				return;
+			}
 
 			isReloading = true;
 			Game game = GameManager.INSTANCE.getGame(player);
@@ -126,7 +136,8 @@ public class GunInstance extends WeaponInstance
 				}
 				else
 				{
-					clipAmmo = totalAmmo;
+					// Not enough left to fill the clip: what is left goes in on top of the rounds still in it
+					clipAmmo += totalAmmo;
 					totalAmmo = 0;
 				}
 				isReloading = false;
@@ -194,6 +205,13 @@ public class GunInstance extends WeaponInstance
 		{
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "No ammo!");
 			player.getWorld().playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
+			return false;
+		}
+
+		// Empty clip (e.g. after a max ammo that does not refill it): reload instead of firing a shot with no bullet
+		if(clipAmmo <= 0)
+		{
+			reload();
 			return false;
 		}
 

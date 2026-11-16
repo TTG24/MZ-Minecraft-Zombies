@@ -25,7 +25,7 @@ public class AmmoCrateSign implements IGameSign
 	public Map<String, String> parse(Game game, Player player, String[] lines) throws SignParseException
 	{
 		String cost = lines[2].trim();
-		if(!cost.matches("[0-9]+"))
+		if(!cost.matches("[0-9]{1,6}"))
 			throw new SignParseException(Colors.RED + "" + Colors.BOLD + "Invalid cost?");
 
 		Map<String, String> data = new HashMap<>();

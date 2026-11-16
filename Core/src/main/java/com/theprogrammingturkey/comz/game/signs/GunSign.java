@@ -44,7 +44,7 @@ public class GunSign implements IGameSign
 		{
 			String buy = prices.substring(0, split).trim();
 			String refill = prices.substring(split + 1).trim();
-			if(buy.matches("[0-9]+") && refill.matches("[0-9]+"))
+			if(buy.matches("[0-9]{1,6}") && refill.matches("[0-9]{1,6}"))
 			{
 				buyPrice = buy;
 				refillPrice = refill;

@@ -140,6 +140,9 @@ public class WeaponListener implements Listener
 			Game game = GameManager.INSTANCE.getGame(player);
 			if(game.getStatus() != GameStatus.INGAME)
 				return;
+			// Downed players cannot shoot
+			if(game.downedPlayerManager.isDownedPlayer(player))
+				return;
 
 			if(game.getPlayersWeapons(player) != null)
 			{
@@ -279,6 +282,11 @@ public class WeaponListener implements Listener
 			Game game = GameManager.INSTANCE.getGame(player);
 			if(game.getStatus() != GameStatus.INGAME)
 				return;
+			// Downed players cannot throw grenades or monkey bombs
+			if(game.downedPlayerManager.isDownedPlayer(player))
+				return;
+			// Only goes off in the match it was thrown in (the timers used to carry on into the next one)
+			final long match = game.getMatchGeneration();
 
 			ItemStack handStack = player.getInventory().getItemInMainHand();
 			if(handStack.getType().equals(Material.SLIME_BALL))
@@ -288,24 +296,31 @@ public class WeaponListener implements Listener
 				item.setVelocity(player.getLocation().getDirection().multiply(1));
 				item.setPickupDelay(1000);
 
+				int smoke = COMZombies.scheduleTask(0, 5, () ->
+				{
+					if(item.isValid())
+						item.getWorld().spawnParticle(Particle.SMOKE, item.getLocation().clone(), 0, COMZombies.rand.nextDouble() - 0.5, 0.5, COMZombies.rand.nextDouble() - 0.5, 0.05);
+				});
 				COMZombies.scheduleTask(100, () ->
 				{
-					Location loc = item.getLocation();
-					player.getWorld().createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
-					List<Mob> ents = game.spawnManager.getEntities();
-					int ticker = COMZombies.scheduleTask(0, 5, () ->
-							item.getWorld().spawnParticle(Particle.SMOKE, item.getLocation().clone(), 0, COMZombies.rand.nextDouble() - 0.5, 0.5, COMZombies.rand.nextDouble() - 0.5, 0.05));
-
-					for(int i = ents.size() - 1; i >= 0; i--)
+					Bukkit.getScheduler().cancelTask(smoke);
+					boolean live = game.getStatus() == GameStatus.INGAME && game.getMatchGeneration() == match && item.isValid();
+					if(live)
 					{
-						Mob mob = ents.get(i);
-						float dist = (float) mob.getLocation().distance(item.getLocation());
-						if(dist < 5)
-							game.damageMob(mob, player, 50f / (dist * dist * dist));
+						Location loc = item.getLocation();
+						item.getWorld().createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
+						List<Mob> ents = game.spawnManager.getEntities();
+						for(int i = ents.size() - 1; i >= 0; i--)
+						{
+							Mob mob = ents.get(i);
+							if(!mob.getWorld().equals(item.getWorld()))
+								continue;
+							float dist = (float) mob.getLocation().distance(item.getLocation());
+							if(dist < 5)
+								game.damageMob(mob, player, 50f / Math.max(0.05f, dist * dist * dist));
+						}
 					}
-
 					item.remove();
-					Bukkit.getScheduler().cancelTask(ticker);
 				});
 			}
 			else if(handStack.getType().equals(Material.MAGMA_CREAM))
@@ -326,27 +341,35 @@ public class WeaponListener implements Listener
 
 				int ticker = COMZombies.scheduleTask(0, 5, () ->
 				{
+					if(game.getStatus() != GameStatus.INGAME || game.getMatchGeneration() != match || !item.isValid())
+						return;
 					item.getWorld().spawnParticle(Particle.SMOKE, item.getLocation().clone(), 0, COMZombies.rand.nextDouble() - 0.5, 0.5, COMZombies.rand.nextDouble() - 0.5, 0.05);
+					// Zombies already after the bomb are left alone (re-targeting every mob every time was wasted work)
 					for(Mob e : game.spawnManager.getEntities())
-						e.setTarget(attackEnt);
+						if(e.getTarget() != attackEnt)
+							e.setTarget(attackEnt);
 				});
 
 				COMZombies.scheduleTask(140, () ->
 				{
-					Location loc = item.getLocation();
-					player.getWorld().createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
-					List<Mob> ents = game.spawnManager.getEntities();
-					for(int i = ents.size() - 1; i >= 0; i--)
+					Bukkit.getScheduler().cancelTask(ticker);
+					if(game.getStatus() == GameStatus.INGAME && game.getMatchGeneration() == match && item.isValid())
 					{
-						Mob mob = ents.get(i);
-						float dist = (float) mob.getLocation().distance(item.getLocation());
-						if(dist < 5)
-							game.damageMob(mob, player, 50f / (dist * dist * dist));
+						Location loc = item.getLocation();
+						item.getWorld().createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
+						List<Mob> ents = game.spawnManager.getEntities();
+						for(int i = ents.size() - 1; i >= 0; i--)
+						{
+							Mob mob = ents.get(i);
+							if(!mob.getWorld().equals(item.getWorld()))
+								continue;
+							float dist = (float) mob.getLocation().distance(item.getLocation());
+							if(dist < 5)
+								game.damageMob(mob, player, 50f / Math.max(0.05f, dist * dist * dist));
+						}
 					}
-
 					item.remove();
 					attackEnt.remove();
-					Bukkit.getScheduler().cancelTask(ticker);
 				});
 			}
 		}

@@ -47,7 +47,7 @@ public class RemoveDoorCommand extends SubCommand
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + args[2] + " is not a valid arena!");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + args[1] + " is not a valid arena!");
 		}
 
 		return true;

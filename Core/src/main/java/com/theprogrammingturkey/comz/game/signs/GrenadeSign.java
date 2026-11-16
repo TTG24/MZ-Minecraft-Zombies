@@ -26,7 +26,7 @@ public class GrenadeSign implements IGameSign
 	public Map<String, String> parse(Game game, Player player, String[] lines)
 	{
 		String cost = lines[2];
-		if(!cost.matches("[0-9]+"))
+		if(!cost.matches("[0-9]{1,6}"))
 			cost = "250";
 
 		Map<String, String> data = new HashMap<>();

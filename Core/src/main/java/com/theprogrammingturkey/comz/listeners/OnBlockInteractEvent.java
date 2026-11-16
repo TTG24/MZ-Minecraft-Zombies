@@ -13,6 +13,12 @@ public class OnBlockInteractEvent implements Listener
 {
 	private static final java.util.Map<java.util.UUID, Object[]> LAST_CLICK = new java.util.HashMap<>();
 
+	/** A player logged off: their last setup click is no longer needed. */
+	public static void forget(org.bukkit.entity.Player player)
+	{
+		LAST_CLICK.remove(player.getUniqueId());
+	}
+
 	@EventHandler
 	public void hitEvent(PlayerInteractEvent event)
 	{

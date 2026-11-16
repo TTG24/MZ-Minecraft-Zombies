@@ -10,7 +10,7 @@ import java.util.HashMap;
 public class PointManager
 {
 	public static final PointManager INSTANCE = new PointManager();
-	private final HashMap<Player, PlayerPoints> playersPoints = new HashMap<>();
+	private final HashMap<java.util.UUID, PlayerPoints> playersPoints = new HashMap<>();
 
 	private PointManager()
 	{
@@ -19,7 +19,7 @@ public class PointManager
 
 	public void initalizePlayer(Player player)
 	{
-		playersPoints.put(player, new PlayerPoints(player, startingPoints()));
+		playersPoints.put(player.getUniqueId(), new PlayerPoints(player, startingPoints()));
 	}
 
 	public boolean canBuy(Player player, int required)
@@ -29,16 +29,14 @@ public class PointManager
 
 	public PlayerPoints getPlayerPoints(Player player)
 	{
-		if(!playersPoints.containsKey(player))
+		if(!playersPoints.containsKey(player.getUniqueId()))
 			initalizePlayer(player);
-		return playersPoints.get(player);
+		return playersPoints.get(player.getUniqueId());
 	}
 
 	public void addPoints(Player player, int amount)
 	{
-		if(!playersPoints.containsKey(player))
-			initalizePlayer(player);
-		playersPoints.get(player).addPoints(amount);
+		getPlayerPoints(player).addPoints(amount);
 	}
 
 	/**
@@ -54,25 +52,23 @@ public class PointManager
 
 	public void takePoints(Player player, int amount)
 	{
-		if(!playersPoints.containsKey(player))
-			initalizePlayer(player);
-
-		playersPoints.get(player).takePoints(amount);
+		getPlayerPoints(player).takePoints(amount);
 	}
 
 	public void unloadPlayer(Player player)
 	{
-		playersPoints.remove(player);
+		playersPoints.remove(player.getUniqueId());
 	}
 
 	public void playerLeaveGame(Player player)
 	{
-		playersPoints.remove(player);
+		playersPoints.remove(player.getUniqueId());
 	}
 
 	public int getPlayersPoints(Player player)
 	{
-		return playersPoints.computeIfAbsent(player, k -> new PlayerPoints(k, startingPoints())).getPoints();
+		PlayerPoints p = playersPoints.get(player.getUniqueId());
+		return p != null ? p.getPoints() : startingPoints();
 	}
 
 	/**
@@ -85,8 +81,7 @@ public class PointManager
 
 	public void saveAll()
 	{
-		for(PlayerPoints playerPoints : playersPoints.values())
-			playerPoints.storePoints();
+		PlayerPoints.storeAll(playersPoints.values());
 	}
 
 	public void clearGamePoints(Game game)
@@ -97,7 +92,8 @@ public class PointManager
 
 	public void setPoints(Player player, int points)
 	{
-		if(playersPoints.containsKey(player))
-			playersPoints.get(player).setPoints(points);
+		PlayerPoints p = playersPoints.get(player.getUniqueId());
+		if(p != null)
+			p.setPoints(points);
 	}
 }

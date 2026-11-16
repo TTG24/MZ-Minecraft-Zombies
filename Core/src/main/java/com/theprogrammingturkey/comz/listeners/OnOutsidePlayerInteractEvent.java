@@ -34,6 +34,8 @@ public class OnOutsidePlayerInteractEvent implements Listener
 		{
 			if(!game.powerUpManager.getCurrentPowerUps().contains(e.getItem()))
 			{
+				// A stray item is never picked up into the locked game inventory
+				e.setCancelled(true);
 				e.getItem().remove();
 				return;
 			}

@@ -17,6 +17,8 @@ public class ArenaSetupAction extends BaseAction
 {
 	private int particleBoxID;
 	private boolean runOnce = false;
+	/** Set by /z edit for an arena that was open: cancelling the edit opens it again. */
+	public boolean reopenOnCancel;
 
 	public ArenaSetupAction(Player player, Game game)
 	{
@@ -43,6 +45,12 @@ public class ArenaSetupAction extends BaseAction
 			Bukkit.getScheduler().cancelTask(particleBoxID);
 		if(!game.arena.isSetupComplete())
 			GameManager.INSTANCE.removeGame(game);
+		else if(reopenOnCancel)
+		{
+			// Nothing was changed for good: the arena is open again (it used to stay closed until /z enable)
+			game.setEnabled();
+			CommandUtil.sendMessageToPlayer(player, Colors.GRAY + game.getName() + " is open again.");
+		}
 
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Arena setup operation canceled!");
 	}
@@ -129,6 +137,12 @@ public class ArenaSetupAction extends BaseAction
 
 		particleBoxID = COMZombies.scheduleTask(0, 5, () ->
 		{
+			// The admin logged off or finished another way: stop drawing (this loop used to run forever)
+			if(!player.isOnline() || COMZombies.getPlugin().activeActions.get(player) != this)
+			{
+				Bukkit.getScheduler().cancelTask(particleBoxID);
+				return;
+			}
 			Location min = new Location(world, Math.min(p1.getBlockX(), p2.getBlockX()), Math.min(p1.getBlockY(), p2.getBlockY()), Math.min(p1.getBlockZ(), p2.getBlockZ()));
 			Location max = new Location(world, Math.max(p1.getBlockX(), p2.getBlockX()), Math.max(p1.getBlockY(), p2.getBlockY()), Math.max(p1.getBlockZ(), p2.getBlockZ()));
 
