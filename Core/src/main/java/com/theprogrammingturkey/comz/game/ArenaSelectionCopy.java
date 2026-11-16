@@ -22,29 +22,15 @@ import com.sk89q.worldedit.regions.CuboidRegion;
 public final class ArenaSelectionCopy implements AutoCloseable
 {
 	/**
-	 * Entity types never copied into instances: players, dropped items and XP orbs,
-	 * projectiles, falling blocks, and the hostile mobs that can be alive in a running
-	 * arena. Decor entities (armor stands, item frames, paintings, boats, minecarts,
-	 * passive mobs) are snapshotted as-is so they appear in every instance.
+	 * Entity types copied into instances: decoration only (armor stands, paintings, item frames, displays, boats, minecarts...).
+	 * No mobs or animals at all: copying live mobs (rabbits...) into every copy failed for many of them, and an arena copy
+	 * only needs its build and its decorations.
 	 */
-	private static final Set<String> EXCLUDED_ENTITIES = Set.of(
-			"player", "falling_block",
-			"item", "xp_orb",
-			"arrow", "spectral_arrow", "snowball", "egg",
-			"fireball", "small_fireball", "dragon_fireball",
-			"trident", "wind_charge", "lightning_bolt",
-			"shulker_bullet", "evoker_fangs",
-			"zombie", "zombie_villager", "husk", "drowned",
-			"skeleton", "stray", "wither_skeleton", "creeper",
-			"spider", "cave_spider", "enderman", "witch",
-			"blaze", "wither", "phantom", "slime",
-			"magma_cube", "guardian", "elder_guardian",
-			"pillager", "vindicator", "evoker", "ravager",
-			"piglin", "piglin_brute", "hoglin", "zoglin",
-			"zombified_piglin", "zombified_piglin_brute", "warden",
-			"breeze", "bogged", "vex");
+	private static final Set<String> DECOR_ENTITIES = Set.of(
+			"armor_stand", "painting", "item_frame", "glow_item_frame", "leash_knot", "end_crystal",
+			"item_display", "block_display", "text_display", "interaction", "mannequin");
 
-	/** True when the entity type should never be snapshotted into instances. */
+	/** True when the entity is not decoration, so it is not snapshotted into instances. */
 	private static boolean isExcluded(Entity entity)
 	{
 		var type = entity.getType();
@@ -52,8 +38,8 @@ public final class ArenaSelectionCopy implements AutoCloseable
 			return true; // Unknown type; safer to leave it out than to bake it into every copy.
 		String name = type.getName();
 		int ns = name.indexOf(':');
-		String entityName = ns >= 0 ? name.substring(ns + 1) : name;
-		return EXCLUDED_ENTITIES.contains(entityName);
+		String n = ns >= 0 ? name.substring(ns + 1) : name;
+		return !(DECOR_ENTITIES.contains(n) || n.contains("minecart") || n.endsWith("boat") || n.endsWith("_raft"));
 	}
 
 	private final Clipboard clipboard;
