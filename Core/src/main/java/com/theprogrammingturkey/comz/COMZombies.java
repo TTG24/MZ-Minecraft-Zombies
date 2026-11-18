@@ -133,6 +133,8 @@ public class COMZombies extends JavaPlugin
 
 		GameManager.INSTANCE.loadAllGames();
 		DoorProximityManager.INSTANCE.start();
+		com.theprogrammingturkey.comz.util.Accessibility.load();
+		com.theprogrammingturkey.comz.game.managers.GlowManager.INSTANCE.start();
 		com.theprogrammingturkey.comz.game.ArenaWeather.start(this);
 		com.theprogrammingturkey.comz.game.ZombieSounds.start(this);
 		com.theprogrammingturkey.comz.game.BoxBeacons.start(this);

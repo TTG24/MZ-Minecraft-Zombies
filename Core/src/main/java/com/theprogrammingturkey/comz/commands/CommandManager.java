@@ -316,6 +316,10 @@ public class CommandManager implements TabExecutor
 		// Perm
 		// - zombies.crouch
 		commandList.put("crouch", new CrouchCommand(COMZPermission.CROUCH));
+
+		// Accessibility options (hold-to-repair, teammate glow), for every player:
+		commandList.put("access", new AccessCommand(null));
+		commandList.put("accessibility", commandList.get("access"));
 	}
 
 	/** Setup/edit commands whose first argument is the arena: it may be left out when standing in the arena. */

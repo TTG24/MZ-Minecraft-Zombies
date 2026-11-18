@@ -36,7 +36,20 @@ public class DoorProximityManager
 	private final Map<Player, Door> nearDoors = new HashMap<>();
 	// The actionbar message last shown per player, used to clear it when leaving range
 	private final Map<Player, String> lastActionbar = new HashMap<>();
-	private record RepairSession(Barrier barrier, long nextRepairNanos) {}
+	/** hold: repairs only while F keeps coming (held key repeats); lastHeldNanos is the last F. */
+	private record RepairSession(Barrier barrier, long nextRepairNanos, boolean hold, long lastHeldNanos)
+	{
+		RepairSession next(long nanos)
+		{
+			return new RepairSession(barrier, nanos, hold, lastHeldNanos);
+		}
+	}
+
+	/**
+	 * Hold-to-repair: a held key repeats F about 20-30 times a second (after the system's first repeat delay, up to about
+	 * half a second), with or without the mod. No F for this long means the key was let go.
+	 */
+	private static final long HOLD_RELEASE_NANOS = 700_000_000L;
 	private final Map<Player, RepairSession> repairs = new HashMap<>();
 	private record NearbyTarget(Door door, Barrier barrier, MachineProximityManager.Target machine, double distanceSquared) {}
 
@@ -71,6 +84,13 @@ public class DoorProximityManager
 	/** Re-evaluates the closest feature at keypress time and runs its existing interaction logic. */
 	public boolean interactNearby(Player player)
 	{
+		RepairSession current = repairs.get(player);
+		if(current != null && current.hold())
+		{
+			// Still holding F: keep going
+			repairs.put(player, new RepairSession(current.barrier(), current.nextRepairNanos(), true, System.nanoTime()));
+			return true;
+		}
 		if(stopRepairing(player))
 			return true;
 		NearbyTarget target = findTarget(player);
@@ -184,7 +204,8 @@ public class DoorProximityManager
 				else
 					nearDoors.remove(player);
 				String message = target.door() != null ? tooltip(target.door(), player)
-						: (target.barrier() != null ? barrierTooltip(target.barrier(), session != null)
+						: (target.barrier() != null ? barrierTooltip(target.barrier(), session != null,
+								com.theprogrammingturkey.comz.util.Accessibility.get(player.getUniqueId()).holdRepair())
 						: MachineProximityManager.tooltip(target.machine(), game, player, getKeyLabel()));
 				// Refresh even unchanged text so the client's actionbar does not fade out.
 				lastActionbar.put(player, message);
@@ -389,7 +410,11 @@ public class DoorProximityManager
 	public void startRepairing(Player player, Barrier barrier)
 	{
 		if(barrier.getStage() > -1 && canKeepRepairing(player, barrier))
-			repairs.put(player, new RepairSession(barrier, System.nanoTime() + 1_000_000_000L));
+		{
+			long now = System.nanoTime();
+			boolean hold = com.theprogrammingturkey.comz.util.Accessibility.get(player.getUniqueId()).holdRepair();
+			repairs.put(player, new RepairSession(barrier, now + 1_000_000_000L, hold, now));
+		}
 	}
 
 	public boolean stopRepairing(Player player)
@@ -417,7 +442,8 @@ public class DoorProximityManager
 			Map.Entry<Player, RepairSession> entry = iterator.next();
 			Player player = entry.getKey();
 			RepairSession session = entry.getValue();
-			if(!canKeepRepairing(player, session.barrier()) || session.barrier().getStage() <= -1)
+			if(!canKeepRepairing(player, session.barrier()) || session.barrier().getStage() <= -1
+					|| (session.hold() && now - session.lastHeldNanos() > HOLD_RELEASE_NANOS))
 			{
 				iterator.remove();
 				continue;
@@ -427,16 +453,18 @@ public class DoorProximityManager
 				if(session.barrier().repair(player))
 					iterator.remove();
 				else
-					entry.setValue(new RepairSession(session.barrier(), now + 1_000_000_000L));
+					entry.setValue(session.next(now + 1_000_000_000L));
 			}
 		}
 	}
 
-	private String barrierTooltip(Barrier barrier, boolean repairing)
+	private String barrierTooltip(Barrier barrier, boolean repairing, boolean hold)
 	{
 		String path = "config.barrierProximity.tooltip.";
-		String state = barrier.getStage() <= -1 ? "repaired" : (repairing ? "repairing" : "repair");
-		String fallback = barrier.getStage() <= -1 ? "&aBarrier fully repaired" : (repairing
+		String state = barrier.getStage() <= -1 ? "repaired" : (repairing ? "repairing" : "repair") + (hold ? "-hold" : "");
+		String fallback = barrier.getStage() <= -1 ? "&aBarrier fully repaired" : hold ? (repairing
+				? "&aRepairing one stage per second &7- Keep holding {key}"
+				: "&aHold {key} to repair &7- 1 stage per second") : (repairing
 				? "&aRepairing one stage per second &7- Press {key} to stop"
 				: "&aPress {key} to start repairing &7- 1 stage per second");
 		String key = getKeyLabel();
