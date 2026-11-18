@@ -109,6 +109,10 @@ public class Game
 	 * List of every player contained in game.
 	 */
 	public Map<Player, GamePlayer> gamePlayers = new LinkedHashMap<>();
+	/** How long a player who left (quit, crashed or /z leave) may still /z rejoin the running match. */
+	public static final long REJOIN_WINDOW_MILLIS = 5 * 60 * 1000L;
+	/** When each player who left mid-match left it. */
+	private final Map<java.util.UUID, Long> leftAt = new java.util.HashMap<>();
 
 	private boolean debugMode = false;
 
@@ -322,9 +326,26 @@ public class Game
 		return gamePlayers.values().stream().filter(gp -> gp.isInGame() || gp.isDead()).map(gp -> gp.getPlayer()).collect(Collectors.toList());
 	}
 
+	/** True for a player who LEFT this match (quit, crashed, /z leave). Players who are only dead are not counted. */
 	public boolean wasDisconnected(Player player)
 	{
-		return gamePlayers.containsKey(player);
+		GamePlayer gp = gamePlayers.get(player);
+		return gp != null && gp.hasLeftGame();
+	}
+
+	/** Milliseconds this player still has to rejoin (0 when they can't). */
+	public long rejoinMillisLeft(Player player)
+	{
+		Long at = leftAt.get(player.getUniqueId());
+		if(status != GameStatus.INGAME || at == null || !wasDisconnected(player))
+			return 0;
+		return Math.max(0, at + REJOIN_WINDOW_MILLIS - System.currentTimeMillis());
+	}
+
+	public static String formatMillis(long millis)
+	{
+		long s = (millis + 999) / 1000;
+		return (s / 60) + ":" + String.format("%02d", s % 60);
 	}
 
 	/**
@@ -999,7 +1020,12 @@ public class Game
 			{
 				if(wasDisconnected(player))
 				{
-					removePlayer(player);
+					if(rejoinMillisLeft(player) <= 0)
+					{
+						CommandUtil.sendMessageToPlayer(player, Colors.RED + "It has been more than 5 minutes since you left this match, so you can't rejoin it.");
+						return;
+					}
+					leftAt.remove(player.getUniqueId());
 
 					gamePlayers.put(player, new GamePlayer(player));
 					setDead(player);
@@ -1082,7 +1108,28 @@ public class Game
 			ArenaInstances.INSTANCE.onSoloPlayerRemoved(this, player);
 		}
 		else if(gamePlayers.containsKey(player))
+		{
 			gamePlayers.get(player).setState(PlayerState.LEFT_GAME);
+			if(status == GameStatus.INGAME)
+			{
+				// They may come back within 5 minutes (/z rejoin); tell them now (when they used /z leave) and when it runs out
+				long at = System.currentTimeMillis();
+				leftAt.put(player.getUniqueId(), at);
+				java.util.UUID id = player.getUniqueId();
+				String name = getName();
+				CommandUtil.sendClickableMessageToPlayer(player, Colors.GRAY + "You left the match. You can rejoin within "
+						+ Colors.RED + "5 minutes" + Colors.GRAY + " with /z rejoin or ", "CLICK HERE", "/z rejoin");
+				COMZombies.scheduleTask(REJOIN_WINDOW_MILLIS / 50, () ->
+				{
+					Long still = leftAt.get(id);
+					Player p = org.bukkit.Bukkit.getPlayer(id);
+					if(still == null || still != at || p == null || status != GameStatus.INGAME || !wasDisconnected(p))
+						return;
+					CommandUtil.sendMessageToPlayer(p, Colors.GRAY + "It has been 5 minutes since you left the match in " + Colors.RED + name
+							+ Colors.GRAY + ", so you can no longer rejoin it.");
+				});
+			}
+		}
 
 		resetPlayer(player);
 
@@ -1404,6 +1451,7 @@ public class Game
 		boxManager.loadAllBoxes();
 		barrierManager.unloadAllBarriers();
 		gamePlayers.clear();
+		leftAt.clear();
 		scoreboard = new GameScoreboard(this);
 		instaKill = false;
 		doublePoints = false;

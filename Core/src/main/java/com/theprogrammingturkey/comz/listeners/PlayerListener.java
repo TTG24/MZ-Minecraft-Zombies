@@ -51,7 +51,16 @@ public class PlayerListener implements Listener
 		if(game == null)
 			return;
 		if(game.wasDisconnected(player))
-			CommandUtil.sendClickableMessageToPlayer(player, Colors.RED + "You can reconnect to your last game with /z rejoin or ", "CLICK HERE", "/z rejoin");
+		{
+			long left = game.rejoinMillisLeft(player);
+			if(left > 0)
+				CommandUtil.sendClickableMessageToPlayer(player, Colors.GRAY + "Your match in " + Colors.RED + game.getName() + Colors.GRAY
+						+ " is still going. Rejoin within " + Colors.RED + com.theprogrammingturkey.comz.game.Game.formatMillis(left)
+						+ Colors.GRAY + " with /z rejoin or ", "CLICK HERE", "/z rejoin");
+			else if(game.getStatus() == com.theprogrammingturkey.comz.game.Game.GameStatus.INGAME)
+				CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Your match in " + Colors.RED + game.getName() + Colors.GRAY
+						+ " is still going, but it has been more than 5 minutes since you left, so you can't rejoin it.");
+		}
 	}
 
 	private void sendStuckPlayerHome(Player player)

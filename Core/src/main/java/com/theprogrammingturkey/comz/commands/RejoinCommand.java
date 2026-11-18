@@ -31,7 +31,7 @@ public class RejoinCommand extends SubCommand
 		}
 
 		if(game.wasDisconnected(player))
-			game.addPlayer(player);
+			game.addPlayer(player); // says so itself when the 5 minutes are up
 		else
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "You are already in the game!");
 
