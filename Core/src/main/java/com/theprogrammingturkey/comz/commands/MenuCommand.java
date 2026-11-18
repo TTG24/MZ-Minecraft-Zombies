@@ -204,7 +204,8 @@ public class MenuCommand extends SubCommand
 	private static Component line(Entry e)
 	{
 		String base = "/z " + e.command();
-		boolean needsMore = e.args().contains("<");
+		// Anything that takes arguments (even optional ones, like join [arena]) goes in the chat box to finish
+		boolean needsMore = !e.args().isEmpty();
 		Component cmd = Component.text(base, NamedTextColor.WHITE)
 				.append(e.args().isEmpty() ? Component.empty() : Component.text(" " + e.args(), NamedTextColor.GRAY));
 		Component hover = Component.text(e.description(), NamedTextColor.GRAY)
