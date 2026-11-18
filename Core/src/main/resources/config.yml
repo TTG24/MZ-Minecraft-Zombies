@@ -105,6 +105,9 @@ config:
     defaultPointsOnHit: 10
     #Default points when you kill a zombie, value * 2 on double points
     defaultPointsOnKill: 60
+    #Points for a kill with a headshot, and with the knife (instead of defaultPointsOnKill), value * 2 on double points
+    pointsOnHeadshotKill: 100
+    pointsOnKnifeKill: 130
     #Max possible zombies in an arena at once
     maxZombies: 20
     #This is the amount to change the zombieSpawnDelay per round. Equation is zombieSpawnDelayFactor / zombieSpawnDelayFactor

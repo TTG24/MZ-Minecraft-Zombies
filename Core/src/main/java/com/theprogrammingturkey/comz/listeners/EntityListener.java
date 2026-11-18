@@ -190,7 +190,7 @@ public class EntityListener implements Listener
 									Math.max(0.3, Math.min(mob.getHeight() * 0.85, player.getEyeLocation().getY() - mob.getLocation().getY() - 0.3)), 0));
 							com.theprogrammingturkey.comz.util.BloodMessages.nextHit(cut, look,
 									com.theprogrammingturkey.comz.util.BloodMessages.SLASH);
-							game.damageMob(mob, player, (float) (maxHealth.getValue() / game.getWave()));
+							game.damageMob(mob, player, (float) (maxHealth.getValue() / game.getWave()), false, true);
 							// The hit really landed (in reach): play the slash, and tell other plugins so they do not
 							// also play the "swing" sound for this attack.
 							player.getWorld().playSound(player.getLocation(), "mz:knife_slash", org.bukkit.SoundCategory.PLAYERS, 1.0F, 1.0F);

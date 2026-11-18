@@ -1938,6 +1938,18 @@ public class Game
 
 	public void damageMob(Mob mob, Player player, float damageAmount, boolean headshot)
 	{
+		damageMob(mob, player, damageAmount, headshot, false);
+	}
+
+	/** Points for the killing blow: knife, headshot or body (COD values by default: 130 / 100 / 60). */
+	private int killPoints(boolean headshot, boolean knife)
+	{
+		ConfigSetup c = ConfigManager.getMainConfig();
+		return knife ? c.pointsOnKnifeKill : headshot ? c.pointsOnHeadshotKill : c.pointsOnKill;
+	}
+
+	public void damageMob(Mob mob, Player player, float damageAmount, boolean headshot, boolean knife)
+	{
 		double mobHealth = mob.getHealth() - damageAmount;
 		// Blood for players with the tactical mod (health is set directly here, so Minecraft sends no hurt flash for it)
 		com.theprogrammingturkey.comz.util.BloodMessages.hit(mob, isInstaKill() || mobHealth < 1);
@@ -1952,10 +1964,7 @@ public class Game
 
 			powerUpManager.powerUpDrop(mob, player);
 			mob.remove();
-			if(isDoublePoints())
-				PointManager.INSTANCE.addPoints(player, ConfigManager.getMainConfig().pointsOnKill * 2);
-			else
-				PointManager.INSTANCE.addPoints(player, ConfigManager.getMainConfig().pointsOnKill);
+			PointManager.INSTANCE.addPoints(player, killPoints(headshot, knife) * (isDoublePoints() ? 2 : 1));
 
 			PointManager.INSTANCE.notifyPlayer(player);
 			spawnManager.removeEntity(mob);
@@ -1979,10 +1988,7 @@ public class Game
 
 			powerUpManager.powerUpDrop(mob, player);
 			mob.remove();
-			if(isDoublePoints())
-				PointManager.INSTANCE.addPoints(player, ConfigManager.getMainConfig().pointsOnKill * 2);
-			else
-				PointManager.INSTANCE.addPoints(player, ConfigManager.getMainConfig().pointsOnKill);
+			PointManager.INSTANCE.addPoints(player, killPoints(headshot, knife) * (isDoublePoints() ? 2 : 1));
 
 			PointManager.INSTANCE.notifyPlayer(player);
 			spawnManager.removeEntity(mob);

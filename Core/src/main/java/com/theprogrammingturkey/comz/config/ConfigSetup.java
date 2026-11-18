@@ -47,6 +47,8 @@ public class ConfigSetup
 	 * Default points when a player kills a zombie.
 	 */
 	public int pointsOnKill;
+	public int pointsOnHeadshotKill;
+	public int pointsOnKnifeKill;
 	/**
 	 * Time it takes to revive a player.
 	 */
@@ -183,6 +185,8 @@ public class ConfigSetup
 		lateJoinRound = Math.max(0, plugin.getConfig().getInt("config.gameSettings.lateJoinRound", 5));
 		pointsOnHit = plugin.getConfig().getInt("config.gameSettings.defaultPointsOnHit");
 		pointsOnKill = plugin.getConfig().getInt("config.gameSettings.defaultPointsOnKill");
+		pointsOnHeadshotKill = plugin.getConfig().getInt("config.gameSettings.pointsOnHeadshotKill", 100);
+		pointsOnKnifeKill = plugin.getConfig().getInt("config.gameSettings.pointsOnKnifeKill", 130);
 		maxWave = plugin.getConfig().getInt("config.gameSettings.maxWave");
 		reviveTimer = plugin.getConfig().getInt("config.ReviveSettings.ReviveTimer");
 		reviveRange = Math.min(plugin.getConfig().getInt("config.ReviveSettings.ReviveRange"), 6);
