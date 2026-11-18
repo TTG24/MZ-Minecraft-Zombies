@@ -44,7 +44,7 @@ public final class SignStyles
 {
 	/** The categories that work without their sign (interact key near them). Ammo crates, kits and so on need the click. */
 	public static final List<String> CATEGORIES = List.of("perk", "pack_a_punch", "gun", "power", "teleporter", "mainframe", "door",
-			"mystery_box");
+			"mystery_box", "grenade");
 	public static final List<String> WOODS = List.of("oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry",
 			"pale_oak", "bamboo", "crimson", "warped");
 	private static final String[] SUFFIXES = {"_WALL_HANGING_SIGN", "_HANGING_SIGN", "_WALL_SIGN", "_SIGN"};

@@ -53,6 +53,7 @@ public class GrenadeSign implements IGameSign
 			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Bought grenades!");
 			PointManager.INSTANCE.takePoints(player, buyPoints);
 			PointManager.INSTANCE.notifyPlayer(player);
+			com.theprogrammingturkey.comz.util.MzSounds.purchase(player);
 		}
 		else
 		{

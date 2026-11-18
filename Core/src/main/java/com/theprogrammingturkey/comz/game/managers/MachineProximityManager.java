@@ -21,7 +21,7 @@ import com.theprogrammingturkey.comz.game.signs.SignRegistry;
 /** Uses the existing machine purchase logic for nearby swap-hand interactions. */
 public class MachineProximityManager
 {
-	private static final Set<String> SIGN_TYPES = Set.of("power", "perk", "pack_a_punch", "gun", "teleporter", "mainframe");
+	private static final Set<String> SIGN_TYPES = Set.of("power", "perk", "pack_a_punch", "gun", "grenade", "teleporter", "mainframe");
 
 	public record Target(String type, Location location, Map<String, String> data, RandomBox box, double distanceSquared) {}
 
@@ -120,6 +120,17 @@ public class MachineProximityManager
 		else if(target.type().equals("gun"))
 		{
 			fallback = state.equals("refill") ? "&aPress {key} to refill ammo &7- {price} points" : "&aPress {key} to buy {gun} &7- {price} points";
+		}
+		else if(target.type().equals("grenade"))
+		{
+			PlayerWeaponManager mine = game.getPlayersWeapons(player);
+			if(mine != null && mine.hasFullGrenades())
+			{
+				state = "full";
+				fallback = "&7You already have grenades";
+			}
+			else
+				fallback = "&aPress {key} to buy grenades &7- {price} points";
 		}
 		else if(target.type().equals("teleporter"))
 		{

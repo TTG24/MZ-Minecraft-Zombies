@@ -61,7 +61,7 @@ public class SignsCommand extends SubCommand
 		if(!category.equals("all") && !SignStyles.CATEGORIES.contains(category))
 		{
 			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Category must be one of: all, " + String.join(", ", SignStyles.CATEGORIES)
-					+ ". (Ammo crate, grenade, kit, join and spectate signs only work by clicking them, so they can't be hidden.)");
+					+ ". (Ammo crate, kit, join and spectate signs only work by clicking them, so they can't be hidden.)");
 			return true;
 		}
 		List<String> categories = category.equals("all") ? SignStyles.CATEGORIES : List.of(category);
