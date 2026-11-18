@@ -684,13 +684,14 @@ public class Barrier
 			return;
 		}
 
-		if(ents.stream().anyMatch(this::isAtBarrier))
+		// Only zombies still held outside it break it: ones already through (released) walking past it from inside don't
+		if(ents.stream().anyMatch(this::isClawing))
 		{
 			// The zombies at it claw at the boards: an arm swing for everyone, and "mz_swing" (the tick) tells
 			// TacticalMovementPlugin to play the claw animation on the BetterModel zombie for players without the mod.
 			if(stage < 5)
 				for(Entity entity : ents)
-					if(entity instanceof org.bukkit.entity.LivingEntity living && isAtBarrier(entity))
+					if(entity instanceof org.bukkit.entity.LivingEntity living && isClawing(entity))
 					{
 						living.swingMainHand();
 						if(living instanceof org.bukkit.entity.Mob m)
@@ -735,6 +736,11 @@ public class Barrier
 				return true;
 		}
 		return false;
+	}
+
+	private boolean isClawing(Entity ent)
+	{
+		return isHeldBack(ent) && isAtBarrier(ent);
 	}
 
 	private boolean isAtBarrier(Entity ent)
