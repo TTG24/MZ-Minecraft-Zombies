@@ -12,7 +12,6 @@ public class ApiCompat
 {
 	/** Renamed from GENERIC_* in 1.21.3 */
 	public static final Attribute MAX_HEALTH = constant(Attribute.class, "MAX_HEALTH", "GENERIC_MAX_HEALTH");
-	public static final Attribute FOLLOW_RANGE = constant(Attribute.class, "FOLLOW_RANGE", "GENERIC_FOLLOW_RANGE");
 	public static final Attribute SAFE_FALL_DISTANCE = constant(Attribute.class, "SAFE_FALL_DISTANCE", "GENERIC_SAFE_FALL_DISTANCE");
 	public static final Attribute FALL_DAMAGE_MULTIPLIER = constant(Attribute.class, "FALL_DAMAGE_MULTIPLIER", "GENERIC_FALL_DAMAGE_MULTIPLIER");
 	public static final Attribute MOVEMENT_SPEED = constant(Attribute.class, "MOVEMENT_SPEED", "GENERIC_MOVEMENT_SPEED");

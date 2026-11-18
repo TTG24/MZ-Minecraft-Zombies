@@ -66,9 +66,40 @@ public final class BloodMessages
 		{
 			return;
 		}
+		int sent = point == null ? OTHER : kind;
 		for(Player player : mob.getWorld().getPlayers())
-			if(player.getLocation().distanceSquared(at) <= RANGE * RANGE && player.getListeningPluginChannels().contains(CHANNEL))
+		{
+			if(player.getLocation().distanceSquared(at) > RANGE * RANGE)
+				continue;
+			if(player.getListeningPluginChannels().contains(CHANNEL))
 				player.sendPluginMessage(COMZombies.getPlugin(), CHANNEL, data);
+			else
+				gore(player, at, dir, sent, killed);
+		}
+	}
+
+	private static final org.bukkit.inventory.ItemStack FLESH = new org.bukkit.inventory.ItemStack(org.bukkit.Material.ROTTEN_FLESH);
+
+	/**
+	 * Players without the mod (it draws its own torn-off chunks): bits of flesh and blood flying out of the hit, more for a
+	 * headshot, a blast or a kill.
+	 */
+	private static void gore(Player player, Location at, org.bukkit.util.Vector dir, int kind, boolean killed)
+	{
+		int chunks = switch(kind)
+		{
+			case SHOT -> 2;
+			case HEADSHOT -> 5;
+			case SLASH -> 3;
+			default -> dir == null ? 1 : 6;
+		};
+		if(killed)
+			chunks *= 2;
+		// Item particles fly with the given speed in a random direction; a few nudged along the hit
+		Location from = dir == null ? at : at.clone().add(dir.clone().multiply(0.15));
+		player.spawnParticle(org.bukkit.Particle.ITEM, from, chunks, 0.12, 0.12, 0.12, 0.12, FLESH);
+		player.spawnParticle(org.bukkit.Particle.BLOCK, from, chunks * 4, 0.15, 0.15, 0.15, 0,
+				org.bukkit.Material.REDSTONE_BLOCK.createBlockData());
 	}
 
 	private static void writeVarInt(DataOutputStream out, int value) throws IOException

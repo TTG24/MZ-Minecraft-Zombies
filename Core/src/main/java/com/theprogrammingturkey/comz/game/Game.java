@@ -866,6 +866,14 @@ public class Game
 				}
 			}
 
+			// Every round gives back 2 grenades (up to the full 4)
+			for(Player pl : getPlayersInGame())
+			{
+				PlayerWeaponManager weapons = getPlayersWeapons(pl);
+				if(weapons != null)
+					weapons.addGrenades(2);
+			}
+
 			spawnManager.startWave(waveNumber);
 			signManager.updateGame();
 			changingRound = false;
@@ -982,6 +990,10 @@ public class Game
 		{
 			PlayerWeaponManager manager = game.getPlayersWeapons(player);
 			manager.addWeapon(gun.getNewInstance(player, 1));
+			// Everyone starts with a full set of grenades (4)
+			com.theprogrammingturkey.comz.game.weapons.Weapon grenade = WeaponManager.getWeapon("grenade");
+			if(grenade != null)
+				manager.addWeapon(grenade);
 		}
 		else if(gun == null)
 		{

@@ -139,7 +139,7 @@ public class COMZombies extends JavaPlugin
 		com.theprogrammingturkey.comz.game.ZombieSounds.start(this);
 		com.theprogrammingturkey.comz.game.BoxBeacons.start(this);
 		com.theprogrammingturkey.comz.game.TeleporterLinks.start(this);
-		com.theprogrammingturkey.comz.game.ZombiePathing.start(this);
+		com.theprogrammingturkey.comz.game.ZombieBrain.start(this);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, com.theprogrammingturkey.comz.util.BloodMessages.CHANNEL);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, com.theprogrammingturkey.comz.util.GameOverMessages.CHANNEL);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, com.theprogrammingturkey.comz.game.ZombieRise.CHANNEL);
@@ -222,6 +222,10 @@ public class COMZombies extends JavaPlugin
 		// R-to-reload: the Tactical Movement client mod sends this empty plugin message when R is pressed.
 		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:reload",
 			(channel, player, message) -> WeaponListener.reloadHeldGun(player));
+		// G-to-throw: the client mod sends this when G is pressed (throws a grenade without switching to it).
+		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:grenade",
+			(channel, player, message) -> WeaponListener.throwGrenade(player));
+		com.theprogrammingturkey.comz.game.Crawlers.register(this);
 		com.theprogrammingturkey.comz.util.Backups.start();
 	}
 

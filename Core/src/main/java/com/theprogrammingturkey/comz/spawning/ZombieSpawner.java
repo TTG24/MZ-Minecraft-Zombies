@@ -34,7 +34,6 @@ public class ZombieSpawner extends RoundSpawner
 				zomb.getEquipment().clear();
 		});
 		zomb.setAdult();
-		setFollowDistance(zomb, MAX_FOLLOW_RANGE);
 		setFallTolerance(zomb);
 
 		float strength = ((wave * 100f) + 50) / 50f;

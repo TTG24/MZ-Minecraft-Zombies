@@ -1,8 +1,6 @@
 package com.theprogrammingturkey.comz.game;
 
-import com.destroystokyo.paper.entity.Pathfinder;
 import com.theprogrammingturkey.comz.COMZombies;
-import com.theprogrammingturkey.comz.game.features.Barrier;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -10,7 +8,6 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.util.Vector;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -19,47 +16,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.UUID;
 
 /**
- * Lets zombies drop down ledges to get where they are going. Minecraft only plans drops of about 3 blocks for most mobs:
- * it goes by the mob's health and the difficulty (on peaceful, nearly always 3), not by its safe fall distance. So a player
- * or barrier down a taller drop looked unreachable and zombies never jumped down. When a zombie's own route cannot reach
- * its goal (the barrier it is going for, or the nearest player), a route is planned here that may drop up to
- * config.gameSettings.zombieSafeFallDistance blocks, and the zombie is walked along it (straight off the edge at a deep
- * drop). If BlockBlocker is installed, its barriers count as solid, so routes never go through or drop onto one.
+ * The arena mobs' route planner and line-of-reach checks, used by {@link ZombieBrain} (which walks every arena mob) and by
+ * BarrierManager (which barrier a zombie can get to).
+ * <ul>
+ * <li>Routes ({@link #search}, {@link #routeLength}): A* over the blocks. A mob stands where its feet and head are free and
+ * the block below is solid (fences and walls, 1.5 high, are not stood on); it steps up one block and drops down as far as
+ * config.gameSettings.zombieSafeFallDistance. BlockBlocker barriers are solid like stone: never gone through, but their
+ * tops can be stood on.</li>
+ * <li>Reach ({@link #canHit}, {@link #arrivesAt}): nothing at all between a mob and a player (fences, walls, slabs,
+ * barriers all count as full).</li>
+ * </ul>
+ * In the arena worlds BlockBlocker only stops mobs moving into its barriers (its no-route-planning-worlds setting): all
+ * planning and steering is MZ's.
  */
 public final class ZombiePathing
 {
 	private static final int MAX_NODES = 3000;
 	private static final int MAX_RANGE = 64;
-	private static final int SEARCHES_PER_TICK = 2;
-	/** Minecraft path searches ("can its own pathfinder get there?") per tick, over every arena. */
-	private static final int FIND_PATHS_PER_TICK = 8;
 	private static final int[][] DIRS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
-
-	private static final class Plan
-	{
-		List<int[]> nodes;
-		int index;
-		Location goal;
-		long madeTick;
-		int pushTicks;
-		// Planned because Minecraft's route only got NEAR the goal (a wall, fence, glass... in between), not for a drop
-		boolean chase;
-		// The node it was last sent to, and when (it is only sent again when that changes, or now and then)
-		int sentAim = -1;
-		long sentTick;
-	}
-
-	private static final Map<UUID, Plan> PLANS = new HashMap<>();
-	private static final Map<UUID, Long> NEXT_CHECK = new HashMap<>();
-	private static long budgetTick = -1;
-	private static int searchesLeft;
-	private static long findPathTick = -1;
-	private static int findPathsLeft;
-	// Which arena goes first this tick: turns round, so the first arenas do not use up every tick's budget
-	private static int gameOffset;
 
 	private static Object blockBlocker;
 	private static Method isBarrierCell;
@@ -70,253 +46,17 @@ public final class ZombiePathing
 	{
 	}
 
-	/** True while a zombie is being walked along a planned route: the plugin's other steering leaves it alone meanwhile. */
-	public static boolean isSteering(Mob mob)
-	{
-		return PLANS.containsKey(mob.getUniqueId());
-	}
-
-	public static void start(Plugin plugin)
-	{
-		Bukkit.getScheduler().runTaskTimer(plugin, ZombiePathing::tick, 20L, 1L);
-	}
-
-	private static void tick()
-	{
-		long tick = Bukkit.getCurrentTick();
-		List<Game> games = GameManager.INSTANCE.getGames();
-		int count = games.size();
-		gameOffset = count == 0 ? 0 : (gameOffset + 1) % count;
-		for(int gi = 0; gi < count; gi++)
-		{
-			Game game = games.get((gi + gameOffset) % count);
-			if(game.getStatus() != Game.GameStatus.INGAME)
-				continue;
-			for(Mob mob : new ArrayList<>(game.spawnManager.getEntities()))
-			{
-				if(!mob.isValid())
-					continue;
-				Plan plan = PLANS.get(mob.getUniqueId());
-				if(plan != null)
-					follow(game, mob, plan, tick);
-				else if(tick >= NEXT_CHECK.getOrDefault(mob.getUniqueId(), 0L))
-				{
-					NEXT_CHECK.put(mob.getUniqueId(), tick + 10);
-					check(game, mob, tick);
-				}
-			}
-		}
-		if(tick % 100 == 0)
-		{
-			PLANS.keySet().removeIf(id -> !(Bukkit.getEntity(id) instanceof Mob m) || !m.isValid());
-			NEXT_CHECK.keySet().removeIf(id -> !(Bukkit.getEntity(id) instanceof Mob m) || !m.isValid());
-		}
-	}
-
-	/** Where the zombie is meant to go: the barrier holding it, else the nearest player. */
-	private static Location goalOf(Game game, Mob mob)
-	{
-		Barrier held = game.barrierManager.heldBy(mob);
-		if(held != null)
-			return held.approachFor(mob);
-		Player p = game.spawnManager.getNearestPlayer(mob);
-		return p == null || p.getWorld() != mob.getWorld() ? null : p.getLocation();
-	}
-
-	/**
-	 * Plans a route when its own one cannot get there: a deep drop on the way, or Minecraft's route only ends NEAR the goal
-	 * with something in between (its pathfinder then walks the zombie up to the fence, wall, glass or gap between posts
-	 * and leaves it pressing there). This planner treats fences, walls, panes, bars, intact barrier boards and BlockBlocker
-	 * barriers as solid, so it goes around: through an open door, a broken barrier, up the stairs...
-	 */
-	private static void check(Game game, Mob mob, long tick)
-	{
-		Location goal = goalOf(game, mob);
-		if(goal == null || !mob.isOnGround())
-			return;
-		// Already there, nothing in between: its own AI does the rest
-		if(goal.distanceSquared(mob.getLocation()) < 4 && arrivesAt(mob.getLocation(), goal))
-			return;
-		// (no path budget left this tick: checked again in a moment)
-		if(reaches(mob, goal) != 0)
-			return;
-		if(plan(mob, goal, tick))
-		{
-			Plan made = PLANS.get(mob.getUniqueId());
-			if(made != null)
-				made.chase = goal.getY() > mob.getLocation().getY() - 3;
-		}
-	}
-
-	/**
-	 * Can its own pathfinder get (about) there? A new path search is limited to a few per tick over every arena (each one is
-	 * a full Minecraft path search).
-	 *
-	 * @return 1 yes, 0 no, -1 not known yet (no search budget left this tick)
-	 */
-	private static int reaches(Mob mob, Location goal)
-	{
-		Pathfinder.PathResult path = mob.getPathfinder().getCurrentPath();
-		if(path != null && path.getFinalPoint() != null && path.canReachFinalPoint() && arrivesAt(path.getFinalPoint(), goal))
-			return 1;
-		long tick = Bukkit.getCurrentTick();
-		if(findPathTick != tick)
-		{
-			findPathTick = tick;
-			findPathsLeft = FIND_PATHS_PER_TICK;
-		}
-		if(findPathsLeft <= 0)
-			return -1;
-		findPathsLeft--;
-		path = mob.getPathfinder().findPath(goal);
-		return path != null && path.getFinalPoint() != null && path.canReachFinalPoint() && arrivesAt(path.getFinalPoint(), goal) ? 1 : 0;
-	}
-
-	/** @return false when this tick's search budget was used up (try again next tick) */
-	private static boolean plan(Mob mob, Location goal, long tick)
-	{
-		if(budgetTick != tick)
-		{
-			budgetTick = tick;
-			searchesLeft = SEARCHES_PER_TICK;
-		}
-		if(searchesLeft <= 0)
-			return false;
-		searchesLeft--;
-		Location at = mob.getLocation();
-		int maxDrop = Math.max(3, Math.min(32, COMZombies.getPlugin().getConfig().getInt("config.gameSettings.zombieSafeFallDistance", 16)));
-		List<int[]> nodes = search(mob.getWorld(), at.getBlockX(), (int) Math.floor(at.getY() + 0.01), at.getBlockZ(),
-				goal.getBlockX(), (int) Math.floor(goal.getY() + 0.01), goal.getBlockZ(), maxDrop, goal);
-		if(nodes == null || nodes.size() < 2)
-		{
-			PLANS.remove(mob.getUniqueId());
-			// Nothing better than what it does already (no way to the player at all, e.g. they are walled in): leave it be
-			// for a while, a failed search is the most costly one
-			NEXT_CHECK.put(mob.getUniqueId(), tick + 100);
-			return true;
-		}
-		Plan plan = new Plan();
-		plan.nodes = nodes;
-		plan.index = 1;
-		plan.goal = goal.clone();
-		plan.madeTick = tick;
-		PLANS.put(mob.getUniqueId(), plan);
-		return true;
-	}
-
-	private static void follow(Game game, Mob mob, Plan plan, long tick)
-	{
-		Location at = mob.getLocation();
-		Location goal = goalOf(game, mob);
-		if(goal == null || goal.getWorld() != at.getWorld())
-		{
-			PLANS.remove(mob.getUniqueId());
-			return;
-		}
-		// Close to the player (or barrier) with nothing in between, or (a drop plan) level with it now: its own AI carries on
-		if(goal.distanceSquared(at) < 9 && arrivesAt(at, goal) || !plan.chase && goal.getY() > at.getY() - 3 && mob.isOnGround())
-		{
-			PLANS.remove(mob.getUniqueId());
-			return;
-		}
-		if(goal.distanceSquared(plan.goal) > 16 || tick - plan.madeTick > 80)
-		{
-			int own = mob.isOnGround() ? reaches(mob, goal) : 0;
-			if(own == 1)
-			{
-				PLANS.remove(mob.getUniqueId());
-				return;
-			}
-			if(own == -1)
-				plan.madeTick = tick - 70; // not known yet: ask again in a moment, keep following meanwhile
-			else
-			{
-				boolean chase = plan.chase;
-				if(mob.isOnGround() && !plan(mob, goal, tick))
-					plan.madeTick = tick - 70; // no budget: try again in a moment, keep following meanwhile
-				plan = PLANS.get(mob.getUniqueId());
-				if(plan == null)
-					return;
-				plan.chase = plan.chase || chase;
-			}
-		}
-		while(plan.index < plan.nodes.size())
-		{
-			int[] n = plan.nodes.get(plan.index);
-			double dx = n[0] + 0.5 - at.getX(), dz = n[2] + 0.5 - at.getZ();
-			if(dx * dx + dz * dz < 0.6 && Math.abs(n[1] - at.getY()) < 1.5)
-				plan.index++;
-			else
-				break;
-		}
-		if(plan.index >= plan.nodes.size())
-		{
-			// There: its own AI carries on
-			PLANS.remove(mob.getUniqueId());
-			return;
-		}
-		// Its own target-chasing would walk it back to the edge; the plugin gives the target back once the plan ends
-		if(mob.getTarget() != null)
-			mob.setTarget(null);
-		int[] next = plan.nodes.get(plan.index);
-		int feetY = (int) Math.floor(at.getY() + 0.01);
-		if(next[1] < feetY - 3)
-		{
-			// A drop deeper than Minecraft's own pathfinder takes: walk straight off the edge
-			mob.getPathfinder().stopPathfinding();
-			if(++plan.pushTicks > 60)
-			{
-				// Could not get off the edge (something in the way): give up on this route for a while
-				PLANS.remove(mob.getUniqueId());
-				NEXT_CHECK.put(mob.getUniqueId(), tick + 40);
-				return;
-			}
-			Vector dir = new Vector(next[0] + 0.5 - at.getX(), 0, next[2] + 0.5 - at.getZ());
-			if(dir.lengthSquared() > 1.0E-4 && mob.isOnGround())
-			{
-				dir.normalize().multiply(0.3);
-				mob.setVelocity(new Vector(dir.getX(), mob.getVelocity().getY(), dir.getZ()));
-				mob.setRotation((float) Math.toDegrees(Math.atan2(-dir.getX(), dir.getZ())), 0);
-			}
-			return;
-		}
-		if(!mob.isOnGround())
-			return; // falling: let it land
-		// Aim a few nodes ahead (smoother), not past a deep drop
-		int aim = plan.index;
-		for(int k = plan.index + 1; k < Math.min(plan.nodes.size(), plan.index + 4); k++)
-		{
-			if(plan.nodes.get(k)[1] < plan.nodes.get(k - 1)[1] - 3)
-				break;
-			aim = k;
-		}
-		// Sent again only when it aims at a new node, has lost its path, or now and then: every moveTo is a full path search,
-		// and this used to run every tick for every zombie on a route
-		if(aim != plan.sentAim || !mob.getPathfinder().hasPath() || tick - plan.sentTick >= 20)
-		{
-			int[] n = plan.nodes.get(aim);
-			mob.getPathfinder().moveTo(new Location(at.getWorld(), n[0] + 0.5, n[1], n[2] + 0.5), 1.0);
-			plan.sentAim = aim;
-			plan.sentTick = tick;
-		}
-	}
-
 	// ------------------------------------------------------------------ A*
 
 	private record Node(int x, int y, int z, double g, double f, Node parent) {}
 
 	/**
-	 * A* over the blocks: a zombie can stand where its feet and head cells are passable and the block below is solid; it can
-	 * step up 1 block and drop down maxDrop.
+	 * A* over the blocks (see the class description), stopping at a node near the goal from which nothing is between it
+	 * and {@code goal} (or, with no goal, any node within a block of it).
 	 *
 	 * @return the route as feet positions from start to goal, or null when there is none within reach
 	 */
-	private static List<int[]> search(World world, int sx, int sy, int sz, int gx, int gy, int gz, int maxDrop)
-	{
-		return search(world, sx, sy, sz, gx, gy, gz, maxDrop, null);
-	}
-
-	private static List<int[]> search(World world, int sx, int sy, int sz, int gx, int gy, int gz, int maxDrop, Location goal)
+	static List<int[]> search(World world, int sx, int sy, int sz, int gx, int gy, int gz, int maxDrop, Location goal)
 	{
 		Map<Long, Boolean> openCache = new HashMap<>();
 		PriorityQueue<Node> open = new PriorityQueue<>((a, b) -> Double.compare(a.f(), b.f()));
@@ -374,6 +114,78 @@ public final class ZombiePathing
 		return null;
 	}
 
+	/**
+	 * The block a route node for someone standing here is: the one their feet are in. Standing on a stair or slab, the
+	 * feet are half way up the stair / slab block itself, which the search can't stand in (it is solid), so it is the block
+	 * above. (Starting a search inside the stair used to find no way out at all, and the zombie stood stuck on it.)
+	 */
+	static int feetCell(Location at)
+	{
+		int y = (int) Math.floor(at.getY() + 0.01);
+		Block feet = at.getWorld().getBlockAt(at.getBlockX(), y, at.getBlockZ());
+		return passableOrFlat(feet) ? y : y + 1;
+	}
+
+	/** Blocks the current search may not go through (see {@link #routeLength}); null for none. The server is one thread. */
+	private static java.util.Collection<Block> avoiding;
+
+	/**
+	 * How long the mob's walk to the location is (blocks, along the route), or -1 when there is none within reach: the same
+	 * planner its walking uses, so BlockBlocker barriers are solid. {@code avoid}: blocks it may not go through (an arena's
+	 * window barriers, to ask whether it has an open way that needs none of them), or null.
+	 */
+	public static double routeLength(Mob mob, Location goal, java.util.Collection<Block> avoid)
+	{
+		if(goal == null || goal.getWorld() != mob.getWorld())
+			return -1;
+		Location at = mob.getLocation();
+		int maxDrop = Math.max(3, Math.min(32, COMZombies.getPlugin().getConfig().getInt("config.gameSettings.zombieSafeFallDistance", 16)));
+		avoiding = avoid == null || avoid.isEmpty() ? null : avoid;
+		List<int[]> route;
+		try
+		{
+			route = search(mob.getWorld(), at.getBlockX(), feetCell(at), at.getBlockZ(), goal.getBlockX(), feetCell(goal),
+					goal.getBlockZ(), maxDrop, goal);
+		}
+		finally
+		{
+			avoiding = null;
+		}
+		if(route == null)
+			return -1;
+		double length = 0;
+		for(int i = 1; i < route.size(); i++)
+		{
+			int[] a = route.get(i - 1), b = route.get(i);
+			length += Math.sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
+		}
+		return length;
+	}
+
+	/**
+	 * Can a mob standing at {@code from} walk in a straight line to the middle of route node {@code to}, on the same level?
+	 * Every point along the line, and a body's width either side of it, has to be ground it can stand on (BlockBlocker
+	 * barriers count as solid, as in the planner).
+	 */
+	static boolean walkableLine(World world, Location from, int[] to)
+	{
+		double ax = from.getX(), az = from.getZ(), bx = to[0] + 0.5, bz = to[2] + 0.5;
+		double dx = bx - ax, dz = bz - az, len = Math.sqrt(dx * dx + dz * dz);
+		if(len < 1.0E-3)
+			return true;
+		double px = -dz / len * 0.3, pz = dx / len * 0.3; // a body's half width, sideways
+		Map<Long, Boolean> cache = new HashMap<>();
+		int steps = (int) Math.ceil(len / 0.25);
+		for(int i = 0; i <= steps; i++)
+		{
+			double x = ax + dx * i / steps, z = az + dz * i / steps;
+			for(int side = -1; side <= 1; side++)
+				if(!standable(world, (int) Math.floor(x + px * side), to[1], (int) Math.floor(z + pz * side), cache))
+					return false;
+		}
+		return true;
+	}
+
 	private static double h(int x, int y, int z, int gx, int gy, int gz)
 	{
 		int dx = Math.abs(x - gx), dz = Math.abs(z - gz);
@@ -397,6 +209,9 @@ public final class ZombiePathing
 	{
 		if(!open(world, x, y, z, cache) || !open(world, x, y + 1, z, cache))
 			return false;
+		// The top of a BlockBlocker barrier is ground, like a stone block's
+		if(barrierCell(world, x, y - 1, z))
+			return true;
 		Block below = world.getBlockAt(x, y - 1, z);
 		if(below.isPassable() || below.getType().isAir())
 			return false;
@@ -523,8 +338,9 @@ public final class ZombiePathing
 		if(known != null)
 			return known;
 		// A fence or wall below reaches half way up into this cell, so nothing walks through it at that height either
-		boolean result = world.isChunkLoaded(x >> 4, z >> 4) && passableOrFlat(world.getBlockAt(x, y, z)) && !barrierCell(world, x, y, z)
-				&& collisionTop(world.getBlockAt(x, y - 1, z)) <= 1.0001;
+		Block block = world.getBlockAt(x, y, z);
+		boolean result = world.isChunkLoaded(x >> 4, z >> 4) && passableOrFlat(block) && !barrierCell(world, x, y, z)
+				&& collisionTop(world.getBlockAt(x, y - 1, z)) <= 1.0001 && (avoiding == null || !avoiding.contains(block));
 		cache.put(k, result);
 		return result;
 	}
@@ -595,27 +411,16 @@ public final class ZombiePathing
 	private static boolean moveBlocked(World world, int x, int y, int z, int nx, int ny, int nz)
 	{
 		int top = Math.max(y, ny);
+		// A step up goes over the block (or barrier) it steps onto: only the height it steps up to has to be clear
+		if(ny > y)
+			return segmentBlocked(world, x + 0.5, top + 0.3, z + 0.5, nx + 0.5, top + 0.3, nz + 0.5)
+					|| segmentBlocked(world, x + 0.5, top + 1.2, z + 0.5, nx + 0.5, top + 1.2, nz + 0.5);
 		if(segmentBlocked(world, x + 0.5, y + 0.3, z + 0.5, nx + 0.5, y + 0.3, nz + 0.5)
 				|| segmentBlocked(world, x + 0.5, y + 1.2, z + 0.5, nx + 0.5, y + 1.2, nz + 0.5))
 			return true;
 		// A step up: also at the height it steps up to (a flat step has nothing more to check)
 		return top != y && (segmentBlocked(world, x + 0.5, top + 0.3, z + 0.5, nx + 0.5, top + 0.3, nz + 0.5)
 				|| segmentBlocked(world, x + 0.5, top + 1.2, z + 0.5, nx + 0.5, top + 1.2, nz + 0.5));
-	}
-
-	/**
-	 * Is a step of a Minecraft path (from one point to the next) blocked by a BlockBlocker barrier? Minecraft's own
-	 * pathfinder does not know about them, so a route it calls open may really run into one.
-	 */
-	public static boolean pathStepBlocked(Location from, Location to)
-	{
-		World world = to.getWorld();
-		if(world == null)
-			return false;
-		int x = to.getBlockX(), y = to.getBlockY(), z = to.getBlockZ();
-		if(barrierCell(world, x, y, z) || barrierCell(world, x, y + 1, z))
-			return true;
-		return from.getWorld() == world && moveBlocked(world, from.getBlockX(), from.getBlockY(), from.getBlockZ(), x, y, z);
 	}
 
 	private static long key(int x, int y, int z)

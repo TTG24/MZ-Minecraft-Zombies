@@ -226,7 +226,9 @@ public class WeaponListener implements Listener
 									boolean headshot = false;
 									double zombieHitLocY = toDamageIntesect.intersection.getY() - entToDamage.getLocation().getY();
 									double eyeHeight = ((Mob) entToDamage).getEyeHeight();
-									if(zombieHitLocY > eyeHeight - (entToDamage.getHeight() - eyeHeight))
+									boolean crawler = com.theprogrammingturkey.comz.game.Crawlers.isCrawler(mob);
+									if(crawler ? com.theprogrammingturkey.comz.game.Crawlers.isHeadshot(mob, toDamageIntesect.intersection)
+											: zombieHitLocY > eyeHeight - (entToDamage.getHeight() - eyeHeight))
 									{
 										headshot = true;
 										damage *= 1.5f;
@@ -267,6 +269,79 @@ public class WeaponListener implements Listener
 		}
 	}
 
+	/**
+	 * Throws one grenade from the player's grenade stack (wherever it is in the inventory: the mod's G key and Q both throw
+	 * without switching to it). Does nothing when they have none, are downed, or the match is not running.
+	 */
+	public static void throwGrenade(Player player)
+	{
+		if(!GameManager.INSTANCE.isPlayerInGame(player))
+			return;
+		Game game = GameManager.INSTANCE.getGame(player);
+		if(game.getStatus() != GameStatus.INGAME || game.downedPlayerManager.isDownedPlayer(player))
+			return;
+		var inv = player.getInventory();
+		for(int i = 0; i < inv.getStorageContents().length; i++)
+		{
+			ItemStack stack = inv.getItem(i);
+			if(stack != null && stack.getType() == Material.SLIME_BALL && stack.getAmount() > 0)
+			{
+				throwGrenade(game, player, stack);
+				inv.setItem(i, stack.getAmount() > 0 ? stack : null);
+				return;
+			}
+		}
+	}
+
+	private static void throwGrenade(Game game, Player player, ItemStack handStack)
+	{
+		// Only goes off in the match it was thrown in (the timers used to carry on into the next one)
+		final long match = game.getMatchGeneration();
+		final Item item = player.getWorld().dropItemNaturally(player.getEyeLocation(), new ItemStack(Material.SLIME_BALL));
+		handStack.setAmount(handStack.getAmount() - 1);
+		item.setVelocity(player.getLocation().getDirection().multiply(1));
+		item.setPickupDelay(1000);
+
+		int smoke = COMZombies.scheduleTask(0, 5, () ->
+		{
+			if(item.isValid())
+				item.getWorld().spawnParticle(Particle.SMOKE, item.getLocation().clone(), 0, COMZombies.rand.nextDouble() - 0.5, 0.5, COMZombies.rand.nextDouble() - 0.5, 0.05);
+		});
+		COMZombies.scheduleTask(100, () ->
+		{
+			Bukkit.getScheduler().cancelTask(smoke);
+			boolean live = game.getStatus() == GameStatus.INGAME && game.getMatchGeneration() == match && item.isValid();
+			if(live)
+			{
+				Location loc = item.getLocation();
+				item.getWorld().createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
+				List<Mob> ents = game.spawnManager.getEntities();
+				for(int i = ents.size() - 1; i >= 0; i--)
+				{
+					Mob mob = ents.get(i);
+					if(!mob.getWorld().equals(item.getWorld()))
+						continue;
+					float dist = (float) mob.getLocation().distance(item.getLocation());
+					if(dist < 5)
+					{
+						float damage = 50f / Math.max(0.05f, dist * dist * dist);
+						double before = mob.getHealth();
+						// Gore flies away from the blast
+						org.bukkit.util.Vector center = mob.getLocation().add(0, mob.getHeight() * 0.5, 0).toVector();
+						org.bukkit.util.Vector away = center.clone().subtract(item.getLocation().toVector());
+						com.theprogrammingturkey.comz.util.BloodMessages.nextHit(center,
+								away.lengthSquared() > 1.0E-4 ? away.normalize() : new org.bukkit.util.Vector(0, 1, 0),
+								com.theprogrammingturkey.comz.util.BloodMessages.OTHER);
+						game.damageMob(mob, player, damage);
+						// Survived the blast: it may have lost its legs
+						com.theprogrammingturkey.comz.game.Crawlers.afterBlast(mob, damage, before);
+					}
+				}
+			}
+			item.remove();
+		});
+	}
+
 	@EventHandler
 	public void onGrenade(PlayerInteractEvent event)
 	{
@@ -290,39 +365,7 @@ public class WeaponListener implements Listener
 
 			ItemStack handStack = player.getInventory().getItemInMainHand();
 			if(handStack.getType().equals(Material.SLIME_BALL))
-			{
-				final Item item = player.getWorld().dropItemNaturally(player.getEyeLocation(), new ItemStack(Material.SLIME_BALL));
-				handStack.setAmount(handStack.getAmount() - 1);
-				item.setVelocity(player.getLocation().getDirection().multiply(1));
-				item.setPickupDelay(1000);
-
-				int smoke = COMZombies.scheduleTask(0, 5, () ->
-				{
-					if(item.isValid())
-						item.getWorld().spawnParticle(Particle.SMOKE, item.getLocation().clone(), 0, COMZombies.rand.nextDouble() - 0.5, 0.5, COMZombies.rand.nextDouble() - 0.5, 0.05);
-				});
-				COMZombies.scheduleTask(100, () ->
-				{
-					Bukkit.getScheduler().cancelTask(smoke);
-					boolean live = game.getStatus() == GameStatus.INGAME && game.getMatchGeneration() == match && item.isValid();
-					if(live)
-					{
-						Location loc = item.getLocation();
-						item.getWorld().createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
-						List<Mob> ents = game.spawnManager.getEntities();
-						for(int i = ents.size() - 1; i >= 0; i--)
-						{
-							Mob mob = ents.get(i);
-							if(!mob.getWorld().equals(item.getWorld()))
-								continue;
-							float dist = (float) mob.getLocation().distance(item.getLocation());
-							if(dist < 5)
-								game.damageMob(mob, player, 50f / Math.max(0.05f, dist * dist * dist));
-						}
-					}
-					item.remove();
-				});
-			}
+				throwGrenade(game, player, handStack);
 			else if(handStack.getType().equals(Material.MAGMA_CREAM))
 			{
 				final Item item = player.getWorld().dropItemNaturally(player.getEyeLocation(), new ItemStack(Material.MAGMA_CREAM));

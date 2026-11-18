@@ -69,7 +69,10 @@ public class RayTrace
 				break;
 
 			for(Entity ent : ents)
-				if(!hit.containsKey(ent) && intersects(position, ent.getBoundingBox().getMin(), ent.getBoundingBox().getMax()))
+				if(!hit.containsKey(ent) && (ent instanceof org.bukkit.entity.LivingEntity living
+						&& com.theprogrammingturkey.comz.game.Crawlers.isCrawler(ent)
+						? com.theprogrammingturkey.comz.game.Crawlers.contains(living, position)
+						: intersects(position, ent.getBoundingBox().getMin(), ent.getBoundingBox().getMax())))
 					hit.put(ent, new RayEntityIntersection(ent, position));
 		}
 		return new ArrayList<>(hit.values());

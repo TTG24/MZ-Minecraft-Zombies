@@ -24,7 +24,6 @@ import com.theprogrammingturkey.comz.economy.PointManager;
 import com.theprogrammingturkey.comz.game.Game;
 import com.theprogrammingturkey.comz.spawning.SpawnPoint;
 import com.theprogrammingturkey.comz.util.BlockUtils;
-import com.theprogrammingturkey.comz.util.PaperPathfinding;
 import com.theprogrammingturkey.comz.util.PeacefulArenaMobs;
 
 public class Barrier
@@ -32,8 +31,6 @@ public class Barrier
 	// A zombie must be next to a barrier block to break it: within this horizontal distance (in blocks) of the
 	// block's centre, which covers touching it from the side or diagonally, and at about the same height
 	private static final double BREAK_RANGE_SQUARED = 1.5 * 1.5;
-	// A held back zombie is let go to fight if a player gets this close (in blocks)
-	private static final double PLAYER_RELEASE_RANGE_SQUARED = 4 * 4;
 
 	private final Map<Block, Material> blocks = new HashMap<>();
 	/** Each block's full state (BlockUtils.dataOf), so it is put back exactly as built. Missing: the material alone. */
@@ -400,8 +397,7 @@ public class Barrier
 			breaking = true;
 			int loopId = ++breakingLoopId;
 			COMZombies.scheduleTask(60, () -> breakTick(loopId));
-			if(PaperPathfinding.isAvailable())
-				COMZombies.scheduleTask(1, () -> steerTick(loopId));
+			COMZombies.scheduleTask(1, () -> steerTick(loopId));
 		}
 	}
 
@@ -411,7 +407,7 @@ public class Barrier
 	 */
 	public boolean isHeldBack(Entity ent)
 	{
-		return PaperPathfinding.isAvailable() && ents.contains(ent) && !releasedZombies.contains(ent);
+		return ents.contains(ent) && !releasedZombies.contains(ent);
 	}
 
 	/**
@@ -464,10 +460,6 @@ public class Barrier
 			// A player within reach of the zombie gets hit, even with the barrier between them.
 			hurtPlayerInReach(mob);
 
-			// Undo any target the plugin gave it (e.g. after being shot) and keep it walking to the barrier
-			mob.setTarget(null);
-			if(!isAtBarrier(mob))
-				steerToBarrier(mob);
 		}
 
 		COMZombies.scheduleTask(10, () -> steerTick(loopId));
@@ -502,14 +494,6 @@ public class Barrier
 	private void release(Mob mob)
 	{
 		releasedZombies.add(mob);
-		mob.setTarget(game.spawnManager.getNearestPlayer(mob));
-	}
-
-	private boolean isPlayerNear(Entity ent)
-	{
-		Player player = game.spawnManager.getNearestPlayer(ent);
-		return player != null && player.getLocation().distanceSquared(ent.getLocation()) <= PLAYER_RELEASE_RANGE_SQUARED
-				&& ((Mob) ent).hasLineOfSight(player);
 	}
 
 	/** The spot beside this barrier, on the zombie's own side, that it is walking to (the nearest one). */
@@ -546,29 +530,6 @@ public class Barrier
 		}
 		approaches.sort(Comparator.comparingDouble(loc -> loc.distanceSquared(mob.getLocation())));
 		return approaches;
-	}
-
-	private void steerToBarrier(Mob mob)
-	{
-		// Being walked down a drop on the way (ZombiePathing): leave it to that
-		if(com.theprogrammingturkey.comz.game.ZombiePathing.isSteering(mob))
-			return;
-		// Aim at walkable spaces beside the barrier, rather than inside a solid barrier block.
-		List<Location> approaches = ownSideApproaches(mob);
-		// Already on its way to one of them: leave its path alone (a new one is a full path search, every half second for
-		// every zombie walking to a barrier)
-		var current = mob.getPathfinder().getCurrentPath();
-		if(current != null && current.getFinalPoint() != null)
-		{
-			Location end = current.getFinalPoint();
-			for(Location approach : approaches)
-				if(approach.getWorld() == end.getWorld() && approach.distanceSquared(end) < 2.25)
-					return;
-		}
-		for(Location approach : approaches)
-			if(PaperPathfinding.moveTo(mob, approach))
-				return;
-		PaperPathfinding.moveTo(mob, getNearestBlockCenter(mob));
 	}
 
 	/**

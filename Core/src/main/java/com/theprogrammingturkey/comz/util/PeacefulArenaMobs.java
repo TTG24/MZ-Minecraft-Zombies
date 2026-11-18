@@ -38,13 +38,6 @@ public final class PeacefulArenaMobs
 
 	private PeacefulArenaMobs() {}
 
-	/** Vanilla refuses player targets on Peaceful, even with the despawn override. */
-	public static boolean needsControlledCombat(Mob mob)
-	{
-		return mob.getWorld().getDifficulty() == Difficulty.PEACEFUL
-				&& COMZombies.getPlugin().getConfig().getBoolean("config.gameSettings.zombiesInPeaceful", true);
-	}
-
 	/** True while a hit the plugin itself decided on (already checked with ZombiePathing.canHit) is being dealt. */
 	public static boolean dealingCheckedHit = false;
 

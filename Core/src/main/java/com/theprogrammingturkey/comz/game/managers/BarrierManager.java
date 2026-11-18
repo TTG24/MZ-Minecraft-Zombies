@@ -251,7 +251,7 @@ public class BarrierManager
 
 	/**
 	 * Which barrier a zombie that has just spawned goes for: of the barriers near it, the one that makes its way to the
-	 * nearest player shortest (see {@link #routeCost}), and that it can actually walk up to (checked with the pathfinder).
+	 * nearest player shortest (see {@link #routeCost}), and that it can actually walk up to (checked with MZ's planner).
 	 * An intact one it breaks; an already broken one (later rounds) it just walks to and goes through. Zombies stick to this
 	 * and do not go for the players until they are through it; {@link #betterBarrier} moves them to another barrier when the
 	 * player moves.
@@ -287,16 +287,13 @@ public class BarrierManager
 		// (A zombie with an open way to the player already went for the player above, so there is no open-way choice to make
 		// here; the check that used to be here ran another full path search per spawn and could never pass.)
 
-		if(com.theprogrammingturkey.comz.util.PaperPathfinding.isAvailable())
+		int tried = 0;
+		for(Barrier b : ranked)
 		{
-			int tried = 0;
-			for(Barrier b : ranked)
-			{
-				if(tried++ >= 5)
-					break;
-				if(canWalkUpTo(mob, b))
-					return b;
-			}
+			if(tried++ >= 5)
+				break;
+			if(canWalkUpTo(mob, b))
+				return b;
 		}
 		return ranked.get(0);
 	}
@@ -334,12 +331,12 @@ public class BarrierManager
 				best = b;
 			}
 		}
-		if(best != null && com.theprogrammingturkey.comz.util.PaperPathfinding.isAvailable() && !canWalkUpTo(mob, best))
+		if(best != null && !canWalkUpTo(mob, best))
 			return null;
 		return best;
 	}
 
-	/** Is there a route for the mob to a spot beside the barrier? */
+	/** Is there a route for the mob to a spot beside the barrier (MZ's planner, the one it walks with)? */
 	private boolean canWalkUpTo(org.bukkit.entity.Mob mob, Barrier barrier)
 	{
 		int tried = 0;
@@ -347,7 +344,7 @@ public class BarrierManager
 		{
 			if(tried++ >= 4)
 				break;
-			if(com.theprogrammingturkey.comz.util.PaperPathfinding.canReach(mob, approach))
+			if(com.theprogrammingturkey.comz.game.ZombiePathing.routeLength(mob, approach, null) >= 0)
 				return true;
 		}
 		return false;
@@ -355,46 +352,24 @@ public class BarrierManager
 
 	private final java.util.Random random = new java.util.Random();
 
-	/** Is there a route that really gets the mob to the location (not just near it, with something in between)? */
+	/** Is there a route that really gets the mob to the location (MZ's planner: BlockBlocker barriers are solid)? */
 	private static boolean reallyReaches(org.bukkit.entity.Mob mob, Location to)
 	{
-		if(!com.theprogrammingturkey.comz.util.PaperPathfinding.isAvailable())
-			return false;
-		com.destroystokyo.paper.entity.Pathfinder.PathResult path = mob.getPathfinder().findPath(to);
-		return path != null && path.canReachFinalPoint() && path.getFinalPoint() != null
-				&& com.theprogrammingturkey.comz.game.ZombiePathing.arrivesAt(path.getFinalPoint(), to);
+		return com.theprogrammingturkey.comz.game.ZombiePathing.routeLength(mob, to, null) >= 0;
 	}
 
 	/**
-	 * How long the zombie's own walk to the location is when it needs no barrier at all: a real route that does not pass
-	 * through any barrier of this arena (broken or not) nor any BlockBlocker barrier.
+	 * How long the zombie's own walk to the location is when it needs no barrier at all: a route (MZ's planner) that does
+	 * not go through any barrier of this arena, broken or not, nor any BlockBlocker barrier.
 	 *
 	 * @return the length in blocks, or -1 when there is no such route
 	 */
 	private double openWayLength(org.bukkit.entity.Mob mob, Location to)
 	{
-		if(!com.theprogrammingturkey.comz.util.PaperPathfinding.isAvailable())
-			return -1;
-		com.destroystokyo.paper.entity.Pathfinder.PathResult path = mob.getPathfinder().findPath(to);
-		if(path == null || !path.canReachFinalPoint() || path.getFinalPoint() == null
-				|| !com.theprogrammingturkey.comz.game.ZombiePathing.arrivesAt(path.getFinalPoint(), to))
-			return -1;
 		java.util.Set<Block> barrierBlocks = new java.util.HashSet<>();
 		for(Barrier b : barriers)
 			barrierBlocks.addAll(b.getBlocks());
-		double length = 0;
-		Location previous = mob.getLocation();
-		for(Location point : path.getPoints())
-		{
-			Block feet = point.getBlock();
-			if(barrierBlocks.contains(feet) || barrierBlocks.contains(feet.getRelative(org.bukkit.block.BlockFace.UP)))
-				return -1;
-			if(com.theprogrammingturkey.comz.game.ZombiePathing.pathStepBlocked(previous, point))
-				return -1;
-			length += previous.distance(point);
-			previous = point;
-		}
-		return length;
+		return com.theprogrammingturkey.comz.game.ZombiePathing.routeLength(mob, to, barrierBlocks);
 	}
 
 	/** A barrier other than {@code self} that the mob is currently touching (a broken one wins over an intact one), or null. */

@@ -12,8 +12,6 @@ import com.theprogrammingturkey.comz.game.Game.GameStatus;
 import com.theprogrammingturkey.comz.game.GameManager;
 import com.theprogrammingturkey.comz.game.features.Door;
 import com.theprogrammingturkey.comz.util.BlockUtils;
-import com.theprogrammingturkey.comz.util.PaperPathfinding;
-import com.theprogrammingturkey.comz.util.PeacefulArenaMobs;
 import com.theprogrammingturkey.comz.util.Util;
 import org.bukkit.Bukkit;
 import com.theprogrammingturkey.comz.util.Colors;
@@ -42,7 +40,6 @@ public class SpawnManager
 	private final Game game;
 	private final List<SpawnPoint> points = new ArrayList<>();
 	private final List<Mob> mobs = new ArrayList<>();
-	private final Map<Mob, Long> lastPeacefulAttack = new HashMap<>();
 	// Idle zombies: when each last hit a player (or a barrier, or was close to a player), and when it was last respawned
 	private final Map<Mob, Long> lastActive = new HashMap<>();
 	private final Map<Mob, Long> lastRespawn = new HashMap<>();
@@ -167,7 +164,6 @@ public class SpawnManager
 			return;
 
 		mobs.remove(mob);
-		lastPeacefulAttack.remove(mob);
 		lastActive.remove(mob);
 		lastRespawn.remove(mob);
 
@@ -335,10 +331,6 @@ public class SpawnManager
 			Mob ent = roundSpawner.spawnEntity(game, finalPoint, wave);
 			mobs.add(ent);
 
-			// Zombies held back at a barrier are walked to it instead of chasing players
-			if(!game.barrierManager.isHeldBack(ent))
-				ent.setTarget(getNearestPlayer(ent));
-
 			mobsSpawned++;
 			smartSpawn(wave);
 		});
@@ -356,19 +348,8 @@ public class SpawnManager
 				Mob mob = mobs.get(i);
 				if(mob.isDead())
 					removeEntity(mob);
-				else if(checkIdle(mob))
-					continue;
-				else if(!game.barrierManager.isHeldBack(mob) && !com.theprogrammingturkey.comz.game.ZombiePathing.isSteering(mob))
-				{
-					Player target = getNearestPlayer(mob);
-					if(PeacefulArenaMobs.needsControlledCombat(mob))
-						updatePeacefulCombat(mob, target);
-					else
-					{
-						lastPeacefulAttack.remove(mob);
-						mob.setTarget(target);
-					}
-				}
+				else
+					checkIdle(mob); // (ZombieBrain walks it and does its hitting)
 				if(game.getStatus() != GameStatus.INGAME)
 					return;
 			}
@@ -459,26 +440,12 @@ public class SpawnManager
 		Location at = point.getLocation().getBlock().getLocation().add(0.5, 0, 0.5);
 		mob.setTarget(null);
 		mob.teleport(at);
+		com.theprogrammingturkey.comz.game.ZombieBrain.forget(mob);
 		Barrier b = game.barrierManager.chooseBarrierFor(mob, point);
 		if(b != null)
 			b.initBarrier(mob);
 		if(mob instanceof org.bukkit.entity.Zombie z)
 			com.theprogrammingturkey.comz.game.ZombieRise.start(z, getNearestPlayer(mob));
-	}
-
-	private void updatePeacefulCombat(Mob mob, Player target)
-	{
-		if(target == null || !mob.isValid())
-			return;
-		PaperPathfinding.moveTo(mob, target.getLocation());
-		long now = System.nanoTime();
-		if(mob.getLocation().distanceSquared(target.getLocation()) <= 4
-				&& now - lastPeacefulAttack.getOrDefault(mob, 0L) >= 1_000_000_000L
-				&& com.theprogrammingturkey.comz.game.ZombiePathing.canHit(mob, target, null))
-		{
-			lastPeacefulAttack.put(mob, now);
-			PeacefulArenaMobs.attackPlayer(mob, target);
-		}
 	}
 
 	public Player getNearestPlayer(Entity e)
@@ -611,7 +578,6 @@ public class SpawnManager
 	{
 		this.mobs.clear();
 		// Per-zombie timers: a zombie that left the list another way would otherwise stay here (and keep its world loaded)
-		lastPeacefulAttack.clear();
 		lastActive.clear();
 		lastRespawn.clear();
 		noOpenSpawnWarned = false;

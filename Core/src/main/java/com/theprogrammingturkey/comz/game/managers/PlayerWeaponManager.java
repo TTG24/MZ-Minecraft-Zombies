@@ -213,6 +213,37 @@ public class PlayerWeaponManager
 		return false;
 	}
 
+	/** Gives the player up to {@code count} more grenades, never more than a full set (the grenade weapon's total ammo). */
+	public void addGrenades(int count)
+	{
+		Weapon grenade = WeaponManager.getWeapon("grenade");
+		if(grenade == null)
+			return;
+		WeaponInstance mine = null;
+		for(WeaponInstance weapon : weapons)
+			if(weapon.getBaseWeapon().getWeaponType().equals(WeaponType.GRENADE))
+				mine = weapon;
+		int have = 0;
+		for(ItemStack stack : player.getInventory().getStorageContents())
+			if(stack != null && stack.getType() == Material.SLIME_BALL)
+				have += stack.getAmount();
+		int now = Math.min(grenade.totalAmmo, have + count);
+		if(now <= have)
+			return;
+		if(mine == null)
+		{
+			addWeapon(grenade);
+			for(WeaponInstance weapon : weapons)
+				if(weapon.getBaseWeapon().getWeaponType().equals(WeaponType.GRENADE))
+					mine = weapon;
+			if(mine == null)
+				return;
+		}
+		mine.totalAmmo = now;
+		mine.updateWeapon();
+		player.updateInventory();
+	}
+
 	public void maxAmmo()
 	{
 		for(WeaponInstance weapon : weapons)

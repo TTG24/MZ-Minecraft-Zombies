@@ -7,9 +7,6 @@ import org.bukkit.entity.Mob;
 
 public abstract class RoundSpawner
 {
-	/** The largest value the follow range attribute accepts: as close to "infinite" as vanilla allows. */
-	public static final int MAX_FOLLOW_RANGE = 2048;
-
 	/**
 	 * True while this plugin spawns a round's zombie or hellhound. Protection plugins (WorldGuard's "mob-spawning: deny" on
 	 * the __global__ region, which instance worlds copy) cancel plugin spawns too, so the game would wait forever for zombies
@@ -34,17 +31,9 @@ public abstract class RoundSpawner
 
 	public abstract Mob spawnEntity(Game game, SpawnPoint loc, int wave);
 
-	public void setFollowDistance(Mob mob, int dist)
-	{
-		AttributeInstance attr = mob.getAttribute(ApiCompat.FOLLOW_RANGE);
-		if(attr != null)
-			attr.setBaseValue(Math.min(dist, MAX_FOLLOW_RANGE));
-	}
-
 	/**
-	 * The pathfinder only plans drops up to the mob's safe fall distance (3 blocks by default), so zombies refused to jump
-	 * down higher ledges and just stood at the edge. config.gameSettings.zombieSafeFallDistance raises it, and
-	 * zombieFallDamage (false by default) decides whether they still get hurt by the fall.
+	 * Falls of up to config.gameSettings.zombieSafeFallDistance blocks don't hurt (MZ's planner takes drops that deep), and
+	 * with zombieFallDamage false (the default) no fall does.
 	 */
 	public void setFallTolerance(Mob mob)
 	{

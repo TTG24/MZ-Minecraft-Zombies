@@ -116,15 +116,9 @@ public final class ZombieRise
 			return;
 		}
 		Location at = zombie.getLocation();
-		StringBuilder log = new StringBuilder();
 		for(Player player : zombie.getWorld().getPlayers())
-		{
-			boolean listens = player.getListeningPluginChannels().contains(CHANNEL);
-			log.append(' ').append(player.getName()).append(listens ? "(mod)" : "(no mod)");
-			if(player.getLocation().distanceSquared(at) <= RANGE * RANGE && listens)
+			if(player.getLocation().distanceSquared(at) <= RANGE * RANGE && player.getListeningPluginChannels().contains(CHANNEL))
 				player.sendPluginMessage(COMZombies.getPlugin(), CHANNEL, data);
-		}
-		COMZombies.log.info("[ZombieRise] zombie " + zombie.getEntityId() + " rising at " + at.toVector() + ", players:" + log);
 	}
 
 	private static void writeVarInt(DataOutputStream out, int value) throws IOException

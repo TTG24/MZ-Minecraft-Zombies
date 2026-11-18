@@ -51,10 +51,20 @@ public class OnOutsidePlayerInteractEvent implements Listener
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{
 			event.setCancelled(true);
-			// Q reloads: players without the client mod can't send R (the server never sees that key), and dropping is
-			// blocked in matches anyway. Next tick, once the cancelled drop has put the gun back in the hand.
-			org.bukkit.Bukkit.getScheduler().runTask(com.theprogrammingturkey.comz.COMZombies.getPlugin(),
-					() -> com.theprogrammingturkey.comz.listeners.WeaponListener.reloadHeldGun(player));
+			// Players without the client mod can't send R or G (the server never sees those keys), so for them Q reloads the
+			// held gun, or throws a grenade while holding the grenades. Mod players use R and G; Q does nothing for them.
+			// Next tick, once the cancelled drop has put the item back in the hand.
+			if(!player.getListeningPluginChannels().contains(com.theprogrammingturkey.comz.game.ZombieRise.CHANNEL))
+			{
+				boolean grenade = event.getItemDrop().getItemStack().getType() == org.bukkit.Material.SLIME_BALL;
+				org.bukkit.Bukkit.getScheduler().runTask(com.theprogrammingturkey.comz.COMZombies.getPlugin(), () ->
+				{
+					if(grenade)
+						com.theprogrammingturkey.comz.listeners.WeaponListener.throwGrenade(player);
+					else
+						com.theprogrammingturkey.comz.listeners.WeaponListener.reloadHeldGun(player);
+				});
+			}
 		}
 		Location loc = player.getLocation();
 		if(GameManager.INSTANCE.isLocationInGame(loc))
