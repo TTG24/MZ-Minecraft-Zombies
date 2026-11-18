@@ -33,6 +33,13 @@ public class RandomBox
 {
 	private int activeTask = -1;
 	private int teddyVelocityTask = -1;
+	/** Bumped by reset(): a roll step from an earlier spin sees a different value and stops. */
+	private int rollToken = 0;
+	/**
+	 * Ticks between gun swaps while the box rolls: very fast at first, slowing down to the final pick (about 5.3 s in all,
+	 * like the old even roll).
+	 */
+	private static final int[] ROLL_DELAYS = {1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 12, 14};
 	private final Location boxLoc;
 	private final BlockFace facing;
 	private Location chestLocation = null;
@@ -147,9 +154,10 @@ public class RandomBox
 		// The box opening sound, for everyone near it
 		boxLoc.getWorld().playSound(boxLoc, "mz:mysterybox", org.bukkit.SoundCategory.PLAYERS, 1f, 1f);
 
-		int taskID = COMZombies.scheduleTask(0, 10, new Runnable()
+		// After the roll: the pick (or teddy bear) and the pick-up countdown, every 10 ticks, from time 0
+		Runnable afterRoll = () -> activeTask = COMZombies.scheduleTask(0, 10, new Runnable()
 		{
-			int time = 10;
+			int time = 0;
 
 			@Override
 			public void run()
@@ -220,7 +228,32 @@ public class RandomBox
 			}
 		});
 
-		activeTask = taskID;
+		// The roll: a new random gun at each step, the steps further and further apart
+		final int token = ++rollToken;
+		Runnable[] step = new Runnable[1];
+		int[] index = {0};
+		step[0] = () ->
+		{
+			if(token != rollToken || !running)
+				return;
+			if(boxGame.getStatus() != Game.GameStatus.INGAME)
+			{
+				reset();
+				return;
+			}
+			if(index[0] >= ROLL_DELAYS.length)
+			{
+				afterRoll.run();
+				return;
+			}
+			weapon = WeaponManager.getRandomWeapon(false, boxGame.getPlayersWeapons(player));
+			item.setItemStack(weapon.getStack());
+			namePlate.customName(Colors.legacy(weapon.getName()));
+			if(item.getLocation().distanceSquared(center) > 0.0025)
+				item.teleport(center);
+			activeTask = COMZombies.scheduleTask(ROLL_DELAYS[index[0]++], step[0]);
+		};
+		activeTask = COMZombies.scheduleTask(ROLL_DELAYS[0], step[0]);
 	}
 
 	public boolean canActivate()
@@ -242,6 +275,7 @@ public class RandomBox
 
 	public void reset()
 	{
+		rollToken++;
 		if(teddyVelocityTask != -1) Bukkit.getScheduler().cancelTask(teddyVelocityTask);
 		teddyVelocityTask = -1;
 		gunSelected = false;
