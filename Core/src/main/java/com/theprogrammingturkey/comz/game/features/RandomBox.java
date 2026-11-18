@@ -125,7 +125,16 @@ public class RandomBox
 		else
 			itemLoc = boxLoc.clone().add(.5, .2, .5);
 
-		item = player.getWorld().dropItem(itemLoc, weapon.getStack());
+		// Frozen in the middle of the box: no random toss and no gravity (it used to land on or in the chest and get pushed out)
+		item = player.getWorld().dropItem(itemLoc, weapon.getStack(), it ->
+		{
+			it.setGravity(false);
+			it.setVelocity(new Vector(0, 0, 0));
+			it.setPickupDelay(Integer.MAX_VALUE);
+			it.setCanMobPickup(false);
+			it.setUnlimitedLifetime(true);
+		});
+		final Location center = itemLoc.clone();
 		namePlate = (ArmorStand) player.getWorld().spawnEntity(itemLoc.clone().add(0, -1.7, 0), EntityType.ARMOR_STAND);
 		namePlate.setVisible(false);
 		namePlate.setGravity(false);
@@ -151,9 +160,13 @@ public class RandomBox
 					reset();
 					return;
 				}
-				item.setTicksLived(5960);
-				item.setPickupDelay(1000);
-				item.setVelocity(new Vector(0, 0, 0));
+				// Back to the middle, unless the teddy bear is floating away
+				if(!isTeddyBear)
+				{
+					item.setVelocity(new Vector(0, 0, 0));
+					if(item.getLocation().distanceSquared(center) > 0.0025)
+						item.teleport(center);
+				}
 				if(boxGame.getStatus() == Game.GameStatus.INGAME)
 				{
 					if(time > 0)
