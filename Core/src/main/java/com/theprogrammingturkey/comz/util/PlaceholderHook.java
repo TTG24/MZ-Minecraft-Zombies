@@ -178,6 +178,8 @@ public class PlaceholderHook extends PlaceholderExpansion
 	 * %comz_round%, %comz_points%, %comz_zombies% (left this round), %comz_kills% (this match), %comz_players%
 	 * (in this game), %comz_playing% (in any game, server wide), %comz_games% (matches being played).
 	 * Game values are empty when the player isn't in one.
+	 * <br>%comz_best_points% / %comz_best_round%: the player's best ever. %comz_top_points% / %comz_top_round%: the server's
+	 * best ("Name - value"); add _name or _value for just one part.
 	 */
 	private String live(OfflinePlayer offline, String id)
 	{
@@ -195,6 +197,24 @@ public class PlaceholderHook extends PlaceholderExpansion
 					if(g.getStatus() == Game.GameStatus.INGAME)
 						n++;
 				return String.valueOf(n);
+			}
+			// Best ever: your own, and the server's top player ("Name - value", or just _name / _value)
+			case "best_points", "best_round" -> {
+				PlayerStats stats = offline == null ? null : Leaderboard.getPlayerStatFromPlayer(offline);
+				if(stats == null)
+					return "0";
+				return String.valueOf(id.equals("best_points") ? stats.getMostPoints() : stats.getHighestRound());
+			}
+			case "top_points", "top_points_name", "top_points_value", "top_round", "top_round_name", "top_round_value" -> {
+				StatsCategory cat = id.startsWith("top_points") ? StatsCategory.MOST_POINTS : StatsCategory.HIGHEST_ROUND;
+				PlayerStats top = Leaderboard.getPosX(cat, 0);
+				String value = top == null ? "0" : getStatForCategory(cat, top);
+				String name = top == null ? "Nobody yet" : top.getPlayerDisplay();
+				if(id.endsWith("_name"))
+					return name;
+				if(id.endsWith("_value"))
+					return value;
+				return name + " - " + value;
 			}
 			case "ingame", "game", "state", "round", "points", "zombies", "kills", "players" -> {}
 			default -> { return null; }
