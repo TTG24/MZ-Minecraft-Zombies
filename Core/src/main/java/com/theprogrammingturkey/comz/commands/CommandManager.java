@@ -320,6 +320,11 @@ public class CommandManager implements TabExecutor
 		// Accessibility options (hold-to-repair, teammate glow), for every player:
 		commandList.put("access", new AccessCommand(null));
 		commandList.put("accessibility", commandList.get("access"));
+
+		// Clickable menus: everything the player may use; the staff menu with sections for setup and game tools
+		commandList.put("menu", new MenuCommand(false));
+		commandList.put("admin", new MenuCommand(true));
+		commandList.put("staff", commandList.get("admin"));
 	}
 
 	/** Setup/edit commands whose first argument is the arena: it may be left out when standing in the arena. */
@@ -403,6 +408,12 @@ public class CommandManager implements TabExecutor
 			Player player = (Player) sender;
 
 			if(args.length == 0)
+			{
+				// Just /z: the menu
+				commandList.get("menu").onCommand(player, new String[] {"menu"});
+				return true;
+			}
+			if(args[0].equalsIgnoreCase("about"))
 			{
 				CommandUtil.sendMessageToPlayer(player, Colors.RED + "MinecraftZombies" + Colors.GRAY + " by " + Colors.RED + "TTG24" + Colors.GRAY + ", based on Call of Minecraft: Zombies by " + Colors.RED + "IModZombies4Fun, Turkey2349 and Smeths" + Colors.GRAY + "!");
 				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type /zombies help for a list of commands!");
