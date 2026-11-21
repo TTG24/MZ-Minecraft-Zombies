@@ -1,245 +1,110 @@
 # MZ-Minecraft-Zombies
-A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
-Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
+**MinecraftZombies**: round-based zombie survival for Paper/Purpur servers, inspired by Call of Duty Zombies.
+Players hold barriers, buy doors and weapons, hit the mystery box and survive as long as they can.
 
-## Release 1.4.1
+A fork of [Call of Minecraft: Zombies](https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies) by TurkeyDev
+(MIT License). Changes per version are in [RELEASE_NOTES.md](RELEASE_NOTES.md), and the jars are on the
+[releases page](https://github.com/TTG24/MZ-Minecraft-Zombies/releases).
 
-**Fix.** `/z access` teammate glow works on Minecraft 26.3.
+## Features
 
-### Release 1.4.0
+- **Zombie AI.** Arena zombies and hellhounds use MZ's own route planner: they pick barriers past opened doors,
+  hold at a barrier until it breaks, and never hit through fences, walls or slabs.
+- **Crawlers, grenades and gore.** Grenades can blow a zombie's legs off and leave it crawling. Players start with
+  4 grenades and get 2 more each round.
+- **COD-style economy.** Points for barrier repairs and kills (knife 130, headshot 100, body 60, configurable),
+  doors, perks, Pack-a-Punch and a mystery box.
+- **Press F to interact.** Doors, barriers, power switches, mystery boxes, perk machines and Pack-a-Punch work from
+  up to 3 blocks away with Swap Item With Offhand, and show an on-screen prompt. Game signs are optional.
+- **Menus and accessibility.** `/z` opens a clickable menu (`/z admin` for staff) that shows only the commands you
+  may use. `/z access` offers hold-or-toggle barrier repair and a teammate glow in a colour you pick.
+- **Many matches per map.** One arena can run several independent copies at once, plus private solo copies.
+- **Quality of life.** A 5-minute rejoin window, a game-over leaderboard, round music, configurable signs and
+  sounds, and daily backups.
 
-**Zombie AI.** Arena zombies and hellhounds run on MZ's own AI and route planner ([BlockBlocker](https://github.com/TTG24/BlockBlocker)
-barriers are solid, doors link the barriers of their room, no hitting through fences or walls).
+## Requirements
 
-**Crawlers, grenades and gore.** Grenades can blow a zombie's legs off, leaving a crawler.
-Players start with 4 grenades and get 2 back each round (Q without the [MZ-Movement](https://github.com/TTG24/MZ-Movement) mod, G with it).
+| | |
+|---|---|
+| Server | **Paper** or a fork such as **Purpur**, Minecraft 26.3 |
+| Java | 25 |
+| Optional | [FastAsyncWorldEdit](https://www.spigotmc.org/resources/fastasyncworldedit.13932/) (or WorldEdit) for arena copies, WorldGuard for arena regions, Vault, PlaceholderAPI |
+| Recommended | [BlockBlocker](https://github.com/TTG24/BlockBlocker) for barrier collision, and the [MZ-Movement](https://github.com/TTG24/MZ-Movement) client mod for players |
 
-**Players.** Clickable `/z` menu and `/z admin` staff menu, `/z access` accessibility options,
-COD kill points, a 5-minute rejoin window and a smoother mystery box roll.
+## Installation
 
-**Server.** On-demand arena copies (4 ready + 1 spare) and daily backups. See `RELEASE_NOTES.md`.
+1. Download `MinecraftZombies-<version>.jar` from the [releases page](https://github.com/TTG24/MZ-Minecraft-Zombies/releases).
+2. Put it in `plugins/` (keep only one MinecraftZombies jar) and restart the server.
+3. Edit `plugins/MinecraftZombies/config.yml` if needed, then run `/z reload` between games. A reload ends
+   games that are running.
 
-### Previous release 1.3.1
+## Commands
 
-**Game over.** When a match genuinely ends (everyone down), a `mz:game_over` stinger from the
-bundled resource pack plays for everyone in the arena, and surviving players are held in
-spectator mode at the spectate warp for `config.gameSettings.gameOverSpectateSeconds` (default
-`30`) before being returned to the spot they joined from. Set the value to `0` to skip the
-hold. Re-read on `/zombies reload`.
+`/zombies` has the aliases `/z`, `/zo` and `/zom`. Run `/z` for the clickable menu or `/z help` for the full list.
 
-**Game over leaderboard.** While players spectate after a match, a **Game Over** sidebar shows
-the round reached plus one line per player with their points, kills, revives and deaths, sorted
-by kills (then points). Stats are tracked per match and captured the moment it ends, so they are
-independent of the lifetime `/zombies leaderboard` totals. `/zombies leave` (or `/zombies l`)
-skips the wait and sends a watcher home; the last one to leave tears a solo instance down
-immediately.
+| Command | What it does |
+|---|---|
+| `/z join <arena>` | Join a match (also from a join sign) |
+| `/z solo <arena>` | Play a private one-player copy of an arena |
+| `/z leave` / `/z rejoin` | Leave a match / get back into it within 5 minutes |
+| `/z spectate <arena>` | Watch a match |
+| `/z access` | Accessibility options |
+| `/z leaderboard` | Lifetime stats |
+| `/z admin` | Staff menu |
+| `/z createarena <name>` | Create an arena, then follow the chat prompts |
+| `/z adddoor`, `/z addbarrier`, `/z editspawns` | Set up doors, barriers and zombie spawns |
+| `/z showall` | Outline everything set up in an arena |
+| `/z instances <arena> <count>` | Run several copies of one arena |
+| `/z setregion <arena> <regionId>` | Link a WorldGuard region as the arena's shape |
+| `/z start` / `/z end <arena>` | Force a match to start / end |
 
-**Fix.** Solo arenas no longer unload while a player is still on the post-match board.
+## Setting up an arena
 
-Servers using the 1.3 resource pack should update to the republished pack for the new
-`mz:game_over` sound.
+1. `/z createarena <name>` and follow the prompts. Only the game warp (`gw`) and spectator warp (`sw`) are
+   required. Without a lobby warp (`lw`), the match starts as soon as enough players join, with a 3-second spawn
+   freeze.
+2. Add doors and barriers. Select the blocks, type `done`, select their spawn points, type `done` again, then enter
+   the price (`POWER:PRICE` for powered doors) or the repair reward. No signs are needed.
+3. Place machines (power switch, perks, mystery box, Pack-a-Punch) with the usual game signs. Signs can be hidden
+   afterwards with `/z signs`, and the machines keep working with F.
+4. Check everything with `/z showall`, then `/z enable <arena>`.
 
-### Previous release 1.3
+Prompts and messages are set under `config.interaction`, `config.doorProximity` and `config.barrierProximity`.
+They use `&` colour codes and placeholders such as `{key}`, `{price}` and `{missing}`. Set a message to `''` to
+hide it.
 
-**Round music.** A bundled server resource pack (source in the repo's `resourcepack/` folder)
-plays a stinger when each round starts and ends. Point your `server.properties` at the pack and
-tune `config.gameSettings.roundMusicVolume` (`0` disables it). Clients without the pack hear
-nothing — the built-in round sounds still play — so it is optional on the server side too.
-Replace the default stingers with your own `.ogg` files; `resourcepack/README.md` covers the
-full procedure, including encoding from mp3.
+## Several matches on one map
 
-**Configurable barrier sounds.** `config.gameSettings.barrierSounds` sets the zombie damage
-sound (a list, cycled in order for variety), the break sound and the player repair sound. Any
-valid Minecraft sound name works, an empty value mutes that sound, and invalid names fall back
-to the defaults with a console warning. Re-read on `/zombies reload`.
+`/z instances Hospital 3` followed by a restart or `/z reload` prepares three independent copies of the arena
+(`Hospital~1`, `Hospital~2`, ...). Players still use `/z join Hospital`, and busy copies queue players in join
+order. The original arena becomes the template you edit, and changes are applied on the next reload.
 
-**Solo arenas.** `/zombies solo <arena>` (or `/zombies js <arena>`) creates a private,
-one-player copy of any fully-configured arena and drops you in with an instant start. The copy
-is destroyed automatically the moment the arena empties (you die and leave, quit, or the match
-ends), so nothing is left behind. Dying only sends you to the spectate area. Toggle with
-`config.instances.soloInstances`; requires FastAsyncWorldEdit or WorldEdit.
-
-**Late joins for lobby-less arenas.** `config.gameSettings.lateJoinRound` (default `5`) lets
-players join a running instant-start match with `/zombies join` or a join sign while the round
-is below that number — they spawn in with the same 3-second freeze and fading blindness.
-After the limit they spectate as before; set `0` to disable.
-
-**Fading blindness.** The 3-second spawn freeze now starts with a full-strength blindness
-overlay that fades away in steps and is removed exactly when the freeze ends. Applies to
-instant-start arena openings and to late joiners.
-
-**Instance decorations.** Instance copies now include decorative entities from the template —
-armor stands, paintings, item frames, boats, minecarts and passive mobs — and those
-decorations are protected from damage and right-click interaction in instance worlds. Live
-zombies, dropped items, XP orbs and projectiles are never copied.
-
-#### Previous release 1.2.1
-
-**Configurable starting armor.** `config.gameSettings.startingArmor` (default `true`) controls
-whether players join wearing the default unbreakable leather armor. Set it to `false` to let
-players start with no armor. Re-read on `/zombies reload`.
-
-**Optional lobby warp.** The lobby warp (`lw`) is no longer required when setting up an arena —
-only the game warp (`gw`) and spectator warp (`sw`) are. Without a lobby, players wait at the
-game warp before the match. Type `rlw` during arena setup to remove a lobby from an existing
-arena.
-
-**Instant start with spawn freeze.** Arenas without a lobby start immediately once enough
-players have joined, skipping the start countdown. At the start, players are frozen in place
-for 3 seconds: they can look around, but movement and jumping snap them back to their spawn
-spot. Arenas with a lobby are unaffected.
-
-## What this fork changes
-
-- **One jar for 1.21 and newer.** The per-version NMS modules are replaced by a single module that only uses the
-  Bukkit API. The compatibility layer targets Minecraft 1.21 and newer; not every server/client combination has been tested.
-- **WorldGuard arena regions.** Use `/zombies setregion <arena> <regionId>` to link an existing region in the arena's
-  world. Spawns, hounds, and player containment use its shape. `/zombies setregion <arena>` shows the link;
-  `/zombies setregion <arena> none` clears it. Requires `zombies.setregion`. WorldGuard is optional; unavailable
-  regions fall back to the arena's min/max bounds.
-- **Configurable signs.** The text on every game sign (guns, perks, doors, mystery box, barriers, join signs and more)
-  is set in the `signs` section of `config.yml`. Signs are recognised by their location, so the text can be anything.
-- **Smarter barriers.** Zombies have to be right next to a barrier to break it, and on Paper they are walked to their
-  barrier and held there until it breaks (see [Server software](#server-software)).
-- **Fixes**, including: barriers letting players through at negative coordinates, zombies breaking barriers from far
-  away, barrier cracks disappearing between rounds, the power switch never working, kit round rewards never firing,
-  and the gun zoom getting stuck.
-
-## Nearby interactions and setup
-
-Press Swap Item With Offhand (F by default) within 3 blocks to use a nearby door, barrier, or machine.
-For barriers, one press starts repairing one stage per second and awards points for each stage.
-Press again or move out of range to stop. Barriers start fully repaired.
-
-Door and barrier setup no longer asks for signs. Select the blocks, type `done`, select spawn points,
-and type `done` again. Then enter the door price (`POWER:PRICE` for powered doors) or barrier repair reward.
-Existing arena signs remain supported. Removal commands now let you click a door/barrier block with the
-wooden sword instead of requiring a sign.
-
-Nearby door and barrier prompts are customizable in `plugins/MinecraftZombies/config.yml` under
-`config.doorProximity.tooltip` and `config.barrierProximity.tooltip`. Missing settings are added on startup.
-Edit the message values using `&` color codes, or set a message to `''` to hide it. Door messages support
-`{key}` and `{price}`, plus `{missing}` in `no_funds`; barrier messages support `{key}`.
-Apply edits by restarting or running `/zombies reload` between games (reloading ends active games).
-
-Swap Item With Offhand (F by default) also activates nearby power switches, mystery boxes, perk machines,
-and Pack-a-Punch. The closest feature supplies the prompt and action; an ongoing barrier repair takes
-priority so pressing the key again stops it. Mystery boxes support both buying a roll and picking up your
-weapon, including fire sale prices. Existing machine locations are used; set them up with the usual game
-signs. You do not have to click the signs to interact.
-
-Customize `config.interaction.key` for the displayed key label. Players change the actual key using
-Minecraft Controls → Swap Item With Offhand. Each new machine type under `config.interaction` has its own
-`enabled`, `radius` (default 3 blocks), and `tooltip` settings. Machine messages support `{key}`, `{price}`,
-`{missing}`, and `{perk}` for perk names. Existing door/barrier prompt settings still work.
-
-## Multiple matches on one arena template
-
-Configure an arena normally, then use `/zombies instances Hospital 3` (requires
-`zombies.createarena`). Restart or run `/zombies reload` **between games** to prepare
-three independent copies. Players use `/zombies join Hospital`; existing join signs
-for Hospital also route to the copies. Busy pools queue players in join order;
-`/zombies leave` cancels a queue. Joining another match cancels the old queue.
-Queues are cleared on reload/restart. Instances inherit the template's join permission.
-
-Each copy has its own rounds, players, mobs, points, power and machines. The original
-arena becomes a setup template and cannot host matches while its pool is enabled.
-Copies appear as `Hospital~1`, `Hospital~2`, etc. Administrators can target these names
-with the existing start/end commands. Disabling/enabling Hospital affects its whole pool.
-Configure and edit the original arena; apply changes with restart/reload. Runtime copies
-are excluded from `arenas.json`. Set the count to `0` and reload to return to a normal arena.
-
-Instances require **FastAsyncWorldEdit** (recommended) or **WorldEdit**. Each copy is a blank void
-world containing only the arena's inclusive **two-corner box**, at its original coordinates. The
-snapshot includes blocks, block entities (such as containers), entities and biomes. No terrain or
-structures generate outside the selection, including in Nether/End instances. Difficulty, time and
-game rules come from the template world. Ordinary arenas without instances do not require either plugin.
-
-**FastAsyncWorldEdit is the recommended plugin.** It is a fork of WorldEdit that provides the same
-API plus an asynchronous block-queue engine, so arena copies run on its faster, lower-memory engine
-when FAWE is installed. Install FAWE instead of WorldEdit (they both provide the same
-`com.sk89q.worldedit` package and are not meant to run side by side). WorldGuard works unchanged
-alongside FAWE. If only WorldEdit is present, the plugin still works but each copy runs
-synchronously on the server thread and the console logs a recommendation to install FAWE.
-
-Include the arena's floor, walls, warps, spawn points, doors and machines within the two corners.
-Configured arena locations outside the box cause preparation to fail with a console explanation.
-The map is captured once per template and pasted into each slot at startup/reload. The default
-volume limit is 5,000,000 blocks, including air; adjust `config.instances.maxCopyBlocks` if needed.
-The copy is applied in order and each instance is only opened after its blocks are fully written.
-With FAWE this runs through its fast engine; with WorldEdit only, it runs on the server thread, so
-large selections or many slots can still cause a pause. Start with a few copies and measure server
-load; the allowed range is 0–16 per template.
-
-WorldGuard is optional. When installed, each instance receives an independent copy of all
-regions in the template world: cuboids, polygons, global regions, priorities, owners, members,
-parent relationships and flags. Link your arena normally with
-`/zombies setregion Hospital hospital_region`, then configure the instance count. Region IDs
-and coordinates stay the same in each copy, so the linked shape controls arena containment.
-The two-corner box controls which map blocks are copied, independently of the linked region.
-Teleport/spawn flag destinations inside the template world are remapped to the instance;
-destinations in other worlds stay unchanged. Changes to a template's regions are applied on
-restart/reload. Existing instance region data is replaced during preparation. If a linked
-region is missing or WorldGuard region copying fails, affected copies are unavailable and
-the server logs explain why. WorldGuard must remain enabled for linked instance arenas.
-WorldGuard's per-world configuration files and other plugins' world settings are not copied.
-
-Between matches the plugin performs its normal door/barrier/mob/machine reset and reuses
-the same world. The selected map is restored on startup/reload, not after every match;
-arbitrary terrain changes from other plugins are not undone between matches. Instance world
-directories named `mz_instance_*` are plugin-owned disposable copies. They are unloaded on
-shutdown and rebuilt on next use from an empty directory and the selected map snapshot.
-Only copies carrying the matching ownership marker can be replaced or deleted. Setting the count
-to `0` removes all owned slots, including older staging directories, on the next restart/reload.
-Loaded worlds are kept if unloading fails; check the console and retry after restart. Reducing
-the count to a nonzero value leaves unused directories on disk.
+- Needs FastAsyncWorldEdit (recommended) or WorldEdit. Each copy is a void world holding only the arena's
+  two-corner box at its original coordinates, so keep every warp, spawn, door and machine inside that box.
+- Copies are kept ready on demand (4 ready plus 1 spare) and pasted in slices so the server doesn't freeze. The
+  size limit is `config.instances.maxCopyBlocks` (default 5,000,000 blocks).
+- With WorldGuard, each copy gets the template world's regions, so a linked region still controls the arena's
+  shape.
+- `mz_instance_*` world folders belong to the plugin and are rebuilt as needed. Set the count to `0` and reload
+  to remove them.
 
 ## Building
 
-From the project folder run `./gradlew build` (`.\gradlew.bat build` on Windows). The plugin jar is
-created in `Core/build/libs`. No BuildTools run is needed.
+```
+./gradlew build        # .\gradlew.bat build on Windows
+```
 
-The Gradle daemon runs on JDK 21; the Java 25 toolchain required by the Paper 26.x API is
-picked up automatically. If neither JDK 21 nor JDK 25 is installed locally, Gradle downloads
-a Temurin toolchain on the first build (Foojay resolver in `settings.gradle`).
-
-## Server software
-
-Servers need Java 21 for 1.21.x, or Java 25 for 26.x.
-
-Arena zombies can survive Peaceful on Paper/Purpur with the per-mob Peaceful override, including 26.3.
-This is enabled by `config.gameSettings.zombiesInPeaceful` and only affects arena zombies. The world's
-difficulty stays unchanged. Spigot does not expose this override; the 26.2 client also does not support it.
-
-**Paper (or a fork such as Purpur) is recommended.** In addition to Peaceful support, on Paper,
-zombies that spawn behind a barrier are walked to it and held there until they break it down. Spigot has no
-pathfinding API for this, so there zombies simply chase the nearest player. On Spigot, build maps so a barrier is the
-only way out of a spawn room, or zombies can get stuck at a closer wall and never reach the barrier.
-
----
-
-*The original project README follows.*
-
-# Call Of MineCraft: Zombies
-COMZ, is a Bukkit plugin that adds the Zombies minigame from the Call Of Duty© Franchise
-
-BukkitDev page: https://www.curseforge.com/minecraft/bukkit-plugins/call-duty-zombies
-
-
-### Contributing:
-For those interested in contributing simply pull down the master branch, add your changes and make a PR! I'm not overly
-stringent on formatting, just try and keep the same style that you see in the code, or when in doubt just ask!
-
-This is a
-gradle based project, so to make your life easier I recommend importing the project as such in your IDE. To build the
-plugin, simple run `gradlew build` on the root folder and then the plugin jar should be found in `Core/build/libs` when
-the build completes.
-
-All core code that you will ikely need to edit will be located inside the `Core` module, but version compatibility code
-can be found in the NMS Support folder and then the corresponding version module.
+The jar is written to `Core/build/libs`. Gradle runs on JDK 21 and compiles with a Java 25 toolchain, which it
+downloads automatically if it isn't installed.
 
 ## Related projects
 
 - [BlockBlocker](https://github.com/TTG24/BlockBlocker): server plugin for invisible barriers that block players and mobs.
 - [MZ-Movement](https://github.com/TTG24/MZ-Movement): the Fabric client mod (tactical movement, zombie animations, crawlers, gore).
+
+## Credits and license
+
+Based on [Call of Minecraft: Zombies](https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies) by TurkeyDev,
+released under the MIT License. Contributions are welcome: open a pull request, and keep to the style of the
+surrounding code.
