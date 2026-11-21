@@ -65,6 +65,13 @@ public class PointManager
 		playersPoints.remove(player.getUniqueId());
 	}
 
+	/** Points the player has earned in this match (0 when not in one). */
+	public int getPlayersEarned(Player player)
+	{
+		PlayerPoints p = playersPoints.get(player.getUniqueId());
+		return p != null ? p.getEarned() : 0;
+	}
+
 	public int getPlayersPoints(Player player)
 	{
 		PlayerPoints p = playersPoints.get(player.getUniqueId());

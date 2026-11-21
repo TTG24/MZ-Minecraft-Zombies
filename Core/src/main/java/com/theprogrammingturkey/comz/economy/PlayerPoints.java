@@ -7,6 +7,8 @@ import com.theprogrammingturkey.comz.COMZombies;
 public class PlayerPoints
 {
 	private int points;
+	/** Every point earned this match (spending doesn't take it back; the starting points don't count): the points record. */
+	private int earned;
 	private final Player player;
 
 	public PlayerPoints(Player player, int points)
@@ -19,6 +21,8 @@ public class PlayerPoints
 	public void addPoints(int amount)
 	{
 		points = points + amount;
+		if(amount > 0)
+			earned += amount;
 	}
 
 	// Checks to see if the player can withdraw an amount of cash
@@ -73,6 +77,11 @@ public class PlayerPoints
 	public int getPoints()
 	{
 		return points;
+	}
+
+	public int getEarned()
+	{
+		return earned;
 	}
 
 	public void setPoints(int points)

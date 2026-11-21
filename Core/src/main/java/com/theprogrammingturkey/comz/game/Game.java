@@ -1166,7 +1166,8 @@ public class Game
 		if(stats.getHighestRound() < this.waveNumber)
 			stats.setHighestRound(this.waveNumber);
 
-		int playerPoints = PointManager.INSTANCE.getPlayersPoints(player);
+		// The record is the total earned in the match, not what was left unspent at the end
+		int playerPoints = PointManager.INSTANCE.getPlayersEarned(player);
 		if(stats.getMostPoints() < playerPoints)
 			stats.setMostPoints(playerPoints);
 
@@ -1431,8 +1432,10 @@ public class Game
 					&& (v.isInGame() || v.isSpectating() || v.isDead());
 			if(v.isInGame() || v.hasLeftGame() || v.isDead())
 			{
-				PointManager.INSTANCE.playerLeaveGame(player);
+				// Record their best (round, points) before their points are cleared: the other way round every match
+				// recorded the starting 500, so the points record never moved
 				removePlayerActions(player);
+				PointManager.INSTANCE.playerLeaveGame(player);
 				com.theprogrammingturkey.comz.game.managers.DoorProximityManager.INSTANCE.clearPlayer(player);
 			}
 			if(linger)

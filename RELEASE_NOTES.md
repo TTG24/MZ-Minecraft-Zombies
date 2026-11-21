@@ -1,3 +1,12 @@
+# MinecraftZombies 1.4.4
+
+## The points record works
+
+- The server's points record (and each player's best, `%comz_best_points%` / `%comz_top_points%`) never moved: the
+  points were cleared before they were recorded, so every match saved the starting 500. It now records the **total
+  points earned in the match** (spending doesn't lower it, the starting points don't count). Records from before stay
+  at 500 until beaten.
+
 # MinecraftZombies 1.4.3
 
 ## Zombies still come for you
