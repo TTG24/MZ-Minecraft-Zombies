@@ -87,9 +87,16 @@ public class PerkMachineSign implements IGameSign
 		Bukkit.getPluginManager().callEvent(new PlayerPerkPurchaseEvent(player, perk));
 		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You now have " + perk.toString().toLowerCase() + "!");
 		int slot = game.perkManager.getAvailablePerkSlot(player);
-		perk.initialEffect(player, perk, slot);
-		if(perk.equals(PerkType.STAMIN_UP))
-			player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+		final PerkType drunk = perk;
+		com.theprogrammingturkey.comz.game.features.PerkDrink.drink(player, perk, () ->
+		{
+			// (lost in the meantime, e.g. went down mid-drink: nothing to give)
+			if(!game.perkManager.getPlayersPerks(player).contains(drunk))
+				return;
+			drunk.initialEffect(player, drunk, slot);
+			if(drunk.equals(PerkType.STAMIN_UP))
+				player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+		});
 
 		PointManager.INSTANCE.takePoints(player, cost);
 		PointManager.INSTANCE.notifyPlayer(player);

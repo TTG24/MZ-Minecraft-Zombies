@@ -16,6 +16,11 @@ public abstract class BaseGun extends Weapon
 	public boolean multiHit;
 
 	public Sound sound;
+	/** A resource pack sound ("mzguns:gun.mp40"), played instead of `sound` when set. */
+	public String soundKey;
+	/** "semi" (a shot a click), "auto" (fires while the trigger is held: the client mod), or "burst" (`burst` shots a click). */
+	public String fireMode = "semi";
+	public int burst = 3;
 
 	public BaseGun(String name, WeaponType type)
 	{
@@ -36,8 +41,12 @@ public abstract class BaseGun extends Weapon
 			this.particleColor = Color.fromRGB(Integer.parseInt(particleColor, 16));
 
 		String defaultSound = this.isPackAPunched() ? "ENTITY_GHAST_SHOOT" : "BLOCK_LAVA_POP";
-		Sound gunSound = ApiCompat.getSound(CustomConfig.getString(json, "sound", defaultSound));
+		String soundName = CustomConfig.getString(json, "sound", defaultSound);
+		this.soundKey = soundName.contains(":") ? soundName : null;
+		Sound gunSound = this.soundKey != null ? null : ApiCompat.getSound(soundName);
 		this.sound = gunSound != null ? gunSound : ApiCompat.getSound(defaultSound);
+		this.fireMode = CustomConfig.getString(json, "fire_mode", "semi").toLowerCase(java.util.Locale.ROOT);
+		this.burst = Math.max(2, CustomConfig.getInt(json, "burst", 3));
 	}
 
 	public void updateAmmo(int clip, int total)

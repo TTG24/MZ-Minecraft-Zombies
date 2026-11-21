@@ -107,9 +107,11 @@ public class WeaponManager
 		weapons.clear();
 		Weapon grenade = new Weapon("Grenade", WeaponType.GRENADE);
 		grenade.totalAmmo = 4;
+		grenade.itemModel = new org.bukkit.NamespacedKey("mzguns", "frag_grenade");
 		WeaponManager.registerWeapon(grenade);
 		Weapon monkeyBomb = new Weapon("Monkey Bomb", WeaponType.MONKEY_BOMB);
 		monkeyBomb.totalAmmo = 4;
+		monkeyBomb.itemModel = new org.bukkit.NamespacedKey("mzguns", "monkey_bomb");
 		WeaponManager.registerWeapon(monkeyBomb);
 
 		JsonElement jsonElement = ConfigManager.getConfig(COMZConfig.GUNS).getJson();

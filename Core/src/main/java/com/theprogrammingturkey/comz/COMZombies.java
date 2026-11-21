@@ -219,13 +219,18 @@ public class COMZombies extends JavaPlugin
 		// DiveListener is still constructed because WeaponListener / CrouchCommand reference it.
 		DiveListener dive = new DiveListener();
 		m.registerEvents(new WeaponListener(dive), this);
+		m.registerEvents(new com.theprogrammingturkey.comz.game.features.PerkDrink(), this);
 		// R-to-reload: the Tactical Movement client mod sends this empty plugin message when R is pressed.
 		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:reload",
 			(channel, player, message) -> WeaponListener.reloadHeldGun(player));
 		// G-to-throw: the client mod sends this when G is pressed (throws a grenade without switching to it).
 		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:grenade",
 			(channel, player, message) -> WeaponListener.throwGrenade(player));
+		// Full auto: the client mod says when the trigger (attack key) goes down and up
+		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:trigger",
+			(channel, player, message) -> WeaponListener.onTrigger(player, message));
 		com.theprogrammingturkey.comz.game.Crawlers.register(this);
+		com.theprogrammingturkey.comz.util.GunAnimMessages.register(this);
 		com.theprogrammingturkey.comz.util.Backups.start();
 	}
 

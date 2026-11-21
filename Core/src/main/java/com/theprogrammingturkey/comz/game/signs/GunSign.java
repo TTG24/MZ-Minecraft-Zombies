@@ -95,6 +95,7 @@ public class GunSign implements IGameSign
 				CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "You got the " + Colors.RED + gunType.getName() + Colors.DARK_GREEN + "!");
 				manager.removeWeapon(manager.getGun(slot));
 				manager.addWeapon(gunType.getNewInstance(player, slot));
+				com.theprogrammingturkey.comz.util.GunAnimMessages.pickedUp(player, slot);
 				player.getLocation().getWorld().playSound(player.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1, 1);
 				PointManager.INSTANCE.takePoints(player, buyPoints);
 				PointManager.INSTANCE.notifyPlayer(player);

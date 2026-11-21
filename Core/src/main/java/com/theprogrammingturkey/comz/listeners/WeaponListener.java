@@ -41,9 +41,78 @@ public class WeaponListener implements Listener
 	private final Map<UUID, Integer> lastFireTick = new HashMap<>();
 	private final Map<UUID, Integer> lastOtherTick = new HashMap<>();
 
+	/** Players holding the trigger down (the client mod's "tacticalmovement:trigger"): the tick it last said so. */
+	private final Map<UUID, Integer> triggerHeld = new HashMap<>();
+	/** Shots still to come in a burst. */
+	private final Map<UUID, Integer> burstLeft = new HashMap<>();
+	private static WeaponListener instance;
+
 	public WeaponListener(DiveListener dive)
 	{
 		this.dive = dive;
+		instance = this;
+		// Full auto: while the trigger is held, keep firing (the gun's own fire delay sets the rate); bursts: the rest of
+		// the burst, as soon as the gun can fire again
+		COMZombies.scheduleTask(1, 1, () ->
+		{
+			int now = Bukkit.getCurrentTick();
+			triggerHeld.entrySet().removeIf(e -> e.getValue() < now - 12);
+			for(UUID id : new ArrayList<>(triggerHeld.keySet()))
+			{
+				Player p = Bukkit.getPlayer(id);
+				GunInstance gun = p == null ? null : heldGun(p);
+				// (only when it can fire: an empty or reloading gun would click and nag every tick)
+				if(gun == null || !"auto".equals(gun.getType().fireMode) || !gun.canFireNow() || gun.clipAmmo <= 0)
+					continue;
+				lastFireTick.put(id, now);
+				shoot(p);
+			}
+			for(UUID id : new ArrayList<>(burstLeft.keySet()))
+			{
+				Player p = Bukkit.getPlayer(id);
+				GunInstance gun = p == null ? null : heldGun(p);
+				if(gun == null || gun.isReloading() || !"burst".equals(gun.getType().fireMode))
+				{
+					burstLeft.remove(id);
+					continue;
+				}
+				if(!gun.canFireNow())
+					continue;
+				int left = burstLeft.get(id);
+				if(shoot(p) && left > 1)
+					burstLeft.put(id, left - 1);
+				else
+					burstLeft.remove(id);
+			}
+		});
+	}
+
+	/** The client mod: the trigger (attack key) is down (1) or up (0); "down" is repeated while held. */
+	public static void onTrigger(Player player, byte[] message)
+	{
+		if(instance == null)
+			return;
+		boolean down = message.length > 0 && message[0] != 0;
+		if(down)
+			instance.triggerHeld.put(player.getUniqueId(), Bukkit.getCurrentTick());
+		else
+			instance.triggerHeld.remove(player.getUniqueId());
+	}
+
+	private static GunInstance heldGun(Player player)
+	{
+		if(!GameManager.INSTANCE.isPlayerInGame(player))
+			return null;
+		PlayerWeaponManager gunManager = GameManager.INSTANCE.getGame(player).getPlayersWeapons(player);
+		if(gunManager == null || !gunManager.isHeldItemGun())
+			return null;
+		return gunManager.getGun(player.getInventory().getHeldItemSlot());
+	}
+
+	private static String heldFireMode(Player player)
+	{
+		GunInstance gun = heldGun(player);
+		return gun == null ? null : gun.getType().fireMode;
 	}
 
 	/**
@@ -132,17 +201,31 @@ public class WeaponListener implements Listener
 		lastOtherTick.remove(event.getPlayer().getUniqueId());
 	}
 
+	/** A click: one shot, or the start of a burst. */
 	private void fireHeldGun(Player player)
 	{
+		lastFireTick.put(player.getUniqueId(), Bukkit.getCurrentTick());
+		if(shoot(player) && "burst".equals(heldFireMode(player)))
+		{
+			GunInstance gun = heldGun(player);
+			burstLeft.put(player.getUniqueId(), gun.getType().burst - 1);
+		}
+	}
+
+	/** Fires the held gun once if it can; true when it did. */
+	private boolean shoot(Player player)
+	{
+		boolean fired = false;
+		if(com.theprogrammingturkey.comz.game.features.PerkDrink.isDrinking(player))
+			return false;
 		if(GameManager.INSTANCE.isPlayerInGame(player))
 		{
-			lastFireTick.put(player.getUniqueId(), Bukkit.getCurrentTick());
 			Game game = GameManager.INSTANCE.getGame(player);
 			if(game.getStatus() != GameStatus.INGAME)
-				return;
+				return false;
 			// Downed players cannot shoot
 			if(game.downedPlayerManager.isDownedPlayer(player))
-				return;
+				return false;
 
 			if(game.getPlayersWeapons(player) != null)
 			{
@@ -156,6 +239,7 @@ public class WeaponListener implements Listener
 					}
 					else if(gun.wasShot())
 					{
+						fired = true;
 						int shots = 1;
 						if(gun.getType().getWeaponType() == WeaponType.SHOTGUNS)
 							shots = 7;
@@ -174,7 +258,8 @@ public class WeaponListener implements Listener
 
 							if(hitEnts.isEmpty())
 							{
-								rayTrace.showParticles(player.getWorld(), distance, 0.5f, gun.getType().particleColor);
+								com.theprogrammingturkey.comz.util.GunAnimMessages.tracer(player, shotOrigin.toVector(), rayTrace.getPosition(distance),
+										gun.getType().particleColor);
 								continue;
 							}
 
@@ -202,7 +287,8 @@ public class WeaponListener implements Listener
 							}
 
 
-							rayTrace.showParticles(player.getWorld(), dist, 0.5f, gun.getType().particleColor);
+							com.theprogrammingturkey.comz.util.GunAnimMessages.tracer(player, shotOrigin.toVector(), rayTrace.getPosition(dist),
+									gun.getType().particleColor);
 
 							float damage = (float) gun.getType().damage / shots;
 
@@ -246,6 +332,7 @@ public class WeaponListener implements Listener
 				}
 			}
 		}
+		return fired;
 	}
 
 	/**
@@ -254,7 +341,7 @@ public class WeaponListener implements Listener
 	 */
 	public static void reloadHeldGun(Player player)
 	{
-		if(!GameManager.INSTANCE.isPlayerInGame(player))
+		if(!GameManager.INSTANCE.isPlayerInGame(player) || com.theprogrammingturkey.comz.game.features.PerkDrink.isDrinking(player))
 			return;
 		Game game = GameManager.INSTANCE.getGame(player);
 		if(game.getStatus() != GameStatus.INGAME)
@@ -275,7 +362,7 @@ public class WeaponListener implements Listener
 	 */
 	public static void throwGrenade(Player player)
 	{
-		if(!GameManager.INSTANCE.isPlayerInGame(player))
+		if(!GameManager.INSTANCE.isPlayerInGame(player) || com.theprogrammingturkey.comz.game.features.PerkDrink.isDrinking(player))
 			return;
 		Game game = GameManager.INSTANCE.getGame(player);
 		if(game.getStatus() != GameStatus.INGAME || game.downedPlayerManager.isDownedPlayer(player))
@@ -291,14 +378,36 @@ public class WeaponListener implements Listener
 				return;
 			}
 		}
+		// No grenades left: a monkey bomb, if there is one
+		for(int i = 0; i < inv.getStorageContents().length; i++)
+		{
+			ItemStack stack = inv.getItem(i);
+			if(stack != null && stack.getType() == Material.MAGMA_CREAM && stack.getAmount() > 0)
+			{
+				throwMonkey(game, player, stack);
+				inv.setItem(i, stack.getAmount() > 0 ? stack : null);
+				return;
+			}
+		}
+	}
+
+	/** A thrown grenade / monkey bomb's item, with its model (so it looks right in flight). */
+	private static ItemStack modelled(Material material, String model)
+	{
+		ItemStack stack = new ItemStack(material);
+		org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
+		meta.setItemModel(new org.bukkit.NamespacedKey("mzguns", model));
+		stack.setItemMeta(meta);
+		return stack;
 	}
 
 	private static void throwGrenade(Game game, Player player, ItemStack handStack)
 	{
 		// Only goes off in the match it was thrown in (the timers used to carry on into the next one)
 		final long match = game.getMatchGeneration();
-		final Item item = player.getWorld().dropItemNaturally(player.getEyeLocation(), new ItemStack(Material.SLIME_BALL));
+		final Item item = player.getWorld().dropItemNaturally(player.getEyeLocation(), modelled(Material.SLIME_BALL, "frag_grenade"));
 		handStack.setAmount(handStack.getAmount() - 1);
+		player.getWorld().playSound(player.getLocation(), "mzguns:grenade.pin", org.bukkit.SoundCategory.PLAYERS, 1f, 1f);
 		item.setVelocity(player.getLocation().getDirection().multiply(1));
 		item.setPickupDelay(1000);
 
@@ -364,11 +473,21 @@ public class WeaponListener implements Listener
 			final long match = game.getMatchGeneration();
 
 			ItemStack handStack = player.getInventory().getItemInMainHand();
+			if(com.theprogrammingturkey.comz.game.features.PerkDrink.isDrinking(player))
+				return;
 			if(handStack.getType().equals(Material.SLIME_BALL))
 				throwGrenade(game, player, handStack);
 			else if(handStack.getType().equals(Material.MAGMA_CREAM))
+				throwMonkey(game, player, handStack);
+		}
+	}
+
+	private static void throwMonkey(Game game, Player player, ItemStack handStack)
+	{
+		final long match = game.getMatchGeneration();
+		{
 			{
-				final Item item = player.getWorld().dropItemNaturally(player.getEyeLocation(), new ItemStack(Material.MAGMA_CREAM));
+				final Item item = player.getWorld().dropItemNaturally(player.getEyeLocation(), modelled(Material.MAGMA_CREAM, "monkey_bomb"));
 				handStack.setAmount(handStack.getAmount() - 1);
 				item.setVelocity(player.getLocation().getDirection().multiply(1));
 				item.setPickupDelay(1000);
@@ -387,6 +506,9 @@ public class WeaponListener implements Listener
 					if(game.getStatus() != GameStatus.INGAME || game.getMatchGeneration() != match || !item.isValid())
 						return;
 					item.getWorld().spawnParticle(Particle.SMOKE, item.getLocation().clone(), 0, COMZombies.rand.nextDouble() - 0.5, 0.5, COMZombies.rand.nextDouble() - 0.5, 0.05);
+					// the monkey's cymbals
+					item.getWorld().playSound(item.getLocation(), "mzguns:monkey.cymbal", org.bukkit.SoundCategory.PLAYERS, 1.2f,
+							0.9f + COMZombies.rand.nextFloat() * 0.2f);
 					// Zombies already after the bomb are left alone (re-targeting every mob every time was wasted work)
 					for(Mob e : game.spawnManager.getEntities())
 						if(e.getTarget() != attackEnt)

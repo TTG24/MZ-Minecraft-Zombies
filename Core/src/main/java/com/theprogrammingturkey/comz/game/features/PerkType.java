@@ -39,13 +39,6 @@ public enum PerkType
 
 	public void initialEffect(final Player player, PerkType type, int slot)
 	{
-		final World world = player.getLocation().getWorld();
-		if(world != null)
-		{
-			COMZombies.scheduleTask(5, () -> world.playSound(player.getLocation(), Sound.ENTITY_GENERIC_DRINK, 1, 1));
-			COMZombies.scheduleTask(10, () -> world.playSound(player.getLocation(), Sound.ENTITY_GENERIC_DRINK, 1, 1));
-			COMZombies.scheduleTask(20, () -> world.playEffect(player.getLocation(), Effect.POTION_BREAK, 1));
-		}
 		ItemStack stack = new ItemStack(Material.AIR, 1);
 		String Perktype = "";
 		switch(type)

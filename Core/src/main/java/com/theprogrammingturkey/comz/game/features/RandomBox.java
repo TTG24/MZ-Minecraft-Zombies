@@ -14,7 +14,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Item;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -56,7 +57,8 @@ public class RandomBox
 	private boolean gunSelected;
 	private boolean isTeddyBear;
 	private Weapon weapon;
-	private Item item;
+	/** The gun shown in the box: a display entity, so nothing pushes it about (a dropped item got shoved out of the chest). */
+	private ItemDisplay item;
 	private ArmorStand namePlate;
 
 
@@ -132,14 +134,23 @@ public class RandomBox
 		else
 			itemLoc = boxLoc.clone().add(.5, .2, .5);
 
-		// Frozen in the middle of the box: no random toss and no gravity (it used to land on or in the chest and get pushed out)
-		item = player.getWorld().dropItem(itemLoc, weapon.getStack(), it ->
+		// Lying along the box (a double chest: from one half to the other), a little above it
+		float yaw = 0;
+		if(chestLocation != null && partnerLocation != null)
 		{
-			it.setGravity(false);
-			it.setVelocity(new Vector(0, 0, 0));
-			it.setPickupDelay(Integer.MAX_VALUE);
-			it.setCanMobPickup(false);
-			it.setUnlimitedLifetime(true);
+			Vector along = partnerLocation.toVector().subtract(chestLocation.toVector());
+			yaw = Math.abs(along.getX()) > Math.abs(along.getZ()) ? 90 : 0;
+		}
+		itemLoc.setYaw(yaw);
+		itemLoc.setPitch(0);
+		itemLoc.add(0, -0.05, 0);
+		item = player.getWorld().spawn(itemLoc, ItemDisplay.class, d ->
+		{
+			d.setItemStack(weapon.getStack());
+			d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.GROUND);
+			d.setBillboard(Display.Billboard.FIXED);
+			d.setTeleportDuration(5);
+			d.setPersistent(false);
 		});
 		final Location center = itemLoc.clone();
 		namePlate = (ArmorStand) player.getWorld().spawnEntity(itemLoc.clone().add(0, -1.7, 0), EntityType.ARMOR_STAND);
@@ -171,7 +182,6 @@ public class RandomBox
 				// Back to the middle, unless the teddy bear is floating away
 				if(!isTeddyBear)
 				{
-					item.setVelocity(new Vector(0, 0, 0));
 					if(item.getLocation().distanceSquared(center) > 0.0025)
 						item.teleport(center);
 				}
@@ -191,14 +201,18 @@ public class RandomBox
 							item.setItemStack(new ItemStack(Material.TOTEM_OF_UNDYING));
 							namePlate.customName(Component.empty());
 							namePlate.setCustomNameVisible(false);
-							item.setGravity(false);
-							item.customName(Colors.legacy("Teddy Bear"));
-							item.setCustomNameVisible(true);
+							namePlate.customName(Colors.legacy("Teddy Bear"));
+							namePlate.setCustomNameVisible(true);
 							isTeddyBear = true;
 
 							boxGame.scheduleMatchTask(40, () ->
 							{
-								teddyVelocityTask = COMZombies.scheduleTask(0, 5, () -> item.setVelocity(new Vector(0, 0.1, 0)));
+								teddyVelocityTask = COMZombies.scheduleTask(0, 5, () ->
+								{
+									// floats up out of the box (and its name with it)
+									item.teleport(item.getLocation().add(0, 0.25, 0));
+									namePlate.teleport(namePlate.getLocation().add(0, 0.25, 0));
+								});
 
 								boxGame.scheduleMatchTask(60, () ->
 								{
@@ -268,7 +282,9 @@ public class RandomBox
 
 	public void pickUpWeapon(Player player)
 	{
+		int slot = boxGame.getPlayersWeapons(player).getCorrectSlot(weapon);
 		boxGame.getPlayersWeapons(player).addWeapon(weapon);
+		com.theprogrammingturkey.comz.util.GunAnimMessages.pickedUp(player, slot);
 		com.theprogrammingturkey.comz.util.MzSounds.purchase(player);
 		reset();
 	}

@@ -127,6 +127,8 @@ public class GunInstance extends WeaponInstance
 
 			isReloading = true;
 			Game game = GameManager.INSTANCE.getGame(player);
+			com.theprogrammingturkey.comz.util.GunAnimMessages.send(player, com.theprogrammingturkey.comz.util.GunAnimMessages.RELOAD,
+					ConfigManager.getMainConfig().reloadTime * 20L);
 			COMZombies.scheduleTask(ConfigManager.getMainConfig().reloadTime * 20L, () ->
 			{
 				if(!(totalAmmo - (gun.clipAmmo - clipAmmo) < 0))
@@ -193,6 +195,12 @@ public class GunInstance extends WeaponInstance
 	 * the bullet shot was the last in the clip. If the player contained in this gun
 	 * has speed cola, fire delay speeds up.
 	 */
+	/** Whether a shot can go now (not reloading, the fire delay over). */
+	public boolean canFireNow()
+	{
+		return canFire && !isReloading;
+	}
+
 	public boolean wasShot()
 	{
 		if(isReloading)
@@ -222,17 +230,18 @@ public class GunInstance extends WeaponInstance
 
 		World world = player.getWorld();
 
-		world.playSound(player.getLocation(), gun.sound, 1, 1);
+		if(gun.soundKey != null)
+			world.playSound(player.getLocation(), gun.soundKey, org.bukkit.SoundCategory.PLAYERS, 1.6f, 0.95f + COMZombies.rand.nextFloat() * 0.1f);
+		else
+			world.playSound(player.getLocation(), gun.sound, 1, 1);
 
 		updateWeapon();
 		canFire = false;
 
 		Game game = GameManager.INSTANCE.getGame(player);
-		COMZombies.scheduleTask(
-				game.perkManager.hasPerk(player, PerkType.SPEED_COLA)
-						? (long) (this.gun.fireDelay / 1.25)
-						: this.gun.fireDelay
-				, () -> canFire = true);
+		long delay = game.perkManager.hasPerk(player, PerkType.SPEED_COLA) ? (long) (this.gun.fireDelay / 1.25) : this.gun.fireDelay;
+		com.theprogrammingturkey.comz.util.GunAnimMessages.send(player, com.theprogrammingturkey.comz.util.GunAnimMessages.SHOT, delay);
+		COMZombies.scheduleTask(delay, () -> canFire = true);
 		return true;
 	}
 

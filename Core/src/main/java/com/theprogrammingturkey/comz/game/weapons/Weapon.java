@@ -20,6 +20,8 @@ public class Weapon
 
 	public Material material;
 	public int modelData;
+	/** The item model it is drawn with ("mzguns:m1911": a model in the server's resource pack), or null for the material's own. */
+	public org.bukkit.NamespacedKey itemModel;
 
 	public Weapon(String name, WeaponType weaponType)
 	{
@@ -33,6 +35,8 @@ public class Weapon
 		this.damage = CustomConfig.getInt(json, "damage", 1);
 		this.material = Material.getMaterial(CustomConfig.getString(json, "material", ""));
 		this.modelData = CustomConfig.getInt(json, "model_data", -1);
+		String model = CustomConfig.getString(json, "item_model", "");
+		this.itemModel = model.isEmpty() ? null : org.bukkit.NamespacedKey.fromString(model);
 	}
 
 	public WeaponType getWeaponType()
@@ -48,6 +52,12 @@ public class Weapon
 	public ItemStack getStack()
 	{
 		ItemStack stack = new ItemStack(material == null ? weaponType.getMaterial() : material);
+		if(itemModel != null)
+		{
+			ItemMeta itemMeta = stack.getItemMeta();
+			itemMeta.setItemModel(itemModel);
+			stack.setItemMeta(itemMeta);
+		}
 		if(modelData != -1)
 		{
 			ItemMeta itemMeta = stack.getItemMeta();

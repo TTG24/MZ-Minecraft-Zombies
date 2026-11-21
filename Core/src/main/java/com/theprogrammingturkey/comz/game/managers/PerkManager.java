@@ -93,8 +93,13 @@ public class PerkManager
 		if(!game.perkManager.addPerk(player, perk))
 			return;
 		int slot = game.perkManager.getAvailablePerkSlot(player);
-		perk.initialEffect(player, perk, slot);
-		if(perk.equals(PerkType.STAMIN_UP))
-			player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+		com.theprogrammingturkey.comz.game.features.PerkDrink.drink(player, perk, () ->
+		{
+			if(!game.perkManager.getPlayersPerks(player).contains(perk))
+				return;
+			perk.initialEffect(player, perk, slot);
+			if(perk.equals(PerkType.STAMIN_UP))
+				player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+		});
 	}
 }
