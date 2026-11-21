@@ -14,7 +14,7 @@ Replace the previous plugin JAR with **MinecraftZombies-1.4.1.jar** and restart.
 ## Zombie AI
 
 - Arena zombies and hellhounds run on MZ's own AI. Minecraft's goals are removed and every route
-  comes from MZ's route planner (BlockBlocker barriers count as solid, with standable tops;
+  comes from MZ's route planner ([BlockBlocker](https://github.com/TTG24/BlockBlocker) barriers count as solid, with standable tops;
   drops, stairs and slabs are handled), walked with Minecraft's movement control.
 - Zombies spawn near players, pick barriers only past opened doors and keep breaking the one
   they started on. Only zombies held outside a barrier can break it.
@@ -28,7 +28,7 @@ Replace the previous plugin JAR with **MinecraftZombies-1.4.1.jar** and restart.
 
 - A grenade that doesn't kill may blow a zombie's legs off (chance from the share of health
   taken). Crawlers are slower, with a ground-level hitbox and headshots, and are sent to
-  MZ-Movement clients.
+  [MZ-Movement](https://github.com/TTG24/MZ-Movement) clients.
 - Players start with 4 grenades and get 2 back each round. **Q** throws them without the client
   mod (Q still reloads a gun), **G** with it. Grenade signs work like gun signs: press F nearby.
 - Grenade hits carry the blast direction; players without the mod get flesh and blood particles.
@@ -56,8 +56,8 @@ Replace the previous plugin JAR with **MinecraftZombies-1.4.1.jar** and restart.
 ## Upgrade
 
 Stop the server, replace the previous plugin JAR with **MinecraftZombies-1.4.0.jar**, and
-restart. Keep only one MinecraftZombies JAR installed. Use BlockBlocker 1.1.0 for barrier
-pathing, and MZ-Movement 1.1.0 on clients for crawlers, gore and the G grenade key.
+restart. Keep only one MinecraftZombies JAR installed. Use [BlockBlocker](https://github.com/TTG24/BlockBlocker) 1.1.0 for barrier
+pathing, and [MZ-Movement](https://github.com/TTG24/MZ-Movement) 1.1.0 on clients for crawlers, gore and the G grenade key.
 
 # MinecraftZombies 1.3.1
 

@@ -9,11 +9,11 @@ Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
 ### Release 1.4.0
 
-**Zombie AI.** Arena zombies and hellhounds run on MZ's own AI and route planner (BlockBlocker
+**Zombie AI.** Arena zombies and hellhounds run on MZ's own AI and route planner ([BlockBlocker](https://github.com/TTG24/BlockBlocker)
 barriers are solid, doors link the barriers of their room, no hitting through fences or walls).
 
 **Crawlers, grenades and gore.** Grenades can blow a zombie's legs off, leaving a crawler.
-Players start with 4 grenades and get 2 back each round (Q without the MZ-Movement mod, G with it).
+Players start with 4 grenades and get 2 back each round (Q without the [MZ-Movement](https://github.com/TTG24/MZ-Movement) mod, G with it).
 
 **Players.** Clickable `/z` menu and `/z admin` staff menu, `/z access` accessibility options,
 COD kill points, a 5-minute rejoin window and a smoother mystery box roll.
@@ -238,3 +238,8 @@ the build completes.
 
 All core code that you will ikely need to edit will be located inside the `Core` module, but version compatibility code
 can be found in the NMS Support folder and then the corresponding version module.
+
+## Related projects
+
+- [BlockBlocker](https://github.com/TTG24/BlockBlocker): server plugin for invisible barriers that block players and mobs.
+- [MZ-Movement](https://github.com/TTG24/MZ-Movement): the Fabric client mod (tactical movement, zombie animations, crawlers, gore).
