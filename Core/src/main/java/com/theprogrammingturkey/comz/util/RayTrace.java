@@ -72,10 +72,26 @@ public class RayTrace
 				if(!hit.containsKey(ent) && (ent instanceof org.bukkit.entity.LivingEntity living
 						&& com.theprogrammingturkey.comz.game.Crawlers.isCrawler(ent)
 						? com.theprogrammingturkey.comz.game.Crawlers.contains(living, position)
-						: intersects(position, ent.getBoundingBox().getMin(), ent.getBoundingBox().getMax())))
+						: inModel(ent, position)))
 					hit.put(ent, new RayEntityIntersection(ent, position));
 		}
 		return new ArrayList<>(hit.values());
+	}
+
+	/**
+	 * Inside a standing zombie as it is drawn (the custom model, mod or BetterModel): 0.9 wide with its arms and shoulders
+	 * (vanilla's box is 0.6, so shots through an arm or shoulder went past), and up to the top of its head at 2.05. Babies
+	 * and anything that isn't a zombie keep their own box.
+	 */
+	private static boolean inModel(Entity ent, Vector position)
+	{
+		org.bukkit.util.BoundingBox box = ent.getBoundingBox();
+		if(ent instanceof org.bukkit.entity.Zombie z && z.isAdult())
+		{
+			Location at = ent.getLocation();
+			box = new org.bukkit.util.BoundingBox(at.getX() - 0.45, at.getY(), at.getZ() - 0.45, at.getX() + 0.45, at.getY() + 2.05, at.getZ() + 0.45);
+		}
+		return intersects(position, box.getMin(), box.getMax());
 	}
 
 	//general intersection detection

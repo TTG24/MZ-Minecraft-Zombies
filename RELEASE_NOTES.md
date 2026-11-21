@@ -1,3 +1,15 @@
+# MinecraftZombies 1.4.5
+
+## Zombies at barriers spread out
+
+- Zombies held at a barrier no longer all pile onto one point. Each takes its own spot beside the barrier (the one with
+  the fewest zombies), the first stands at the barrier slightly to one side, and the rest line up behind it.
+
+## Bigger hitboxes
+
+- Shots hit a standing zombie anywhere in its drawn model: 0.9 wide (arms and shoulders) and 2.05 tall, where the
+  vanilla box was 0.6 wide. Headshots line up with the model's head; crawlers keep their lying hitbox.
+
 # MinecraftZombies 1.4.4
 
 ## The points record works

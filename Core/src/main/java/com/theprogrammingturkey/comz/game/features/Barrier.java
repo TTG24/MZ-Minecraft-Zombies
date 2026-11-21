@@ -61,6 +61,8 @@ public class Barrier
 	private final Map<Entity, Long> lastBarrierHit = new HashMap<>();
 	// Zombies from this barrier's spawns that are free to chase players
 	private final Set<Entity> releasedZombies = new HashSet<>();
+	/** The spot beside the barrier each held zombie has taken (its feet block), so they spread out instead of all piling onto the nearest one. */
+	private final java.util.Map<Entity, Block> slots = new java.util.HashMap<>();
 
 	public Barrier(String id, Game game)
 	{
@@ -475,6 +477,7 @@ public class Barrier
 	public void forget(Entity ent)
 	{
 		ents.remove(ent);
+		slots.remove(ent);
 		zombieSides.remove(ent);
 		brokenSeen.remove(ent);
 		lastBarrierHit.remove(ent);
@@ -485,6 +488,7 @@ public class Barrier
 	private void handOff(Mob mob, Barrier other)
 	{
 		ents.remove(mob);
+		slots.remove(mob);
 		zombieSides.remove(mob);
 		brokenSeen.remove(mob);
 		lastBarrierHit.remove(mob);
@@ -493,6 +497,7 @@ public class Barrier
 
 	private void release(Mob mob)
 	{
+		slots.remove(mob);
 		releasedZombies.add(mob);
 	}
 
@@ -500,7 +505,72 @@ public class Barrier
 	public Location approachFor(Mob mob)
 	{
 		List<Location> approaches = ownSideApproaches(mob);
-		return approaches.isEmpty() ? getNearestBlockCenter(mob) : approaches.get(0);
+		if(approaches.isEmpty())
+			return getNearestBlockCenter(mob);
+		// Each zombie keeps the spot it took; a new one takes the spot with the fewest zombies at it (the nearest of those)
+		slots.keySet().removeIf(e -> !ents.contains(e) || releasedZombies.contains(e) || e.isDead());
+		Block mine = slots.get(mob);
+		Location spot = null;
+		if(mine != null)
+			for(Location a : approaches)
+				if(a.getBlock().equals(mine))
+					spot = a;
+		if(spot == null)
+		{
+			int fewest = Integer.MAX_VALUE;
+			for(Location a : approaches)
+			{
+				int n = 0;
+				for(Block b : slots.values())
+					if(b.equals(a.getBlock()))
+						n++;
+				if(n < fewest)
+				{
+					fewest = n;
+					spot = a;
+				}
+			}
+			slots.put(mob, spot.getBlock());
+		}
+		// Its place in the line at that spot (by entity id, so it never changes): the first stands at the barrier, the
+		// others behind it
+		int rank = 0;
+		for(java.util.Map.Entry<Entity, Block> e : slots.entrySet())
+			if(e.getKey() != mob && e.getValue().equals(spot.getBlock()) && e.getKey().getEntityId() < mob.getEntityId())
+				rank++;
+		double[] at = standSpot(spot.getX(), spot.getZ(), sideFor(mob), rank, mob.getEntityId());
+		Location stand = new Location(spot.getWorld(), at[0], spot.getY(), at[1]);
+		// Behind it may be a wall or a drop: then as near the barrier as there is room
+		while(rank > 0 && !standable(stand.getBlock()))
+		{
+			rank--;
+			at = standSpot(spot.getX(), spot.getZ(), sideFor(mob), rank, mob.getEntityId());
+			stand = new Location(spot.getWorld(), at[0], spot.getY(), at[1]);
+		}
+		return stand;
+	}
+
+	private static boolean standable(Block feet)
+	{
+		return feet.isPassable() && feet.getRelative(BlockFace.UP).isPassable() && feet.getRelative(BlockFace.DOWN).getType().isSolid();
+	}
+
+	/**
+	 * Where a zombie waiting at a spot beside the barrier stands (x, z): the first one (rank 0) at the spot, a little to
+	 * one side or the other so two never stand on the same point; each next one 0.9 blocks further back from the wall
+	 * ({@code side}: see {@link #spawnSide}, null when not known: then they spread along x), alternating sides.
+	 */
+	static double[] standSpot(double x, double z, double[] side, int rank, int salt)
+	{
+		double jitter = (Math.floorMod(salt * 37, 5) - 2) / 10.0; // -0.2 .. 0.2
+		double lateral = rank == 0 ? jitter : (rank % 2 == 1 ? 0.35 : -0.35) + jitter * 0.3;
+		double back = rank * 0.9;
+		if(side == null)
+			// Which way is back isn't known (it could be into the wall): side by side instead
+			return new double[] {x + jitter * 0.5 + (rank + 1) / 2 * 0.6 * (rank % 2 == 1 ? 1 : -1), z};
+		boolean acrossX = side[0] == 0; // the wall is crossed along x: back is along x, sideways along z
+		double dir = side[1];
+		return acrossX ? new double[] {x + back * dir, z + lateral} : new double[] {x + lateral, z + back * dir};
 	}
 
 	/** Walkable spots beside this barrier on the zombie's own side (all sides if that can't be told), nearest first. */
