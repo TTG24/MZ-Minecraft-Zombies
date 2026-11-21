@@ -102,6 +102,14 @@ public final class ZombieBrain
 			mob.setTarget(null);
 		if(!mob.hasAI())
 			return; // digging itself up (ZombieRise)
+		// Never riding anything (e.g. a chicken jockey Minecraft rolled): off it, and the mount goes
+		if(mob.getVehicle() != null)
+		{
+			org.bukkit.entity.Entity mount = mob.getVehicle();
+			mob.leaveVehicle();
+			if(!(mount instanceof Player))
+				mount.remove();
+		}
 
 		Barrier held = game.barrierManager.heldBy(mob);
 		Player player = held == null ? game.spawnManager.getNearestPlayer(mob) : null;
