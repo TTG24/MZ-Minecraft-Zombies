@@ -39,6 +39,14 @@ A fork of [Call of Minecraft: Zombies](https://github.com/TheTurkeyDev/Call_Of_M
 3. Edit `plugins/MinecraftZombies/config.yml` if needed, then run `/z reload` between games. A reload ends
    games that are running.
 
+### Configuration
+
+`config.yml` describes every setting above it, grouped by topic. Upgrading never loses your settings. On startup and
+`/z reload`, an existing config (including one from the original COMZombies plugin) is put into the current layout:
+every value you set is kept, new settings are added, and settings this version doesn't use are kept with a note. A
+copy of the old file goes to `config-backups/` first. A config with a YAML mistake is never overwritten; the
+defaults are used until it is fixed.
+
 ## Commands
 
 `/zombies` has the aliases `/z`, `/zo` and `/zom`. Run `/z` for the clickable menu or `/z help` for the full list.

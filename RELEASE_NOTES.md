@@ -1,3 +1,29 @@
+# MinecraftZombies 1.4.2
+
+## Config that explains itself
+
+- `config.yml` now describes every setting, grouped by topic (matches, points, zombies, barriers, weapons,
+  teleporters, sound, revives, arena copies, prompts, signs).
+- An existing `config.yml` (including one from the original COMZombies plugin) is put into that layout on startup
+  and `/z reload`: **every value you set is kept**, new settings are added with their defaults, and settings this
+  version doesn't know are kept at the end of their section with a note ("no longer used" for old ones). A copy of
+  the file as it was goes to `config-backups/` first (the last 10 are kept). Nothing is rewritten when nothing changes.
+
+## Settings are never overwritten
+
+- A `config.yml` with a YAML mistake is left exactly as it is (the defaults are used until it is fixed). Before,
+  the defaults were saved over the whole file, and saving players' points did the same.
+- The door prompt radius (2 or 4) and the key label (E) are no longer put back to old defaults on every start.
+  These updates now run once, for configs from before this version.
+- Old-format files from the original plugin (`arenas.yml`, `guns.yml`, `kits.yml`, `signs.yml`, `stats.yml`)
+  are only converted when the current `.json` file doesn't exist yet, so they can't replace arenas, guns or stats
+  already in use. They are moved to `legacy_cache/` under a free name, so they are never converted twice.
+- New `config.ReviveSettings.DownedWalkSpeed` (crawl speed while downed) is now in the default config.
+
+## Upgrade
+
+Replace the previous plugin JAR with **MinecraftZombies-1.4.2.jar** and restart.
+
 # MinecraftZombies 1.4.1
 
 ## Fixes

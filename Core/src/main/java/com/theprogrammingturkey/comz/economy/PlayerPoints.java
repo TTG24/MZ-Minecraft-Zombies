@@ -33,6 +33,9 @@ public class PlayerPoints
 		COMZombies plugin = COMZombies.getPlugin();
 		// saveConfig() writes the whole in-memory config over config.yml, which threw away anything edited in the file since
 		// the plugin loaded (a player dying was enough). Re-read the file first so only the points change.
+		// A config.yml that is not valid YAML would load empty and be replaced whole: leave it alone until it is fixed.
+		if(!com.theprogrammingturkey.comz.config.ConfigManager.isConfigWritable())
+			return;
 		plugin.reloadConfig();
 		plugin.getConfig().set("Players." + player.getName() + ".points", points);
 		plugin.saveConfig();
@@ -44,6 +47,8 @@ public class PlayerPoints
 		if(all.isEmpty())
 			return;
 		COMZombies plugin = COMZombies.getPlugin();
+		if(!com.theprogrammingturkey.comz.config.ConfigManager.isConfigWritable())
+			return;
 		plugin.reloadConfig();
 		for(PlayerPoints p : all)
 			plugin.getConfig().set("Players." + p.player.getName() + ".points", p.points);

@@ -11,51 +11,74 @@ public class ConfigManager
 	private static final Map<COMZConfig, CustomConfig> CONFIGS = new HashMap<>();
 	private static ConfigSetup mainConfig;
 
+	/** False while config.yml is not valid YAML: then nothing may be saved to it (it would replace the whole file). */
+	private static boolean configWritable = true;
+
+	/**
+	 * Whether config.yml may be saved right now: it was valid when loaded, and still is (it is read again, as it may have
+	 * been edited since). A file that can't be parsed would load empty, and saving that would replace all of it.
+	 */
+	public static boolean isConfigWritable()
+	{
+		if(!configWritable)
+			return false;
+		java.io.File file = new java.io.File(COMZombies.getPlugin().getDataFolder(), "config.yml");
+		if(!file.exists())
+			return true;
+		try
+		{
+			new org.bukkit.configuration.file.YamlConfiguration().loadFromString(
+					java.nio.file.Files.readString(file.toPath(), java.nio.charset.StandardCharsets.UTF_8));
+			return true;
+		} catch(java.io.IOException | org.bukkit.configuration.InvalidConfigurationException e)
+		{
+			COMZombies.getPlugin().getLogger().warning("config.yml is not valid YAML right now, so it was not saved to: " + e.getMessage());
+			return false;
+		}
+	}
+
 	public static void loadFiles()
 	{
 		COMZombies plugin = COMZombies.getPlugin();
+		// Put an existing config.yml in the current layout (order, descriptions, new settings), keeping every value
+		ConfigOrganizer.Result organized = ConfigOrganizer.organize(plugin);
+		configWritable = organized.valid();
+		plugin.saveDefaultConfig(); // only writes the default when there is no config.yml yet
+		plugin.reloadConfig();
 		plugin.getConfig().options().copyDefaults(true);
-		plugin.saveDefaultConfig();
-		// Migrate the old door interaction labels while preserving custom tooltip text.
-		boolean doorPromptChanged = false;
-		// Update the former default ranges for existing installations.
-		double doorRadius = plugin.getConfig().getDouble("config.doorProximity.radius");
-		if(doorRadius == 2.0 || doorRadius == 4.0)
+
+		boolean changed = false;
+		// One-time updates of old default values, for configs made before layout 2. They used to run on every start,
+		// which put a radius of 2 or 4, or the key label E, back to the old default even when chosen on purpose.
+		if(organized.previousVersion() < ConfigOrganizer.LAYOUT_VERSION)
 		{
-			plugin.getConfig().set("config.doorProximity.radius", 3);
-			doorPromptChanged = true;
+			double doorRadius = plugin.getConfig().getDouble("config.doorProximity.radius");
+			if(doorRadius == 2.0 || doorRadius == 4.0)
+			{
+				plugin.getConfig().set("config.doorProximity.radius", 3);
+				changed = true;
+			}
+			if("E".equals(plugin.getConfig().getString("config.doorProximity.key")))
+			{
+				plugin.getConfig().set("config.doorProximity.key", "F");
+				changed = true;
+			}
 		}
-		if("E".equals(plugin.getConfig().getString("config.doorProximity.key")))
-		{
-			plugin.getConfig().set("config.doorProximity.key", "F");
-			doorPromptChanged = true;
-		}
-		String openPrompt = plugin.getConfig().getString("config.doorProximity.tooltip.open");
-		if("&aRight-click to open &7- {price}".equals(openPrompt) || "&aPress {key} to open &7- {price}".equals(openPrompt))
-		{
-			plugin.getConfig().set("config.doorProximity.tooltip.open", "&aPress {key} to open &7- {price} points");
-			doorPromptChanged = true;
-		}
-		if("&cThis door requires power!".equals(plugin.getConfig().getString("config.doorProximity.tooltip.no_power")))
-		{
-			plugin.getConfig().set("config.doorProximity.tooltip.no_power", "&cRequires power &7- {price} points");
-			doorPromptChanged = true;
-		}
-		if("&cNot enough points!".equals(plugin.getConfig().getString("config.doorProximity.tooltip.no_funds")))
-		{
-			plugin.getConfig().set("config.doorProximity.tooltip.no_funds", "&cNeed {missing} more points &7- {price} points");
-			doorPromptChanged = true;
-		}
-		if("&aPress {key} to fully repair &7- 1 second cooldown".equals(plugin.getConfig().getString("config.barrierProximity.tooltip.repair")))
-		{
-			plugin.getConfig().set("config.barrierProximity.tooltip.repair", "&aPress {key} to start repairing &7- 1 stage per second");
-			doorPromptChanged = true;
-		}
-		// Persist missing defaults on existing installations so every tooltip is editable.
+		// Old default texts become the new ones; a text that was changed is left alone
+		changed |= replaceOldDefault(plugin, "config.doorProximity.tooltip.open", "&aPress {key} to open &7- {price} points",
+				"&aRight-click to open &7- {price}", "&aPress {key} to open &7- {price}");
+		changed |= replaceOldDefault(plugin, "config.doorProximity.tooltip.no_power", "&cRequires power &7- {price} points",
+				"&cThis door requires power!");
+		changed |= replaceOldDefault(plugin, "config.doorProximity.tooltip.no_funds", "&cNeed {missing} more points &7- {price} points",
+				"&cNot enough points!");
+		changed |= replaceOldDefault(plugin, "config.barrierProximity.tooltip.repair", "&aPress {key} to start repairing &7- 1 stage per second",
+				"&aPress {key} to fully repair &7- 1 second cooldown");
 		if(!plugin.getConfig().contains("config.interaction.key", true))
+		{
 			plugin.getConfig().set("config.interaction.key", plugin.getConfig().getString("config.doorProximity.key", "F"));
-		// copyDefaults adds missing keys while keeping existing custom values.
-		if(doorPromptChanged || plugin.getConfig().options().copyDefaults())
+			changed = true;
+		}
+		if(changed && configWritable)
 			plugin.saveConfig();
 
 		mainConfig = new ConfigSetup();
@@ -69,6 +92,20 @@ public class ConfigManager
 		mainConfig.setup();
 		SignRegistry.INSTANCE.load();
 		com.theprogrammingturkey.comz.game.signs.SignStyles.load();
+	}
+
+	private static boolean replaceOldDefault(COMZombies plugin, String path, String current, String... old)
+	{
+		String value = plugin.getConfig().getString(path);
+		for(String o : old)
+		{
+			if(o.equals(value))
+			{
+				plugin.getConfig().set(path, current);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static CustomConfig getConfig(COMZConfig comzConfig)

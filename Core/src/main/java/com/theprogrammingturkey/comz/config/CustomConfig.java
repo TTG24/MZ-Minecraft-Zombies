@@ -52,15 +52,34 @@ public class CustomConfig
 		{
 			try
 			{
-				if(!file.exists() && !file.createNewFile())
+				// An old-format file (from the original plugin) is only converted when there is no current file yet: the
+				// conversion writes a whole new file, which would replace arenas, guns or stats already in use.
+				if(file.exists() && file.length() > 0)
 				{
-					COMZombies.log.log(Level.SEVERE, "FAILED TO CONVERT A LEGACY FILE! {0}", new Object[]{config.getLegacyFileName()});
-					return;
+					COMZombies.log.log(Level.WARNING, COMZombies.CONSOLE_PREFIX + "Found the old " + config.getLegacyFileName() + " next to "
+							+ config.getFileName() + ": " + config.getFileName() + " is kept as it is, and the old file was moved to legacy_cache/ without converting it.");
 				}
-				LegacyConfig.convertLegacyConfig(legacyFile, this);
+				else
+				{
+					if(!file.exists() && !file.createNewFile())
+					{
+						COMZombies.log.log(Level.SEVERE, "FAILED TO CONVERT A LEGACY FILE! {0}", new Object[]{config.getLegacyFileName()});
+						return;
+					}
+					LegacyConfig.convertLegacyConfig(legacyFile, this);
+					// Nothing converted (an empty or unreadable old file): start from the default instead of an empty file
+					if(file.length() == 0)
+						file.delete();
+				}
+				// Moved aside under a name that is free, so it can never be found (and converted) again
 				File legacyCacheFolder = new File(plugin.getDataFolder(), "legacy_cache");
 				if(legacyCacheFolder.exists() || legacyCacheFolder.mkdir())
-					Files.move(Paths.get(legacyFile.getAbsolutePath()), Paths.get(new File(legacyCacheFolder, config.getLegacyFileName()).getAbsolutePath()));
+				{
+					File target = new File(legacyCacheFolder, config.getLegacyFileName());
+					if(target.exists())
+						target = new File(legacyCacheFolder, config.getLegacyFileName() + "." + System.currentTimeMillis());
+					Files.move(Paths.get(legacyFile.getAbsolutePath()), Paths.get(target.getAbsolutePath()));
+				}
 			} catch(IOException e)
 			{
 				COMZombies.log.log(Level.SEVERE, COMZombies.CONSOLE_PREFIX + "Failed to convert legacy " + config.getLegacyFileName() + "!", e);
