@@ -1,3 +1,53 @@
+# MinecraftZombies 1.4.0
+
+## Zombie AI
+
+- Arena zombies and hellhounds run on MZ's own AI. Minecraft's goals are removed and every route
+  comes from MZ's route planner (BlockBlocker barriers count as solid, with standable tops;
+  drops, stairs and slabs are handled), walked with Minecraft's movement control.
+- Zombies spawn near players, pick barriers only past opened doors and keep breaking the one
+  they started on. Only zombies held outside a barrier can break it.
+- Doors link the barriers of their room (`adddoor` / `editdoor` "barriers").
+- Zombies cannot hit through fences, walls, slabs or BlockBlocker barriers, and route around
+  fences, walls and glass to a real opening.
+- Idle zombies respawn after 30 s and die after 2 minutes. Zombies in a game take no fire or
+  lava damage, and never ride other mobs (chicken jockeys are removed).
+
+## Crawlers, grenades and gore
+
+- A grenade that doesn't kill may blow a zombie's legs off (chance from the share of health
+  taken). Crawlers are slower, with a ground-level hitbox and headshots, and are sent to
+  MZ-Movement clients.
+- Players start with 4 grenades and get 2 back each round. **Q** throws them without the client
+  mod (Q still reloads a gun), **G** with it. Grenade signs work like gun signs: press F nearby.
+- Grenade hits carry the blast direction; players without the mod get flesh and blood particles.
+
+## Players
+
+- Clickable `/z` menu and `/z admin` staff menu, showing only the commands you may use. Commands
+  with optional arguments fill the chat box instead of running.
+- `/z access`: hold or toggle barrier repair, and a per-player teammate glow with a colour.
+- COD kill points: knife kill 130, headshot kill 100, body kill 60 (configurable).
+- 5-minute rejoin window with notices. Dead players come back at the next round again.
+- Mystery box roll starts fast and slows down to the pick, with the item kept centred.
+- Themed chat format, `[MZ]` prefix and help headers; best/top points and round placeholders.
+- Leaving an arena returns players to spawn.
+
+## Arena copies and server
+
+- On-demand arena copies: 4 ready + 1 spare, pasted in slices over 3 seconds, without FAWE undo
+  history. Copies take decoration entities only (no mobs or animals).
+- Daily backups, reload announcements, mystery box and ammo crate feedback.
+- `/z showall` also shows teleporter links and the mainframe.
+- Fixes: sign permission, spawn freeze, ammo, downed state, PHD, grenades, points, pathing
+  budget, solo copies, backups and setup cleanup.
+
+## Upgrade
+
+Stop the server, replace the previous plugin JAR with **MinecraftZombies-1.4.0.jar**, and
+restart. Keep only one MinecraftZombies JAR installed. Use BlockBlocker 1.1.0 for barrier
+pathing, and MZ-Movement 1.1.0 on clients for crawlers, gore and the G grenade key.
+
 # MinecraftZombies 1.3.1
 
 ## Post-match game over

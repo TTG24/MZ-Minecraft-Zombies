@@ -3,7 +3,20 @@ A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
 Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
-## Release 1.3.1
+## Release 1.4.0
+
+**Zombie AI.** Arena zombies and hellhounds run on MZ's own AI and route planner (BlockBlocker
+barriers are solid, doors link the barriers of their room, no hitting through fences or walls).
+
+**Crawlers, grenades and gore.** Grenades can blow a zombie's legs off, leaving a crawler.
+Players start with 4 grenades and get 2 back each round (Q without the MZ-Movement mod, G with it).
+
+**Players.** Clickable `/z` menu and `/z admin` staff menu, `/z access` accessibility options,
+COD kill points, a 5-minute rejoin window and a smoother mystery box roll.
+
+**Server.** On-demand arena copies (4 ready + 1 spare) and daily backups. See `RELEASE_NOTES.md`.
+
+### Previous release 1.3.1
 
 **Game over.** When a match genuinely ends (everyone down), a `mz:game_over` stinger from the
 bundled resource pack plays for everyone in the arena, and surviving players are held in
