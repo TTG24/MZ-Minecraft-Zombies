@@ -56,7 +56,7 @@ public final class ZombiePathing
 	 *
 	 * @return the route as feet positions from start to goal, or null when there is none within reach
 	 */
-	static List<int[]> search(World world, int sx, int sy, int sz, int gx, int gy, int gz, int maxDrop, Location goal)
+	static List<int[]> search(World world, int sx, int sy, int sz, int gx, int gy, int gz, int maxDrop, Location goal, boolean orNearest)
 	{
 		Map<Long, Boolean> openCache = new HashMap<>();
 		PriorityQueue<Node> open = new PriorityQueue<>((a, b) -> Double.compare(a.f(), b.f()));
@@ -64,9 +64,19 @@ public final class ZombiePathing
 		open.add(new Node(sx, sy, sz, 0, h(sx, sy, sz, gx, gy, gz), null));
 		best.put(key(sx, sy, sz), 0.0);
 		int visited = 0;
+		// The node that got nearest to the goal, in case none gets there (a player flying overhead, on an unreachable ledge,
+		// behind a wall): the zombie then goes to the closest point it can reach and waits under / beside them, not stands still
+		Node nearest = null;
+		double nearestH = Double.MAX_VALUE;
 		while(!open.isEmpty() && visited++ < MAX_NODES)
 		{
 			Node cur = open.poll();
+			double hc = h(cur.x(), cur.y(), cur.z(), gx, gy, gz);
+			if(hc < nearestH)
+			{
+				nearestH = hc;
+				nearest = cur;
+			}
 			if(Math.abs(cur.x() - gx) <= 1 && Math.abs(cur.z() - gz) <= 1 && Math.abs(cur.y() - gy) <= 1
 					&& (goal == null || arrivesAt(new Location(world, cur.x(), cur.y(), cur.z()), goal)))
 				return build(cur);
@@ -111,6 +121,9 @@ public final class ZombiePathing
 				open.add(new Node(nx, ny, nz, g, g + h(nx, ny, nz, gx, gy, gz), cur));
 			}
 		}
+		// No way all the way: the closest it got, if that is a real step nearer than where it started
+		if(orNearest && nearest != null && nearestH < h(sx, sy, sz, gx, gy, gz) - 2)
+			return build(nearest);
 		return null;
 	}
 
@@ -145,7 +158,7 @@ public final class ZombiePathing
 		try
 		{
 			route = search(mob.getWorld(), at.getBlockX(), feetCell(at), at.getBlockZ(), goal.getBlockX(), feetCell(goal),
-					goal.getBlockZ(), maxDrop, goal);
+					goal.getBlockZ(), maxDrop, goal, false);
 		}
 		finally
 		{

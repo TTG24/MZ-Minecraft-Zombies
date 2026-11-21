@@ -141,7 +141,7 @@ public final class ZombieBrain
 		{
 			int maxDrop = Math.max(3, Math.min(32, COMZombies.getPlugin().getConfig().getInt("config.gameSettings.zombieSafeFallDistance", 16)));
 			List<int[]> route = ZombiePathing.search(mob.getWorld(), at.getBlockX(), ZombiePathing.feetCell(at), at.getBlockZ(),
-					goal.getBlockX(), ZombiePathing.feetCell(goal), goal.getBlockZ(), maxDrop, goal);
+					goal.getBlockX(), ZombiePathing.feetCell(goal), goal.getBlockZ(), maxDrop, goal, true);
 			s.routeTick = tick;
 			s.routeGoal = goal.clone();
 			s.stuckFrom = null;

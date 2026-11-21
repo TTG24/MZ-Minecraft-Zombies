@@ -1,3 +1,10 @@
+# MinecraftZombies 1.4.3
+
+## Zombies still come for you
+
+- A zombie whose player can't be reached (flying above it, on an unreachable ledge, behind a wall) now walks to the
+  closest spot it can reach and waits there, instead of standing still. It goes back to the real route as soon as one opens.
+
 # MinecraftZombies 1.4.2
 
 ## Config that explains itself
