@@ -3,7 +3,11 @@ A fork of the Call_Of_Minecraft-Zombies Repo from TurkeyDev under MIT Licensing
 
 Original project: https://github.com/TheTurkeyDev/Call_Of_Minecraft-Zombies
 
-## Release 1.4.0
+## Release 1.4.1
+
+**Fix.** `/z access` teammate glow works on Minecraft 26.3.
+
+### Release 1.4.0
 
 **Zombie AI.** Arena zombies and hellhounds run on MZ's own AI and route planner (BlockBlocker
 barriers are solid, doors link the barriers of their room, no hitting through fences or walls).

@@ -94,9 +94,10 @@ public final class GlowManager
 		scoreboardCtor = scoreboard.getConstructor();
 		Class<?> playerTeam = Class.forName("net.minecraft.world.scores.PlayerTeam");
 		teamCtor = playerTeam.getConstructor(scoreboard, String.class);
-		Class<?> chatFormatting = Class.forName("net.minecraft.ChatFormatting");
-		chatFormattingByName = chatFormatting.getMethod("getByName", String.class);
-		setColor = playerTeam.getMethod("setColor", chatFormatting);
+		// 26.3: team colours are TeamColor (byName("dark_aqua")), set as an Optional; ChatFormatting.getByName is gone
+		Class<?> teamColor = Class.forName("net.minecraft.world.scores.TeamColor");
+		chatFormattingByName = teamColor.getMethod("byName", String.class);
+		setColor = playerTeam.getMethod("setColor", java.util.Optional.class);
 		Class<?> component = Class.forName("net.minecraft.network.chat.Component");
 		setPrefix = playerTeam.getMethod("setPlayerPrefix", component);
 		asVanilla = Class.forName("io.papermc.paper.adventure.PaperAdventure").getMethod("asVanilla", Component.class);
@@ -200,7 +201,7 @@ public final class GlowManager
 		Object team = teamCtor.newInstance(scoreboardCtor.newInstance(), "mzglow_" + color);
 		Object format = chatFormattingByName.invoke(null, color.toLowerCase(Locale.ROOT));
 		if(format != null)
-			setColor.invoke(team, format);
+			setColor.invoke(team, java.util.Optional.of(format));
 		String prefix = prefix(target);
 		if(!prefix.isEmpty())
 			setPrefix.invoke(team, asVanilla.invoke(null, LEGACY.deserialize(prefix)));

@@ -1,3 +1,14 @@
+# MinecraftZombies 1.4.1
+
+## Fixes
+
+- `/z access` teammate glow works on Minecraft 26.3: team colours use 26.3's `TeamColor` (the old
+  `ChatFormatting.getByName` lookup no longer exists, so the glow was switched off at startup).
+
+## Upgrade
+
+Replace the previous plugin JAR with **MinecraftZombies-1.4.1.jar** and restart.
+
 # MinecraftZombies 1.4.0
 
 ## Zombie AI
