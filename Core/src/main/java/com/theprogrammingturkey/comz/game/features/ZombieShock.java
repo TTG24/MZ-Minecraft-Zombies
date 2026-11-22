@@ -55,6 +55,9 @@ public final class ZombieShock
 		mob.setMetadata(META, new FixedMetadataValue(COMZombies.getPlugin(), "shock_" + variant));
 		mob.setAI(false);
 		mob.setVelocity(new Vector());
+		// its electrocuted cry (mz:zombie_shock, one of six, in the zombie-sounds pack), heard by everyone
+		mob.getWorld().playSound(mob.getLocation(), "mz:zombie_shock", org.bukkit.SoundCategory.HOSTILE, 1f,
+				0.95f + COMZombies.rand.nextFloat() * 0.1f);
 		byte[] data = ByteBuffer.allocate(7).putInt(mob.getEntityId()).put((byte) variant).putShort((short) TICKS).array();
 		for(Player p : mob.getWorld().getPlayers())
 			if(p.getListeningPluginChannels().contains(CHANNEL) && p.getLocation().distanceSquared(mob.getLocation()) <= RANGE * RANGE)
