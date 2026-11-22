@@ -48,6 +48,9 @@ SWATCH = {
     'fur': ((96, 62, 36), 0.16, 'grain'),
     'fur_light': ((196, 160, 116), 0.10, 'noise'),
     'fez_red': ((150, 20, 28), 0.08, 'noise'),
+    # the Wunderwaffe's coils and its glowing bulbs
+    'copper': ((176, 98, 54), 0.12, 'noise'),
+    'tesla_glow': ((150, 215, 255), 0.10, 'noise'),
 }
 NAMES = list(SWATCH)
 
@@ -70,7 +73,7 @@ def sheet(pap=False):
     px = [[(0, 0, 0, 0)] * 32 for _ in range(32)]
     for i, name in enumerate(NAMES):
         (r, g, b), amount, kind = SWATCH[name]
-        if pap and name != 'ray_glow':
+        if pap and name not in ('ray_glow', 'tesla_glow'):
             # purple and violet blotches; the wood and grips darker than the metal
             r, g, b = (70, 40, 110) if name.startswith(('wood', 'bakelite', 'grip')) else (110, 60, 170)
         for j in range(4):
@@ -829,6 +832,33 @@ def _():
             B(35.4, 36.2, 8.6, 14.2, 2.1, 'steel')]
 
 
+@gun('wunderwaffe', 'Wunderwaffe DG-2', 2.5, 'rifle', grip=(29.5, 9))
+def _():
+    out = [B(-0.4, 1.4, 11, 17, 4.2, 'steel_dark'),           # the emitter dish at the muzzle
+           B(-1.0, 0, 12.6, 15.4, 1.6, 'tesla_glow', glow=True),  # its glowing tip
+           B(1.4, 16, 12.6, 15.4, 2.6, 'steel'),             # barrel
+           B(2, 3, 15.4, 17.6, 0.5, 'steel'),                # front sight
+           B(16, 30, 10, 17, 4.0, 'blued'),                  # the generator body
+           B(18, 28, 11, 15.6, 4.8, 'copper'),               # copper windings, both sides
+           B(25.5, 28, 13.6, 16.2, 4.8, 'brass'),            # gauge
+           B(14, 18, 16, 16.8, 1.0, 'copper'),               # cable to the barrel
+           B(17, 27.8, 11.4, 15.6, 0.6, 'brass', x=-2.3),    # the bulbs' socket plate, on the left side
+           B(28, 29.2, 17, 18.4, 0.6, 'steel'),              # rear sight
+           B(17, 20, 5, 10, 1.8, 'wood_dark'),               # front grip
+           B(26, 29, 7.4, 8.2, 1.0, 'steel'),                # trigger guard
+           B(27, 27.6, 8.2, 10, 0.6, 'steel'),               # trigger
+           B(28, 31, 3, 10, 2.2, 'wood_dark', rot=tilt(29.5, 10)),  # pistol grip
+           B(30, 44, 9, 15, 2.6, 'wood'),                    # stock
+           B(36, 44, 6, 9, 2.6, 'wood'),
+           B(43.4, 44.4, 6, 15, 2.8, 'steel_dark')]          # butt plate
+    for z in range(3, 15, 2):                                # copper coils round the barrel
+        out.append(B(z, z + 1, 12.2, 15.8, 3.2, 'copper'))
+    for z in (17.6, 20.9, 24.2):                             # the three bulbs, sticking out sideways to the left (the "magazine")
+        out += [B(z, z + 2.8, 12, 15, 3.8, 'tesla_glow', x=-4.5, glow=True, mag=True),
+                B(z + 0.6, z + 2.2, 12.6, 14.4, 0.8, 'brass', x=-6.8, mag=True)]
+    return out
+
+
 # ------------------------------------------------------------------------------------------------- model json, display
 
 # How a gun is held: its rotation, and where its grip goes (Minecraft's display terms; worked out with preview.py, which
@@ -944,7 +974,44 @@ def _():
             B(10, 12, 8, 9, 1.0, 'steel'), B(11.6, 12.2, 7, 10, 2.6, 'steel')]  # wind-up key
 
 
-for _g in ('frag_grenade', 'monkey_bomb'):
+@gun('teddy_bear', 'Teddy Bear', 2.2, 'prop', grip=(8, 9))
+def _():
+    """The mystery box's teddy bear, sitting up, its face to +z (south: what a billboarded display turns to the viewer)."""
+    out = [B(5, 11, 3, 11, 7.0, 'fur'),                       # body
+           B(10.6, 11.4, 4, 9.5, 4.4, 'fur_light'),           # belly
+           B(5, 11.5, 11, 17.5, 7.0, 'fur'),                  # head
+           B(11.5, 13.5, 12, 14.5, 3.0, 'fur_light'),         # snout
+           B(13.5, 14.0, 13.4, 14.4, 1.2, 'grip_black')]      # nose
+    for x in (-1, 1):
+        out += [B(11.5, 12.0, 15, 16, 0.9, 'grip_black', x=1.5 * x),     # eye
+                B(7, 9.5, 17, 19.5, 2.2, 'fur', x=2.8 * x),              # ear
+                B(9.5, 9.9, 17.5, 19, 1.2, 'fur_light', x=2.8 * x),
+                B(6.5, 10, 5, 10, 2.0, 'fur', x=4.4 * x),                # arm
+                B(8, 14, 0, 3.5, 2.8, 'fur', x=2.0 * x),                 # leg, out in front
+                B(14, 14.4, 0.4, 3.1, 2.2, 'fur_light', x=2.0 * x)]      # foot pad
+    return out
+
+
+@gun('box_broken', 'Broken Mystery Box', 1.0, 'prop', grip=(8, 8))
+def _():
+    """A mystery box spot the box isn't at: the chest smashed in. Block pixels as they are (raw: not centred), the front
+    to -z (north); shown with the display transform NONE at the block's middle, turned to the chest's facing."""
+    return [B(1, 15, 0, 2.5, 14, 'wood_dark'),                                    # what's left of the bottom
+            B(3, 13, 2.5, 2.8, 10, 'bakelite'),                                   # the dark inside
+            B(13, 15, 2.5, 8, 14, 'wood'),                                        # back wall, broken off
+            B(13.2, 14.8, 8, 10, 5, 'wood', x=-3.5),                              #   a jagged bit still standing
+            B(3, 13, 2.5, 6, 2, 'wood', x=-6),                                    # left wall, low
+            B(4, 12, 2, 9, 1.6, 'wood', x=6.6, rot=('z', -22.5, (8, 2))),         # right wall, falling outwards
+            B(2, 14, 2.5, 4.5, 13, 'wood_dark', rot=('x', -22.5, (14, 3.5))),     # the lid, caved in
+            B(0.4, 1.4, 1.5, 4, 2.4, 'steel'),                                    # the latch
+            B(-2, 6, 0, 1, 2.2, 'wood', x=-8.5, rot=('y', 22.5, (2, 0.5))),       # loose planks
+            B(11, 18, 0, 1, 2.2, 'wood', x=8.5, rot=('y', -45, (14.5, 0.5))),
+            B(-1.5, 1.5, 0, 0.8, 4.5, 'wood_dark', x=3, rot=('y', 22.5, (0, 0.4)))]
+
+
+GUNS['box_broken']['raw'] = True
+
+for _g in ('frag_grenade', 'monkey_bomb', 'teddy_bear'):
     GUNS[_g]['fp_rot'] = UPRIGHT
     GUNS[_g]['tp_rot'] = UPRIGHT
 
@@ -953,6 +1020,8 @@ def model(gid, part=None):
     """part: None (the whole gun), 'nomag' (without its magazine) or 'mag' (the magazine alone), all placed alike."""
     g = GUNS[gid]
     boxes, size = centred(g['boxes'])
+    if g.get('raw'):
+        boxes = [dict(b) for b in g['boxes']]
     if part == 'nomag':
         boxes = [b for b in boxes if not b['mag']]
     elif part == 'mag':
@@ -982,6 +1051,92 @@ def model(gid, part=None):
     }
     return {'textures': {'gun': NS + ':item/gun', 'particle': NS + ':item/gun'},
             'elements': [element(b) for b in boxes], 'display': display}
+
+
+# ------------------------------------------------------------------------------------------------- mystery box effects
+# Flat sprites (one 16x16-pixel square, both sides, full bright) with soft translucent textures: the box's aura (a halo that
+# faces the camera, and the same lying on the floor), its beam (levels 0-3: fainter and fainter as a player gets near) and
+# the "?" over it (glow levels 0-2, cycled for a pulse). The plugin's BoxEffects shows them with item displays.
+BEAM_LEVELS = (1.0, 0.7, 0.45, 0.28)
+QMARK_GLOW = (0.55, 0.85, 1.15)
+QMARK = ['.###.', '#...#', '....#', '...#.', '..#..', '.....', '..#..']
+
+
+def _rgba(c, a):
+    return (int(c[0]), int(c[1]), int(c[2]), max(0, min(255, int(a))) if a >= 28 else 0)
+
+
+def _mix(a, b, t):
+    return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+
+
+def fx_halo():
+    import math
+    n = 64
+    px = [[(0, 0, 0, 0)] * n for _ in range(n)]
+    for y in range(n):
+        for x in range(n):
+            r = math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2)
+            if r < 1:
+                px[y][x] = _rgba(_mix((240, 252, 255), (80, 175, 255), min(1, r ** 0.5)), 240 * (1 - r) ** 1.3)
+    return px
+
+
+def fx_beam(level):
+    import math
+    w, h = 16, 64
+    f = BEAM_LEVELS[level]
+    px = [[(0, 0, 0, 0)] * w for _ in range(h)]
+    for y in range(h):
+        v = (y + 0.5) / h                                   # 0 at the top (the sky end), 1 at the box
+        for x in range(w):
+            dx = abs(x + 0.5 - w / 2) / (w / 2)
+            core, haze = math.exp(-(dx / 0.22) ** 2), math.exp(-(dx / 0.75) ** 2)
+            streak = 0.85 + 0.3 * noise(x, y // 6, 17)
+            a = (core * 0.95 + haze * 0.5) * 255 * f * v ** 0.6 * streak
+            px[y][x] = _rgba(_mix((70, 150, 255), (235, 250, 255), core), a)
+    return px
+
+
+def fx_qmark(level):
+    n, k = 32, 3
+    g = QMARK_GLOW[level]
+    on = set()
+    ox, oy = (n - 5 * k) // 2, (n - 7 * k) // 2
+    for j, row in enumerate(QMARK):
+        for i, ch in enumerate(row):
+            if ch == '#':
+                for a in range(k):
+                    for b in range(k):
+                        on.add((ox + i * k + a, oy + j * k + b))
+    import math
+    px = [[(0, 0, 0, 0)] * n for _ in range(n)]
+    for y in range(n):
+        for x in range(n):
+            if (x, y) in on:
+                px[y][x] = (235, 250, 255, 255)
+                continue
+            d = min(math.hypot(x - a, y - b) for a, b in on)
+            px[y][x] = _rgba((90, 190, 255), 200 * g * math.exp(-d / 2.6))
+    return px
+
+
+def sprite(tex):
+    """A flat square sprite (16 pixels = a block when shown with the transform NONE), each side reads the right way round seen from its own side."""
+    t = NS + ':item/' + tex
+    return {'textures': {'t': t, 'particle': t},
+            'elements': [{'from': [0, 0, 8], 'to': [16, 16, 8], 'light_emission': 15, 'shade': False,
+                          'faces': {'south': {'uv': [0, 0, 16, 16], 'texture': '#t'},
+                                    'north': {'uv': [0, 0, 16, 16], 'texture': '#t'}}}]}
+
+
+def fx_sprites():
+    out = {'fx_halo': fx_halo()}
+    for i in range(len(BEAM_LEVELS)):
+        out['fx_beam_%d' % i] = fx_beam(i)
+    for i in range(len(QMARK_GLOW)):
+        out['fx_qmark_%d' % i] = fx_qmark(i)
+    return out
 
 
 def write_pack(out):
@@ -1017,6 +1172,10 @@ def write_pack(out):
         for name in names:
             for v in ('', '_pap'):
                 put('assets/%s/items/%s%s.json' % (NS, name, v), {'model': {'type': 'minecraft:model', 'model': NS + ':item/' + name + v}})
+    for name, px in fx_sprites().items():
+        put('assets/%s/textures/item/%s.png' % (NS, name), png(px))
+        put('assets/%s/models/item/%s.json' % (NS, name), sprite(name))
+        put('assets/%s/items/%s.json' % (NS, name), {'model': {'type': 'minecraft:model', 'model': NS + ':item/' + name}})
     print('wrote', len(GUNS), 'guns to', out)
 
 

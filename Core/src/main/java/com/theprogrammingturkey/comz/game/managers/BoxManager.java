@@ -24,6 +24,12 @@ public class BoxManager
 	private final List<RandomBox> boxes = new ArrayList<>();
 	private RandomBox currentBox;
 	private boolean multiBox;
+	/** Spins at the current box's spot since it got there (the teddy bear can't turn up in the first few). */
+	private int spinsHere;
+	/** The box is moving (after a teddy bear): no box can be used until it turns up somewhere else. */
+	private boolean moving;
+	/** How long the box is away when it moves (ticks, from the bear flying off): the move music's end. */
+	private static final int AWAY_TICKS = 177;
 
 	public BoxManager(Game game)
 	{
@@ -163,6 +169,8 @@ public class BoxManager
 		if(currentBox != null)
 			currentBox.removeBox();
 		currentBox = box;
+		spinsHere = 0;
+		moving = false;
 		currentBox.loadBox();
 	}
 
@@ -175,7 +183,9 @@ public class BoxManager
 		else
 		{
 			unloadAllBoxes();
-			currentBox.loadBox();
+			// (none while the box is moving: it turns up when the move is done)
+			if(currentBox != null)
+				currentBox.loadBox();
 		}
 	}
 
@@ -214,12 +224,44 @@ public class BoxManager
 		return Util.genRandId();
 	}
 
+	/**
+	 * A spin at the (single) current box: whether it turns up the teddy bear. Never with one box, multiple boxes or in a fire
+	 * sale, nor in the first teddy_bear_safe_uses spins at a spot; after that teddy_bear_percent % a spin.
+	 */
+	public boolean rollTeddyBear()
+	{
+		if(multiBox || game.isFireSale() || moving || boxes.size() < 2 || game.getTeddyBearPercent() <= 0)
+			return false;
+		spinsHere++;
+		return spinsHere > game.getTeddyBearSafeUses() && COMZombies.rand.nextInt(100) < game.getTeddyBearPercent();
+	}
+
+	public boolean isMoving()
+	{
+		return moving;
+	}
+
+	/** The bear has flown off: the box is gone for a while (no box at all), then turns up at another spot. */
 	public void teddyBear()
 	{
-		currentBox.removeBox();
-		RandomBox b = getRandomBox(currentBox);
-		if(b != null)
+		final RandomBox old = currentBox;
+		if(old != null)
+			old.removeBox();
+		currentBox = null;
+		moving = true;
+		game.scheduleMatchTask(AWAY_TICKS, () ->
+		{
+			if(!moving)
+				return;
+			RandomBox b = getRandomBox(old);
+			moving = false;
+			spinsHere = 0;
 			currentBox = b;
-		currentBox.loadBox();
+			if(b != null)
+			{
+				b.loadBox();
+				game.sendMessageToPlayers(Colors.GOLD + "The mystery box has moved!");
+			}
+		});
 	}
 }

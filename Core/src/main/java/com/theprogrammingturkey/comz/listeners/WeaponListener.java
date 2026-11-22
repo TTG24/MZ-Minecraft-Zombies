@@ -237,6 +237,15 @@ public class WeaponListener implements Listener
 					{
 						player.getLocation().getWorld().playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
 					}
+					else if(gun.getType().chain > 0)
+					{
+						// the Wunderwaffe: chain lightning
+						if(gun.wasShot())
+						{
+							fired = true;
+							com.theprogrammingturkey.comz.game.features.ChainLightning.fire(player, game, gun.getType(), dive.getWeaponOrigin(player));
+						}
+					}
 					else if(gun.wasShot())
 					{
 						fired = true;

@@ -137,7 +137,7 @@ public class COMZombies extends JavaPlugin
 		com.theprogrammingturkey.comz.game.managers.GlowManager.INSTANCE.start();
 		com.theprogrammingturkey.comz.game.ArenaWeather.start(this);
 		com.theprogrammingturkey.comz.game.ZombieSounds.start(this);
-		com.theprogrammingturkey.comz.game.BoxBeacons.start(this);
+		com.theprogrammingturkey.comz.game.BoxEffects.start(this);
 		com.theprogrammingturkey.comz.game.TeleporterLinks.start(this);
 		com.theprogrammingturkey.comz.game.ZombieBrain.start(this);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, com.theprogrammingturkey.comz.util.BloodMessages.CHANNEL);
@@ -245,7 +245,7 @@ public class COMZombies extends JavaPlugin
 		PointManager.INSTANCE.saveAll();
 		DoorProximityManager.INSTANCE.stop();
 		com.theprogrammingturkey.comz.util.Highlight.clearAll();
-		com.theprogrammingturkey.comz.game.BoxBeacons.clearAll();
+		com.theprogrammingturkey.comz.game.BoxEffects.clearAll();
 		GameManager.INSTANCE.endAll();
 		// Players still in an arena (including post-match spectators) go home now: scheduled tasks no longer run here.
 		for(org.bukkit.entity.Player online : Bukkit.getOnlinePlayers())

@@ -197,7 +197,9 @@ public class Game
 	 */
 	private boolean powerSetup;
 
+	/** The mystery box's teddy bear: the chance (%) a spin turns one up, once the box has had teddyBearSafeUses spins where it is. */
 	private int teddyBearPercent;
+	private int teddyBearSafeUses;
 
 	private int dogRoundEveryX;
 
@@ -1718,7 +1720,9 @@ public class Game
 		templateMode = instanceCount > 0;
 		minPlayers = CustomConfig.getInt(arenaSettingsJson, "min_players", 1);
 		maxPlayers = CustomConfig.getInt(arenaSettingsJson, "max_players", 8);
-		teddyBearPercent = CustomConfig.getInt(arenaSettingsJson, "teddy_bear_chance", 100);
+		// (replaces the old "teddy_bear_chance", a 1-in-N chance that arenas had at 0, i.e. never)
+		teddyBearPercent = Math.max(0, Math.min(100, CustomConfig.getInt(arenaSettingsJson, "teddy_bear_percent", 15)));
+		teddyBearSafeUses = Math.max(0, CustomConfig.getInt(arenaSettingsJson, "teddy_bear_safe_uses", 4));
 		startingGun = CustomConfig.getString(arenaSettingsJson, "StartingGun", DEFAULT_STARTING_GUN);
 		dogRoundEveryX = CustomConfig.getInt(arenaSettingsJson, "dog_round_every_x", 5);
 		maxAmmoReplishClip = CustomConfig.getBoolean(arenaSettingsJson, "max_ammo_replenish_clip", false);
@@ -1766,7 +1770,9 @@ public class Game
 		arenaSettingsJson.addProperty("min_players", minPlayers);
 		arenaSettingsJson.addProperty("instance_count", instanceCount);
 		arenaSettingsJson.addProperty("max_players", maxPlayers);
-		arenaSettingsJson.addProperty("teddy_bear_chance", teddyBearPercent);
+		arenaSettingsJson.remove("teddy_bear_chance");
+		arenaSettingsJson.addProperty("teddy_bear_percent", teddyBearPercent);
+		arenaSettingsJson.addProperty("teddy_bear_safe_uses", teddyBearSafeUses);
 		arenaSettingsJson.addProperty("StartingGun", startingGun);
 		arenaSettingsJson.addProperty("dog_round_every_x", dogRoundEveryX);
 		arenaSettingsJson.addProperty("max_ammo_replenish_clip", maxAmmoReplishClip);
@@ -2128,6 +2134,11 @@ public class Game
 	public int getTeddyBearPercent()
 	{
 		return teddyBearPercent;
+	}
+
+	public int getTeddyBearSafeUses()
+	{
+		return teddyBearSafeUses;
 	}
 
 	public int getDogRoundEveryX()

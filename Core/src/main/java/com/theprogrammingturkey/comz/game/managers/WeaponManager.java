@@ -33,6 +33,12 @@ public class WeaponManager
 		weapons.add(weapon);
 	}
 
+	/** Every gun in guns.json, Pack-a-Punched ones included. */
+	public static List<BaseGun> getGuns()
+	{
+		return weapons.stream().filter(weapon -> weapon instanceof BaseGun).map(weapon -> (BaseGun) weapon).collect(Collectors.toList());
+	}
+
 	/**
 	 * Gets a gun based off of the name given
 	 *

@@ -844,6 +844,38 @@
         },
         "item_model": "mzguns:ray_gun",
         "fire_mode": "semi"
+      },
+      {
+        "name": "Wunderwaffe DG-2",
+        "material": "NETHERITE_SHOVEL",
+        "sound": "mzguns:gun.wunderwaffe",
+        "clip_ammo": 3,
+        "total_ammo": 12,
+        "damage": 10000,
+        "fire_delay": 24,
+        "max_distance": 40.0,
+        "particle_color": "7FD4FF",
+        "multi_hit": false,
+        "chain": 10,
+        "chain_range": 7.0,
+        "pack_a_punch_gun": {
+          "name": "Wunderwaffe DG-3 JZ",
+          "material": "NETHERITE_SHOVEL",
+          "sound": "mzguns:gun.wunderwaffe_pap",
+          "clip_ammo": 6,
+          "total_ammo": 24,
+          "damage": 10000,
+          "fire_delay": 20,
+          "max_distance": 50.0,
+          "particle_color": "C070FF",
+          "multi_hit": false,
+          "chain": 24,
+          "chain_range": 9.0,
+          "item_model": "mzguns:wunderwaffe_pap",
+          "fire_mode": "semi"
+        },
+        "item_model": "mzguns:wunderwaffe",
+        "fire_mode": "semi"
       }
     ]
   }

@@ -21,7 +21,7 @@ SR = 44100
 # what each gun sounds like: its kind (below) and how big it is (1: the kind's usual; lower is deeper and longer)
 GUN_SOUNDS = {
     'm1911': ('pistol', 1.0), 'b23r': ('pistol', 1.1), 'five_seven': ('pistol', 1.2), 'kap40': ('pistol', 1.05),
-    'executioner': ('revolver', 0.9), 'python': ('revolver', 1.0), 'ray_gun': ('ray', 1.0),
+    'executioner': ('revolver', 0.9), 'python': ('revolver', 1.0), 'ray_gun': ('ray', 1.0), 'wunderwaffe': ('tesla', 1.0),
     'thompson': ('smg', 0.9), 'mp40': ('smg', 1.0), 'type100': ('smg', 1.05), 'mp5': ('smg', 1.15), 'pdw57': ('smg', 1.25),
     'chicom': ('smg', 1.1),
     'stg44': ('rifle', 0.95), 'an94': ('rifle', 1.0), 'm16a1': ('rifle', 1.08), 'm8a1': ('rifle', 1.12), 'm27': ('rifle', 1.05),
@@ -115,6 +115,47 @@ def ray(name, pap=False):
     if pap:
         out += 0.5 * np.sin(phase * 0.5) * env(t, 0.2)
     return finish(out)
+
+
+def crackle(r, n, t, density_tau, rate=900):
+    """Electric crackle: sharp sparks at random moments, thinning out over density_tau seconds."""
+    out = np.zeros(n)
+    spark = highpass(r.standard_normal(n), 2500)
+    k = 0
+    while k < n:
+        k += int(SR / rate * r.exponential(1.0) / max(0.05, np.exp(-k / SR / density_tau)))
+        if k >= n:
+            break
+        m = min(n - k, int(SR * r.uniform(0.001, 0.004)))
+        out[k:k + m] += spark[k:k + m] * r.uniform(0.4, 1.0) * np.exp(-k / SR / (density_tau * 1.5))
+    return out
+
+
+def tesla(name, pap=False):
+    """The Wunderwaffe: a crack of lightning, a falling electric zap, sparks, and thunder rolling away."""
+    r = rng(name)
+    n = int(SR * (1.6 if pap else 1.3))
+    t = np.arange(n) / SR
+    out = crackle(r, n, t, 0.18) * 1.2
+    f = 3200 * np.exp(-t / 0.07) + (90 if pap else 140)
+    buzz = 1 + 0.5 * np.sign(np.sin(2 * np.pi * 60 * t))                 # mains hum in the zap
+    out += 0.7 * np.sin(2 * np.pi * np.cumsum(f * buzz) / SR) * env(t, 0.12)
+    out += 1.6 * highpass(r.standard_normal(n), 1200) * env(t, 0.006)    # the strike
+    thunder = lowpass_fast(r.standard_normal(n), 180, 3) * (1 - env(t, 0.03)) * env(t, 0.45 if pap else 0.35)
+    out += thunder * 9.0
+    if pap:
+        out += 0.4 * np.sin(2 * np.pi * np.cumsum(f * 0.5) / SR) * env(t, 0.2)
+    return finish(out)
+
+
+def arc(name):
+    """A bolt jumping to the next zombie: a short snap of sparks."""
+    r = rng(name)
+    n = int(SR * 0.4)
+    t = np.arange(n) / SR
+    out = crackle(r, n, t, 0.07, rate=1400) + 1.2 * highpass(r.standard_normal(n), 1500) * env(t, 0.004)
+    out += 0.4 * np.sin(2 * np.pi * np.cumsum(1800 * np.exp(-t / 0.04) + 300) / SR) * env(t, 0.06)
+    return finish(out) * 0.85
 
 
 def pap_layer(name, x):
@@ -225,6 +266,7 @@ def cymbal():
 EXTRA = {
     'perk.open': perk_open, 'perk.gulp_0': lambda: gulp(0), 'perk.gulp_1': lambda: gulp(1), 'perk.gulp_2': lambda: gulp(2),
     'perk.burp': burp, 'perk.smash': smash, 'grenade.pin': pin, 'monkey.cymbal': cymbal,
+    'wunderwaffe.arc_0': lambda: arc('arc0'), 'wunderwaffe.arc_1': lambda: arc('arc1'), 'wunderwaffe.arc_2': lambda: arc('arc2'),
     'handling.inspect': lambda: clunk('inspect', [1400, 2500], 0.02, slide=0.05, length=0.2, click=0.7),
 }
 
@@ -270,6 +312,8 @@ def write(pack):
                 key = '%s_%d' % (name, v)
                 if kind == 'ray':
                     x = ray(key, pap)
+                elif kind == 'tesla':
+                    x = tesla(key, pap)
                 else:
                     x = shot(gid + str(v), kind, size)
                     if pap:
@@ -277,6 +321,9 @@ def write(pack):
                 write_ogg(os.path.join(root, 'sounds', 'gun', key.replace('gun.', '') + '.ogg'), x)
                 files.append({'name': 'mzguns:gun/' + key.replace('gun.', ''), 'attenuation_distance': 48})
             sounds[name] = {'subtitle': 'Gunshot', 'sounds': files}
+            if kind == 'tesla':
+                for f in files:
+                    f['attenuation_distance'] = 64
         print('shot', gid)
     for name, fn in HANDLING.items():
         write_ogg(os.path.join(root, 'sounds', 'handling', name + '.ogg'), fn())
@@ -284,7 +331,7 @@ def write(pack):
     for name, fn in EXTRA.items():
         file = name.replace('.', '/')
         write_ogg(os.path.join(root, 'sounds', file + '.ogg'), fn())
-        event = name.rsplit('_', 1)[0] if name.startswith('perk.gulp') else name
+        event = name.rsplit('_', 1)[0] if name.startswith(('perk.gulp', 'wunderwaffe.arc')) else name
         sounds.setdefault(event, {'sounds': []})['sounds'].append({'name': 'mzguns:' + file, 'attenuation_distance': 16})
     with open(os.path.join(root, 'sounds.json'), 'w') as f:
         json.dump(sounds, f, indent=1)

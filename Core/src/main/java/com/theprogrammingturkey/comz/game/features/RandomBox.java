@@ -195,10 +195,13 @@ public class RandomBox
 					}
 					else if(time == 0)
 					{
-						if(!boxGame.isFireSale() && !boxGame.boxManager.isMultiBox() && boxGame.getTeddyBearPercent() != 0 && COMZombies.rand.nextInt(boxGame.getTeddyBearPercent()) == 0)
+						if(boxGame.boxManager.rollTeddyBear())
 						{
 							CommandUtil.sendMessageToPlayer(player, Colors.RED + "Teddy Bear!!!!!!");
-							item.setItemStack(new ItemStack(Material.TOTEM_OF_UNDYING));
+							// the bear, turned to whoever looks at it, and the box's move music (heard all round)
+							item.setItemStack(teddyBear());
+							item.setBillboard(Display.Billboard.VERTICAL);
+							boxLoc.getWorld().playSound(boxLoc, "mz:mysterybox_move", org.bukkit.SoundCategory.PLAYERS, 1f, 1f);
 							namePlate.customName(Component.empty());
 							namePlate.setCustomNameVisible(false);
 							namePlate.customName(Colors.legacy("Teddy Bear"));
@@ -268,6 +271,16 @@ public class RandomBox
 			activeTask = COMZombies.scheduleTask(ROLL_DELAYS[index[0]++], step[0]);
 		};
 		activeTask = COMZombies.scheduleTask(ROLL_DELAYS[0], step[0]);
+	}
+
+	/** The teddy bear (its model in the guns pack; a totem without the pack). */
+	private static ItemStack teddyBear()
+	{
+		ItemStack stack = new ItemStack(Material.TOTEM_OF_UNDYING);
+		org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
+		meta.setItemModel(new org.bukkit.NamespacedKey("mzguns", "teddy_bear"));
+		stack.setItemMeta(meta);
+		return stack;
 	}
 
 	public boolean canActivate()

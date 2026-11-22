@@ -235,6 +235,13 @@ public class CommandManager implements TabExecutor
 		// - zombies.debug
 		commandList.put("points", new PointsCommand(COMZPermission.DEBUG));
 
+		// Debug: gives a player in a game any gun from guns.json:
+		// Perm
+		// - zombies.debug
+		commandList.put("givegun", new GiveGunCommand(COMZPermission.DEBUG));
+		commandList.put("gg", commandList.get("givegun"));
+		commandList.put("gun", commandList.get("givegun"));
+
 		// Marks a zombie spawn as always active (never locked by doors):
 		// Perm
 		// - zombies.editzspawns
