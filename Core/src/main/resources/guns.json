@@ -826,7 +826,7 @@
         "damage": 90,
         "fire_delay": 7,
         "max_distance": 50.0,
-        "particle_color": "168,229,73",
+        "particle_color": "96FF5A",
         "multi_hit": true,
         "pack_a_punch_gun": {
           "name": "Porter's X2 Ray Gun",
@@ -840,10 +840,16 @@
           "particle_color": "FF1919",
           "multi_hit": true,
           "item_model": "mzguns:ray_gun_pap",
-          "fire_mode": "semi"
+          "fire_mode": "semi",
+          "tracer": "ray",
+          "splash_radius": 2.5,
+          "splash_damage": 90
         },
         "item_model": "mzguns:ray_gun",
-        "fire_mode": "semi"
+        "fire_mode": "semi",
+        "tracer": "ray",
+        "splash_radius": 2.0,
+        "splash_damage": 60
       },
       {
         "name": "Wunderwaffe DG-2",

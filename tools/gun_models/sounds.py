@@ -158,6 +158,18 @@ def arc(name):
     return finish(out) * 0.85
 
 
+def ray_impact():
+    """The Ray Gun's bolt bursting: a soft electric pop with a falling whine and a little fizz."""
+    r = rng('ray_impact')
+    n = int(SR * 0.5)
+    t = np.arange(n) / SR
+    f = 1400 * np.exp(-t / 0.05) + 180
+    out = np.sin(2 * np.pi * np.cumsum(f) / SR) * env(t, 0.09)
+    out += 0.8 * lowpass_fast(r.standard_normal(n), 700) * env(t, 0.04)
+    out += 0.25 * highpass(r.standard_normal(n), 3500) * env(t, 0.12) * (r.random(n) < 0.5)
+    return finish(out) * 0.8
+
+
 def pap_layer(name, x):
     """Pack-a-Punched: the same shot with an electric zap over it."""
     r = rng(name + 'pap')
@@ -266,6 +278,7 @@ def cymbal():
 EXTRA = {
     'perk.open': perk_open, 'perk.gulp_0': lambda: gulp(0), 'perk.gulp_1': lambda: gulp(1), 'perk.gulp_2': lambda: gulp(2),
     'perk.burp': burp, 'perk.smash': smash, 'grenade.pin': pin, 'monkey.cymbal': cymbal,
+    'raygun.impact': ray_impact,
     'wunderwaffe.arc_0': lambda: arc('arc0'), 'wunderwaffe.arc_1': lambda: arc('arc1'), 'wunderwaffe.arc_2': lambda: arc('arc2'),
     'handling.inspect': lambda: clunk('inspect', [1400, 2500], 0.02, slide=0.05, length=0.2, click=0.7),
 }

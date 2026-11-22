@@ -43,6 +43,9 @@ public final class PeacefulArenaMobs
 
 	public static void attackPlayer(Mob mob, Player player)
 	{
+		// (not while it can't act: rising out of the ground, or shocked by the Wunderwaffe)
+		if(!mob.hasAI())
+			return;
 		// A direct attacker keeps the normal EntityDamageByEntityEvent and armor handling.
 		// Leave the causing entity unset so vanilla does not scale damage to zero on Peaceful.
 		DamageSource source = DamageSource.builder(DamageType.MOB_ATTACK).withDirectEntity(mob).build();

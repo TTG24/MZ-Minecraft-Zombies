@@ -264,6 +264,12 @@ public class WeaponListener implements Listener
 							RayTrace rayTrace = new RayTrace(shotOrigin.toVector(), dirVec);
 							double distance = gun.getType().distance;
 							List<RayTrace.RayEntityIntersection> hitEnts = rayTrace.getZombieIntersects(player.getWorld(), game.spawnManager.getEntities(), distance, game);
+							if(gun.getType().splashRadius > 0)
+							{
+								// the Ray Gun: stops at what it hits and splashes round it
+								splashShot(player, game, gun.getType(), shotOrigin, dirVec, hitEnts);
+								continue;
+							}
 
 							if(hitEnts.isEmpty())
 							{
@@ -342,6 +348,78 @@ public class WeaponListener implements Listener
 			}
 		}
 		return fired;
+	}
+
+	/**
+	 * A splash gun's shot (the Ray Gun): it flies until the first zombie, wall or floor in its way, hits a zombie there
+	 * (a headshot counts), then hurts every zombie within splashRadius of where it landed: splashDamage at the middle, a
+	 * third of that at the edge. Never players (no self-damage). Drawn as the gun's bolt; a burst and a zap where it lands.
+	 */
+	private static void splashShot(Player player, Game game, com.theprogrammingturkey.comz.game.weapons.BaseGun type, Location origin, Vector dir,
+			List<RayTrace.RayEntityIntersection> hits)
+	{
+		org.bukkit.World world = player.getWorld();
+		Vector from = origin.toVector();
+		Vector unit = dir.clone().normalize();
+		var wall = world.rayTraceBlocks(origin, unit, type.distance, org.bukkit.FluidCollisionMode.NEVER, true);
+		double wallDist = wall == null ? Double.MAX_VALUE : wall.getHitPosition().distance(from);
+		RayTrace.RayEntityIntersection first = null;
+		double best = Double.MAX_VALUE;
+		for(RayTrace.RayEntityIntersection hit : hits)
+		{
+			double d = hit.intersection.distance(from);
+			if(d < best && d <= wallDist && hit.hitEnt instanceof Mob)
+			{
+				best = d;
+				first = hit;
+			}
+		}
+		Vector impact = first != null ? first.intersection.clone() : wall != null ? wall.getHitPosition() : null;
+		com.theprogrammingturkey.comz.util.GunAnimMessages.tracer(player, from, impact != null ? impact : from.clone().add(unit.clone().multiply(type.distance)),
+				type.particleColor, "ray".equals(type.tracer));
+		if(impact == null)
+			return; // into the open air: nothing to burst on
+		if(first != null)
+		{
+			Mob mob = (Mob) first.hitEnt;
+			float damage = type.damage;
+			boolean headshot = com.theprogrammingturkey.comz.game.Crawlers.isCrawler(mob)
+					? com.theprogrammingturkey.comz.game.Crawlers.isHeadshot(mob, first.intersection)
+					: first.intersection.getY() - mob.getLocation().getY() > mob.getEyeHeight() - (mob.getHeight() - mob.getEyeHeight());
+			if(headshot)
+				damage *= 1.5f;
+			com.theprogrammingturkey.comz.util.BloodMessages.nextHit(first.intersection.clone(), unit.clone(),
+					headshot ? com.theprogrammingturkey.comz.util.BloodMessages.HEADSHOT : com.theprogrammingturkey.comz.util.BloodMessages.SHOT);
+			game.damageMob(mob, player, damage, headshot);
+		}
+		// the splash
+		Location at = impact.toLocation(world);
+		org.bukkit.Particle.DustOptions dust = new org.bukkit.Particle.DustOptions(type.particleColor, 1.5f);
+		world.spawnParticle(Particle.DUST, at, 24, type.splashRadius * 0.3, type.splashRadius * 0.2, type.splashRadius * 0.3, 0, dust);
+		org.bukkit.Particle.DustOptions ring = new org.bukkit.Particle.DustOptions(type.particleColor, 1.0f);
+		for(int i = 0; i < 18; i++)
+		{
+			double a = i * Math.PI * 2 / 18;
+			world.spawnParticle(Particle.DUST, at.getX() + Math.cos(a) * type.splashRadius * 0.7, at.getY() + 0.1,
+					at.getZ() + Math.sin(a) * type.splashRadius * 0.7, 0, 0, 0, 0, 1, ring);
+		}
+		world.playSound(at, "mzguns:raygun.impact", org.bukkit.SoundCategory.PLAYERS, 1f, 0.9f + COMZombies.rand.nextFloat() * 0.2f);
+		double r = type.splashRadius;
+		for(Mob m : new ArrayList<>(game.spawnManager.getEntities()))
+		{
+			if(m == null || !m.isValid() || m.isDead() || m.getWorld() != world)
+				continue;
+			// how far the burst is from the zombie's body (the nearest point of it)
+			org.bukkit.util.BoundingBox box = m.getBoundingBox();
+			double dx = Math.max(box.getMinX() - impact.getX(), Math.max(0, impact.getX() - box.getMaxX()));
+			double dy = Math.max(box.getMinY() - impact.getY(), Math.max(0, impact.getY() - box.getMaxY()));
+			double dz = Math.max(box.getMinZ() - impact.getZ(), Math.max(0, impact.getZ() - box.getMaxZ()));
+			double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+			if(d > r)
+				continue;
+			com.theprogrammingturkey.comz.util.BloodMessages.nextHit(null, null, com.theprogrammingturkey.comz.util.BloodMessages.OTHER);
+			game.damageMob(m, player, type.splashDamage * (float) (1 - (2.0 / 3.0) * (d / r)), false);
+		}
 	}
 
 	/**

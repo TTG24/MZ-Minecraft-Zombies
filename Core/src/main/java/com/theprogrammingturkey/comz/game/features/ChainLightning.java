@@ -21,7 +21,7 @@ import java.util.UUID;
 /**
  * The Wunderwaffe's shot (any gun with "chain" in guns.json): a bolt of lightning that kills the first zombie in its path,
  * then jumps to the nearest zombie it can see within "chain_range" blocks, and on from there, up to "chain" zombies in
- * all. Each one is killed outright. Players with the client mod see a flickering bolt (GunAnimMessages.arc); everyone sees
+ * all. Each one is shocked (ZombieShock): it convulses for a moment, then drops. Players with the client mod see a flickering bolt (GunAnimMessages.arc); everyone sees
  * sparks and hears it crack.
  */
 public final class ChainLightning
@@ -86,7 +86,7 @@ public final class ChainLightning
 			double best = gun.chainRange * gun.chainRange;
 			for(Mob m : game.spawnManager.getEntities())
 			{
-				if(m == null || m.isDead() || !m.isValid() || struck.contains(m.getUniqueId()) || m.getWorld() != world)
+				if(m == null || m.isDead() || !m.isValid() || struck.contains(m.getUniqueId()) || m.getWorld() != world || ZombieShock.isShocked(m))
 					continue;
 				Vector c = centre(m);
 				double d = c.distanceSquared(from);
@@ -116,8 +116,8 @@ public final class ChainLightning
 		World world = mob.getWorld();
 		world.spawnParticle(Particle.ELECTRIC_SPARK, l, 30, 0.3, mob.getHeight() / 3, 0.3, 0.25);
 		world.playSound(l, "mzguns:wunderwaffe.arc", SoundCategory.PLAYERS, 1.0f, 0.9f + COMZombies.rand.nextFloat() * 0.2f);
-		// killed outright, whatever its health
-		game.damageMob(mob, player, (float) Math.max(gun.damage, mob.getHealth() + 1), false);
+		// it convulses for a moment, then drops (ZombieShock)
+		ZombieShock.shock(game, player, mob);
 	}
 
 	private static Vector centre(Mob mob)

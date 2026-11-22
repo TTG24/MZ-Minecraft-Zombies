@@ -459,8 +459,9 @@ public class Barrier
 				}
 			}
 
-			// A player within reach of the zombie gets hit, even with the barrier between them.
-			hurtPlayerInReach(mob);
+			// A player within reach of the zombie gets hit, even with the barrier between them (not while it's shocked)
+			if(mob.hasAI())
+				hurtPlayerInReach(mob);
 
 		}
 

@@ -24,6 +24,14 @@ public abstract class BaseGun extends Weapon
 	/** Chain lightning (the Wunderwaffe, ChainLightning): how many zombies a shot kills in all, jumping up to chainRange blocks. */
 	public int chain = 0;
 	public double chainRange = 7;
+	/**
+	 * Splash (the Ray Gun): a shot stops at the first zombie (or wall, or the ground) and hurts every zombie within
+	 * splashRadius blocks of where it lands, splashDamage at the middle down to a third of it at the edge. 0: none.
+	 */
+	public double splashRadius = 0;
+	public int splashDamage = 0;
+	/** How the shot is drawn: "bullet" (a tracer) or "ray" (the Ray Gun's ringed bolt). */
+	public String tracer = "bullet";
 
 	public BaseGun(String name, WeaponType type)
 	{
@@ -59,6 +67,9 @@ public abstract class BaseGun extends Weapon
 		this.burst = Math.max(2, CustomConfig.getInt(json, "burst", 3));
 		this.chain = Math.max(0, CustomConfig.getInt(json, "chain", 0));
 		this.chainRange = CustomConfig.getDouble(json, "chain_range", 7);
+		this.splashRadius = Math.max(0, CustomConfig.getDouble(json, "splash_radius", 0));
+		this.splashDamage = Math.max(0, CustomConfig.getInt(json, "splash_damage", this.damage / 2));
+		this.tracer = CustomConfig.getString(json, "tracer", "bullet").toLowerCase(java.util.Locale.ROOT);
 	}
 
 	public void updateAmmo(int clip, int total)

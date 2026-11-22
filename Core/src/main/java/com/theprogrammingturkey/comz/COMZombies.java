@@ -219,6 +219,7 @@ public class COMZombies extends JavaPlugin
 		// DiveListener is still constructed because WeaponListener / CrouchCommand reference it.
 		DiveListener dive = new DiveListener();
 		m.registerEvents(new WeaponListener(dive), this);
+		com.theprogrammingturkey.comz.game.features.ZombieShock.register(this);
 		m.registerEvents(new com.theprogrammingturkey.comz.game.features.PerkDrink(), this);
 		// R-to-reload: the Tactical Movement client mod sends this empty plugin message when R is pressed.
 		getServer().getMessenger().registerIncomingPluginChannel(this, "tacticalmovement:reload",

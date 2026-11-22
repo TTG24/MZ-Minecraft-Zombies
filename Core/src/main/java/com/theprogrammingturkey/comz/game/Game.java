@@ -2017,8 +2017,18 @@ public class Game
 		return knife ? c.pointsOnKnifeKill : headshot ? c.pointsOnHeadshotKill : c.pointsOnKill;
 	}
 
+	/** The next kill shows a headshot death (head popped) but pays as an ordinary kill (the Wunderwaffe: ZombieShock). */
+	private boolean popNextHead;
+
+	public void popNextHead()
+	{
+		popNextHead = true;
+	}
+
 	public void damageMob(Mob mob, Player player, float damageAmount, boolean headshot, boolean knife)
 	{
+		boolean popHead = popNextHead;
+		popNextHead = false;
 		double mobHealth = mob.getHealth() - damageAmount;
 		// Blood for players with the tactical mod (health is set directly here, so Minecraft sends no hurt flash for it)
 		com.theprogrammingturkey.comz.util.BloodMessages.hit(mob, isInstaKill() || mobHealth < 1);
@@ -2027,7 +2037,7 @@ public class Game
 		if(isInstaKill())
 		{
 			if(mob instanceof Zombie)
-				playZombieDeath(mob, headshot, player);
+				playZombieDeath(mob, headshot || popHead, player);
 			else
 				player.getWorld().playSound(mob.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
 
@@ -2051,7 +2061,7 @@ public class Game
 		else if(mobHealth < 1)
 		{
 			if(mob instanceof Zombie)
-				playZombieDeath(mob, headshot, player);
+				playZombieDeath(mob, headshot || popHead, player);
 			else
 				player.getWorld().playSound(mob.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
 
