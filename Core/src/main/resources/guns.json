@@ -835,7 +835,7 @@
           "clip_ammo": 40,
           "total_ammo": 200,
           "damage": 120,
-          "fire_delay": 20,
+          "fire_delay": 7,
           "max_distance": 100.0,
           "particle_color": "FF1919",
           "multi_hit": true,

@@ -273,7 +273,8 @@ public class WeaponListener implements Listener
 
 							if(hitEnts.isEmpty())
 							{
-								com.theprogrammingturkey.comz.util.GunAnimMessages.tracer(player, shotOrigin.toVector(), rayTrace.getPosition(distance),
+								// to where it stopped: the block it hit, not on through it
+								com.theprogrammingturkey.comz.util.GunAnimMessages.tracer(player, shotOrigin.toVector(), rayTrace.stopPosition(),
 										gun.getType().particleColor);
 								continue;
 							}

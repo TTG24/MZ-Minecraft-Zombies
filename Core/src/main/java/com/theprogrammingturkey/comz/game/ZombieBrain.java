@@ -165,7 +165,11 @@ public final class ZombieBrain
 		{
 			int[] n = s.route.get(s.index);
 			double dx = n[0] + 0.5 - at.getX(), dz = n[2] + 0.5 - at.getZ();
-			if(dx * dx + dz * dz < 0.36 && Math.abs(n[1] - at.getY()) < 1.5)
+			// Where the route turns, it walks nearer the middle of the step before heading on: turning early cut the corner,
+			// it scraped along the block there and slowed down
+			boolean turns = s.index > 0 && s.index + 1 < s.route.size() && turnsAt(s.route, s.index);
+			double near = turns ? 0.3 * 0.3 : 0.36;
+			if(dx * dx + dz * dz < near && Math.abs(n[1] - at.getY()) < 1.5)
 				s.index++;
 			else
 				break;
@@ -188,6 +192,43 @@ public final class ZombieBrain
 		}
 		int[] next = s.route.get(aim);
 		walkTo(mob, next[0] + 0.5, next[1], next[2] + 0.5);
+	}
+
+	/**
+	 * Heading diagonally into a wall, Minecraft drops the part of the move that goes into it and the mob slides along at a
+	 * fraction of its speed. When a short step towards the point would hit a block but a step along x or along z alone
+	 * would not, it is aimed straight along the wall instead (as far as the point is along that way), so it slides at full
+	 * speed. Not for a step up (a block it is about to jump onto is not a wall).
+	 *
+	 * @return the x and z to walk to
+	 */
+	private static double[] alongWall(Mob mob, double x, double y, double z)
+	{
+		Location at = mob.getLocation();
+		double dx = x - at.getX(), dz = z - at.getZ();
+		double len = Math.sqrt(dx * dx + dz * dz);
+		if(len < 0.3 || y > at.getY() + 0.5)
+			return new double[] {x, z};
+		org.bukkit.World world = mob.getWorld();
+		// its box, a hair above the floor and a hair narrower (so the floor and a wall it already touches don't count)
+		org.bukkit.util.BoundingBox box = mob.getBoundingBox().expand(-0.01, -0.01, -0.01).shift(0, 0.02, 0);
+		double step = 0.2;
+		if(!world.hasCollisionsIn(box.clone().shift(dx / len * step, 0, dz / len * step)))
+			return new double[] {x, z};
+		boolean xFree = Math.abs(dx) > 1.0E-3 && !world.hasCollisionsIn(box.clone().shift(Math.signum(dx) * step, 0, 0));
+		boolean zFree = Math.abs(dz) > 1.0E-3 && !world.hasCollisionsIn(box.clone().shift(0, 0, Math.signum(dz) * step));
+		if(xFree && (!zFree || Math.abs(dx) >= Math.abs(dz)))
+			return new double[] {x, at.getZ()};
+		if(zFree)
+			return new double[] {at.getX(), z};
+		return new double[] {x, z};
+	}
+
+	/** Does the route change direction at step i (the way in differs from the way out)? */
+	private static boolean turnsAt(List<int[]> route, int i)
+	{
+		int[] a = route.get(i - 1), b = route.get(i), c = route.get(i + 1);
+		return Integer.signum(b[0] - a[0]) != Integer.signum(c[0] - b[0]) || Integer.signum(b[2] - a[2]) != Integer.signum(c[2] - b[2]);
 	}
 
 	/** Hasn't moved half a block in the last second although it is trying to: its route needs redoing. */
@@ -238,6 +279,9 @@ public final class ZombieBrain
 	 */
 	private static void walkTo(Mob mob, double x, double y, double z)
 	{
+		double[] slid = alongWall(mob, x, y, z);
+		x = slid[0];
+		z = slid[1];
 		if(!moveControlBroken)
 		{
 			try

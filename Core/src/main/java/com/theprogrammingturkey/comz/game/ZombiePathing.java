@@ -186,7 +186,8 @@ public final class ZombiePathing
 		double dx = bx - ax, dz = bz - az, len = Math.sqrt(dx * dx + dz * dz);
 		if(len < 1.0E-3)
 			return true;
-		double px = -dz / len * 0.3, pz = dx / len * 0.3; // a body's half width, sideways
+		// a body's half width (0.3) sideways, plus room to spare: right at 0.3 it scraped past block corners and slowed down
+		double px = -dz / len * 0.45, pz = dx / len * 0.45;
 		Map<Long, Boolean> cache = new HashMap<>();
 		int steps = (int) Math.ceil(len / 0.25);
 		for(int i = 0; i <= steps; i++)
