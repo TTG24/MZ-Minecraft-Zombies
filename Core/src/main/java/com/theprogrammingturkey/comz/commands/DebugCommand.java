@@ -20,6 +20,15 @@ public class DebugCommand extends SubCommand
 		if(!COMZPermission.DEBUG.hasPerm(player))
 			return true;
 
+		// /zombies debug zombies: what each arena mob's AI is doing, shown only to you (works in any game)
+		if(args.length > 1 && args[1].equalsIgnoreCase("zombies"))
+		{
+			boolean on = com.theprogrammingturkey.comz.game.ZombieDebug.toggle(player);
+			player.sendRawMessage(on ? "§a" + "Zombie AI debug on: labels show each zombie's job, particles its route "
+					+ "(green walk, yellow jump, blue drop, white goal, red no progress)." : Colors.GRAY + "Zombie AI debug off.");
+			return true;
+		}
+
 		Game game = GameManager.INSTANCE.getGame(player);
 		if(game != null)
 		{

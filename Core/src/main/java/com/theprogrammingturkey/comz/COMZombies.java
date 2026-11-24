@@ -247,6 +247,7 @@ public class COMZombies extends JavaPlugin
 		DoorProximityManager.INSTANCE.stop();
 		com.theprogrammingturkey.comz.util.Highlight.clearAll();
 		com.theprogrammingturkey.comz.game.BoxEffects.clearAll();
+		com.theprogrammingturkey.comz.game.ZombieDebug.clear();
 		GameManager.INSTANCE.endAll();
 		// Players still in an arena (including post-match spectators) go home now: scheduled tasks no longer run here.
 		for(org.bukkit.entity.Player online : Bukkit.getOnlinePlayers())

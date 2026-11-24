@@ -508,6 +508,8 @@ public class Barrier
 		if(face != null)
 			to.setDirection(face.toVector().subtract(to.toVector()).setY(0).lengthSquared() > 1.0E-6
 					? face.toVector().subtract(to.toVector()).setY(0) : at.getDirection());
+		COMZombies.log.info(String.format("[Barrier %s] %s made no progress for 3s at %.2f %.2f %.2f, %.1f from its spot: put on its spot %.2f %.2f %.2f",
+				id, mob.getType().name().toLowerCase(), at.getX(), at.getY(), at.getZ(), Math.sqrt(flatDistSquared(spot, at)), to.getX(), to.getY(), to.getZ()));
 		mob.teleport(to);
 		com.theprogrammingturkey.comz.game.ZombieBrain.forget(mob);
 	}

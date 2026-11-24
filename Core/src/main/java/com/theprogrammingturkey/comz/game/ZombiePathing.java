@@ -48,20 +48,41 @@ public final class ZombiePathing
 
 	// ------------------------------------------------------------------ A*
 
-	private record Node(int x, int y, int z, double g, double f, Node parent) {}
+	/** {@code floor}: the height its feet are really at in this cell (on snow layers, a slab, carpet... not the block grid). */
+	private record Node(int x, int y, int z, double floor, double g, double f, Node parent) {}
+
+	/** Rises up to this it walks straight up (Minecraft's step height for mobs). */
+	static final double STEP = 0.6;
+	/** Rises up to this it jumps onto (a zombie's jump reaches about 1.25). Anything higher is not a way at all. */
+	static final double MAX_JUMP = 1.2;
+	private static final double HALF_WIDTH = 0.3, HEIGHT = 1.95;
+
+	/** A route step's real floor height (route entries are {x, cell y, z, floor in thousandths}). */
+	public static double floorOf(int[] step)
+	{
+		return step.length > 3 ? step[3] / 1000.0 : step[1];
+	}
 
 	/**
 	 * A* over the blocks (see the class description), stopping at a node near the goal from which nothing is between it
-	 * and {@code goal} (or, with no goal, any node within a block of it).
+	 * and {@code goal} (or, with no goal, any node within a block of it). Every move is one Minecraft really lets a zombie
+	 * make, measured from real floor heights: a rise up to {@link #STEP} is walked, up to {@link #MAX_JUMP} jumped (with head
+	 * room for the jump), drops up to {@code maxDrop}; its whole body has to fit wherever it stands.
 	 *
-	 * @return the route as feet positions from start to goal, or null when there is none within reach
+	 * @param startAt where it really is now (its feet): whether it is already there is judged from here, not from the
+	 *                middle of its block (beside a wall corner the middle can see the goal while it can't, and it waited
+	 *                there forever, told it had arrived)
+	 * @return the route as {x, cell y, z, floor in thousandths} from start to goal, or null when there is none within reach
 	 */
-	static List<int[]> search(World world, int sx, int sy, int sz, int gx, int gy, int gz, int maxDrop, Location goal, boolean orNearest)
+	static List<int[]> search(World world, int sx, int sy, int sz, Location startAt, int gx, int gy, int gz, int maxDrop, Location goal,
+	                          boolean orNearest)
 	{
+		double startFloor = startAt.getY();
 		Map<Long, Boolean> openCache = new HashMap<>();
+		Map<Long, Double> floors = new HashMap<>();
 		PriorityQueue<Node> open = new PriorityQueue<>((a, b) -> Double.compare(a.f(), b.f()));
 		Map<Long, Double> best = new HashMap<>();
-		open.add(new Node(sx, sy, sz, 0, h(sx, sy, sz, gx, gy, gz), null));
+		open.add(new Node(sx, sy, sz, startFloor, 0, h(sx, sy, sz, gx, gy, gz), null));
 		best.put(key(sx, sy, sz), 0.0);
 		int visited = 0;
 		// The node that got nearest to the goal, in case none gets there (a player flying overhead, on an unreachable ledge,
@@ -78,7 +99,7 @@ public final class ZombiePathing
 				nearest = cur;
 			}
 			if(Math.abs(cur.x() - gx) <= 1 && Math.abs(cur.z() - gz) <= 1 && Math.abs(cur.y() - gy) <= 1
-					&& (goal == null || arrivesAt(new Location(world, cur.x(), cur.y(), cur.z()), goal)))
+					&& (goal == null || arrivesAt(cur.parent() == null ? startAt : new Location(world, cur.x(), cur.floor(), cur.z()), goal)))
 				return build(cur);
 			Double known = best.get(key(cur.x(), cur.y(), cur.z()));
 			if(known != null && known < cur.g())
@@ -89,36 +110,72 @@ public final class ZombiePathing
 				if(Math.abs(nx - sx) > MAX_RANGE || Math.abs(nz - sz) > MAX_RANGE)
 					continue;
 				boolean diagonal = d[0] != 0 && d[1] != 0;
-				if(diagonal && (!open(world, cur.x() + d[0], cur.y(), cur.z(), openCache) || !open(world, cur.x(), cur.y(), cur.z() + d[1], openCache)
-						|| !open(world, cur.x() + d[0], cur.y() + 1, cur.z(), openCache) || !open(world, cur.x(), cur.y() + 1, cur.z() + d[1], openCache)))
-					continue;
+				double from = cur.floor();
 				int ny = Integer.MIN_VALUE;
-				if(standable(world, nx, cur.y(), nz, openCache))
-					ny = cur.y();
-				else if(!diagonal && standable(world, nx, cur.y() + 1, nz, openCache) && open(world, cur.x(), cur.y() + 2, cur.z(), openCache))
-					ny = cur.y() + 1;
-				else if(!diagonal && open(world, nx, cur.y(), nz, openCache) && open(world, nx, cur.y() + 1, nz, openCache))
-					for(int drop = 1; drop <= maxDrop; drop++)
+				double to = Double.NaN;
+				// Level with it, or the cell above (a step or a jump up), whichever it can stand in
+				for(int y = cur.y(); y <= cur.y() + 1 && ny == Integer.MIN_VALUE; y++)
+				{
+					double f = floorAt(world, nx, y, nz, floors);
+					if(!Double.isNaN(f) && f - from <= MAX_JUMP && from - f <= maxDrop)
 					{
-						if(!open(world, nx, cur.y() - drop, nz, openCache))
+						ny = y;
+						to = f;
+					}
+				}
+				// Off an edge: it walks out over the drop (its body has to fit there at its own height), then falls
+				if(ny == Integer.MIN_VALUE && !diagonal && bodyFits(world, nx, from, nz))
+					for(int drop = 1; drop <= maxDrop + 1; drop++)
+					{
+						int y = cur.y() - drop;
+						double f = floorAt(world, nx, y, nz, floors);
+						if(!Double.isNaN(f))
 						{
-							if(standable(world, nx, cur.y() - drop + 1, nz, openCache))
-								ny = cur.y() - drop + 1;
+							if(from - f <= maxDrop)
+							{
+								ny = y;
+								to = f;
+							}
 							break;
 						}
+						if(!open(world, nx, y, nz, openCache))
+							break;
 					}
-				if(ny == Integer.MIN_VALUE || ny > cur.y() + 1)
+				if(ny == Integer.MIN_VALUE)
 					continue;
+				double rise = to - from;
+				// Stairs (and anything with a lower near side) are walked up in two steps, not jumped: the half of the block
+				// it steps onto first is within a step of where it is, and the rest within a step of that
+				double lift = to;
+				boolean twoSteps = false;
+				if(rise > STEP && !diagonal && world.getBlockAt(nx, ny, nz).isPassable() && !barrierCell(world, nx, ny - 1, nz))
+				{
+					double near = nearSideTop(world.getBlockAt(nx, ny - 1, nz), d[0], d[1]);
+					if(near - from <= STEP && to - near <= STEP)
+					{
+						twoSteps = true;
+						lift = near;
+					}
+				}
+				// A jump or a diagonal only where it really fits: a corner is cut walking, never jumping, and a jump needs head
+				// room above where it takes off
+				if(diagonal && (Math.abs(rise) > STEP || !bodyFits(world, cur.x() + d[0], Math.max(from, to), cur.z())
+						|| !bodyFits(world, cur.x(), Math.max(from, to), cur.z() + d[1])))
+					continue;
+				if(rise > 0.01 && !bodyFits(world, cur.x(), lift, cur.z()))
+					continue;
+				if(twoSteps)
+					rise = STEP; // costed as a walk up
 				if(moveBlocked(world, cur.x(), cur.y(), cur.z(), nx, ny, nz))
 					continue;
-				double step = (diagonal ? 1.414 : 1.0) + (ny > cur.y() ? 0.4 : ny < cur.y() ? 0.15 * (cur.y() - ny) : 0);
+				double step = (diagonal ? 1.414 : 1.0) + (rise > STEP ? 0.6 : rise > 0.01 ? 0.2 : rise < -STEP ? 0.15 * -rise : 0);
 				double g = cur.g() + step;
 				long k = key(nx, ny, nz);
 				Double old = best.get(k);
 				if(old != null && old <= g)
 					continue;
 				best.put(k, g);
-				open.add(new Node(nx, ny, nz, g, g + h(nx, ny, nz, gx, gy, gz), cur));
+				open.add(new Node(nx, ny, nz, to, g, g + h(nx, ny, nz, gx, gy, gz), cur));
 			}
 		}
 		// No way all the way: the closest it got, if that is a real step nearer than where it started
@@ -135,6 +192,23 @@ public final class ZombiePathing
 	static int feetCell(Location at)
 	{
 		int y = (int) Math.floor(at.getY() + 0.01);
+		// The cell whose real floor is where the feet are (on 3 snow layers the feet are in the snow's block, but that block
+		// is not a cell to stand in: the one above it is, with its floor a quarter block up the snow's block)
+		Map<Long, Double> floors = new HashMap<>();
+		int best = Integer.MIN_VALUE;
+		double bestErr = 0.6;
+		for(int cy = y - 1; cy <= y + 1; cy++)
+		{
+			double f = floorAt(at.getWorld(), at.getBlockX(), cy, at.getBlockZ(), floors);
+			if(!Double.isNaN(f) && Math.abs(f - at.getY()) < bestErr)
+			{
+				bestErr = Math.abs(f - at.getY());
+				best = cy;
+			}
+		}
+		if(best != Integer.MIN_VALUE)
+			return best;
+		// Its body does not fit standing at the middle of its block (it is off to one side of something): by the blocks alone
 		Block feet = at.getWorld().getBlockAt(at.getBlockX(), y, at.getBlockZ());
 		return passableOrFlat(feet) ? y : y + 1;
 	}
@@ -157,7 +231,7 @@ public final class ZombiePathing
 		List<int[]> route;
 		try
 		{
-			route = search(mob.getWorld(), at.getBlockX(), feetCell(at), at.getBlockZ(), goal.getBlockX(), feetCell(goal),
+			route = search(mob.getWorld(), at.getBlockX(), feetCell(at), at.getBlockZ(), at, goal.getBlockX(), feetCell(goal),
 					goal.getBlockZ(), maxDrop, goal, false);
 		}
 		finally
@@ -176,9 +250,9 @@ public final class ZombiePathing
 	}
 
 	/**
-	 * Can a mob standing at {@code from} walk in a straight line to the middle of route node {@code to}, on the same level?
-	 * Every point along the line, and a body's width either side of it, has to be ground it can stand on (BlockBlocker
-	 * barriers count as solid, as in the planner).
+	 * Can a mob standing at {@code from} walk in a straight line to the middle of route node {@code to}, without a jump?
+	 * Every point along the line, and a body's width either side of it, has to be ground it can stand on, each no more than
+	 * a step ({@link #STEP}) above or below the last (BlockBlocker barriers count as solid, as in the planner).
 	 */
 	static boolean walkableLine(World world, Location from, int[] to)
 	{
@@ -188,16 +262,32 @@ public final class ZombiePathing
 			return true;
 		// a body's half width (0.3) sideways, plus room to spare: right at 0.3 it scraped past block corners and slowed down
 		double px = -dz / len * 0.45, pz = dx / len * 0.45;
-		Map<Long, Boolean> cache = new HashMap<>();
+		Map<Long, Double> floors = new HashMap<>();
 		int steps = (int) Math.ceil(len / 0.25);
+		double last = from.getY();
 		for(int i = 0; i <= steps; i++)
 		{
 			double x = ax + dx * i / steps, z = az + dz * i / steps;
+			double here = Double.NaN;
 			for(int side = -1; side <= 1; side++)
-				if(!standable(world, (int) Math.floor(x + px * side), to[1], (int) Math.floor(z + pz * side), cache))
+			{
+				int cx = (int) Math.floor(x + px * side), cz = (int) Math.floor(z + pz * side);
+				// the floor there, in the cell level with the line, or a step up or down from it
+				double f = Double.NaN;
+				for(int cy = to[1] - 1; cy <= to[1] + 1 && Double.isNaN(f); cy++)
+				{
+					double c = floorAt(world, cx, cy, cz, floors);
+					if(!Double.isNaN(c) && Math.abs(c - last) <= STEP)
+						f = c;
+				}
+				if(Double.isNaN(f))
 					return false;
+				if(side == 0)
+					here = f;
+			}
+			last = here;
 		}
-		return true;
+		return Math.abs(last - floorOf(to)) <= STEP;
 	}
 
 	private static double h(int x, int y, int z, int gx, int gy, int gz)
@@ -210,27 +300,109 @@ public final class ZombiePathing
 	{
 		List<int[]> out = new ArrayList<>();
 		for(Node n = end; n != null; n = n.parent())
-			out.add(new int[] {n.x(), n.y(), n.z()});
+			out.add(new int[] {n.x(), n.y(), n.z(), (int) Math.round(n.floor() * 1000)});
 		Collections.reverse(out);
 		return out;
 	}
 
 	/**
-	 * Feet and head open, solid ground below that is not a BlockBlocker barrier cell. Ground taller than a full block
-	 * (fences, walls, closed fence gates: 1.5 high) is not something a zombie can step onto or stand on.
+	 * Where a zombie's feet are standing in the middle of this cell, or NaN when it can't stand there. The cell holds its
+	 * feet: either open, with ground below it, or with only a thin cover in it (carpet, snow up to two layers: no more than
+	 * 0.13 high). The ground is a block whose top is no higher than a full block (fences, walls and closed gates, 1.5 high,
+	 * are not stood on) or a BlockBlocker barrier (stood on like stone). Its whole body, 0.6 wide and 1.95 tall from that
+	 * real floor, has to fit (real shapes: a low ceiling, a top slab, a lantern, a fence arm), with no BlockBlocker barrier
+	 * in it.
 	 */
-	private static boolean standable(World world, int x, int y, int z, Map<Long, Boolean> cache)
+	public static double floorAt(World world, int x, int y, int z, Map<Long, Double> cache)
 	{
-		if(!open(world, x, y, z, cache) || !open(world, x, y + 1, z, cache))
+		long k = key(x, y, z);
+		Double known = cache.get(k);
+		if(known != null)
+			return known;
+		double f = floorHere(world, x, y, z);
+		cache.put(k, f);
+		return f;
+	}
+
+	private static double floorHere(World world, int x, int y, int z)
+	{
+		if(!world.isChunkLoaded(x >> 4, z >> 4) || barrierCell(world, x, y, z))
+			return Double.NaN;
+		Block here = world.getBlockAt(x, y, z);
+		if(avoiding != null && avoiding.contains(here))
+			return Double.NaN;
+		double floor;
+		if(!here.isPassable())
+		{
+			double top = collisionTop(here);
+			if(top > 0.13)
+				return Double.NaN;
+			floor = y + top;
+		}
+		else if(barrierCell(world, x, y - 1, z))
+			floor = y; // the top of a BlockBlocker barrier is ground, like a stone block's
+		else
+		{
+			Block below = world.getBlockAt(x, y - 1, z);
+			double top = below.isPassable() ? 0 : collisionTop(below);
+			// A thin cover below is the floor of the cell it is in, not of this one (no two cells for one place to stand)
+			if(top <= 0.13 || top > 1.0001)
+				return Double.NaN;
+			floor = y - 1 + top;
+		}
+		if(!bodyFits(world, x, floor, z))
+			return Double.NaN;
+		return floor;
+	}
+
+	/**
+	 * The top of the half of this block a mob walking in direction (dx, dz) steps onto first (world height). A stair entered
+	 * from its low side is half a block high there; a full block or a slab is the same all over.
+	 */
+	private static double nearSideTop(Block ground, int dx, int dz)
+	{
+		double top = 0;
+		for(var b : ground.getCollisionShape().getBoundingBoxes())
+		{
+			boolean near = (dx > 0 ? b.getMinX() < 0.5 : dx < 0 ? b.getMaxX() > 0.5 : true)
+					&& (dz > 0 ? b.getMinZ() < 0.5 : dz < 0 ? b.getMaxZ() > 0.5 : true);
+			if(near)
+				top = Math.max(top, b.getMaxY());
+		}
+		return ground.getY() + top;
+	}
+
+	/**
+	 * Does a zombie's body (0.6 wide, 1.95 tall) fit at the middle of this column with its feet at {@code floor}? Real block
+	 * shapes, and no BlockBlocker barrier in the cells it fills.
+	 */
+	static boolean bodyFits(World world, int x, double floor, int z)
+	{
+		if(!world.isChunkLoaded(x >> 4, z >> 4))
 			return false;
-		// The top of a BlockBlocker barrier is ground, like a stone block's
-		if(barrierCell(world, x, y - 1, z))
-			return true;
-		Block below = world.getBlockAt(x, y - 1, z);
-		if(below.isPassable() || below.getType().isAir())
-			return false;
-		double top = collisionTop(below);
-		return top > 0 && top <= 1.0001;
+		double minY = floor + 0.01, maxY = floor + HEIGHT;
+		// its body across the cell (block-relative), a hair narrower so a wall it only touches does not count
+		double lo = 0.5 - HALF_WIDTH + 0.01, hi = 0.5 + HALF_WIDTH - 0.01;
+		int bottom = (int) Math.floor(minY);
+		// From the block below its feet (a fence or wall there reaches up 1.5) to the one its head is in. Block shapes stay
+		// inside their own block (only that 1.5 height reaches above), so this column is all that can be in its way.
+		for(int y = bottom - 1; y <= (int) Math.floor(maxY); y++)
+		{
+			Block b = world.getBlockAt(x, y, z);
+			if(y >= bottom && (barrierCell(world, x, y, z) || (avoiding != null && avoiding.contains(b))))
+				return false;
+			if(b.isPassable())
+				continue;
+			for(var box : b.getCollisionShape().getBoundingBoxes())
+			{
+				if(y + box.getMaxY() <= minY || y + box.getMinY() >= maxY)
+					continue;
+				if(box.getMaxX() <= lo || box.getMinX() >= hi || box.getMaxZ() <= lo || box.getMinZ() >= hi)
+					continue;
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
