@@ -222,20 +222,44 @@ public final class ZombieBrain
 		if(len < 0.3 || y > at.getY() + 0.5)
 			return new double[] {x, z};
 		org.bukkit.World world = mob.getWorld();
-		// its box, a hair above the floor and a hair narrower (so the floor and a wall it already touches don't count)
-		// Raised by a step's height (0.6), so a slab or a half-block step up it can walk onto is not taken for a wall: that
-		// slid it sideways at the edge of a window floor half a block above the slabs outside, and it turned on the spot
-		org.bukkit.util.BoundingBox box = mob.getBoundingBox().expand(-0.01, -0.01, -0.01).shift(0, 0.61, 0);
+		// its real box, a hair above the floor and a hair narrower (so the floor and a wall it already touches don't count)
+		org.bukkit.util.BoundingBox box = mob.getBoundingBox().expand(-0.01, -0.01, -0.01);
 		double step = 0.2;
-		if(!world.hasCollisionsIn(box.clone().shift(dx / len * step, 0, dz / len * step)))
+		if(free(world, box, dx / len * step, dz / len * step))
 			return new double[] {x, z};
-		boolean xFree = Math.abs(dx) > 1.0E-3 && !world.hasCollisionsIn(box.clone().shift(Math.signum(dx) * step, 0, 0));
-		boolean zFree = Math.abs(dz) > 1.0E-3 && !world.hasCollisionsIn(box.clone().shift(0, 0, Math.signum(dz) * step));
+		boolean xFree = Math.abs(dx) > 1.0E-3 && free(world, box, Math.signum(dx) * step, 0);
+		boolean zFree = Math.abs(dz) > 1.0E-3 && free(world, box, 0, Math.signum(dz) * step);
+		double[] slid;
 		if(xFree && (!zFree || Math.abs(dx) >= Math.abs(dz)))
-			return new double[] {x, at.getZ()};
-		if(zFree)
-			return new double[] {at.getX(), z};
-		return new double[] {x, z};
+			slid = new double[] {x, at.getZ()};
+		else if(zFree)
+			slid = new double[] {at.getX(), z};
+		else
+			return new double[] {x, z};
+		// Aimed at a point right beside itself it would overshoot and turn on the spot every tick: keep the real aim
+		double sx = slid[0] - at.getX(), sz = slid[1] - at.getZ();
+		if(sx * sx + sz * sz < 0.3 * 0.3)
+			return new double[] {x, z};
+		return slid;
+	}
+
+	/**
+	 * Can its body make this small move, the way Minecraft moves a mob: straight on, or lifted by a step's height (0.6) when
+	 * that is in the way (a slab, stair or snow it walks up onto is not a wall)? Its real box is tested both times, so a
+	 * low ceiling it fits under never counts as a wall (testing a box simply raised 0.6 hit such ceilings, and zombies in a
+	 * low passage circled on the spot).
+	 */
+	private static boolean free(org.bukkit.World world, org.bukkit.util.BoundingBox box, double mx, double mz)
+	{
+		org.bukkit.util.BoundingBox moved = box.clone().shift(mx, 0, mz);
+		if(!world.hasCollisionsIn(moved))
+			return true;
+		// stepping up: room above where it stands, then room for the move up there (a half-block step only needs a half
+		// block of lift, so a low lintel over a window it fits through does not count either)
+		for(double lift : new double[] {0.51, 0.6})
+			if(!world.hasCollisionsIn(box.clone().shift(0, lift, 0)) && !world.hasCollisionsIn(moved.clone().shift(0, lift, 0)))
+				return true;
+		return false;
 	}
 
 	/** Does the route change direction at step i (the way in differs from the way out)? */
