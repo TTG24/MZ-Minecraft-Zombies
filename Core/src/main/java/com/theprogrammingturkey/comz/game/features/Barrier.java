@@ -500,7 +500,7 @@ public class Barrier
 		progressTick.remove(mob);
 		if(spot == null || spot.getWorld() != at.getWorld() || spot.distanceSquared(at) > 8 * 8)
 			return; // nowhere near its barrier: it is still on its way, not caught at it
-		if(spot.distanceSquared(at) < 0.6 * 0.6)
+		if(flatDistSquared(spot, at) < 0.6 * 0.6)
 			return; // standing where it should (waiting its turn further back in the line)
 		Location to = spot.clone();
 		// facing the barrier
@@ -788,7 +788,7 @@ public class Barrier
 		PeacefulArenaMobs.attackPlayer(mob, nearest);
 	}
 
-	private Location getNearestBlockCenter(Entity ent)
+	public Location getNearestBlockCenter(Entity ent)
 	{
 		Location nearest = null;
 		double nearestDist = Double.MAX_VALUE;

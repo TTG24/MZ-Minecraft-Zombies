@@ -126,15 +126,27 @@ public final class ZombieBrain
 		}
 
 		// Right there with nothing in between: straight to it (a player is a moving target; a barrier spot is just reached)
-		if(at.distanceSquared(goal) < 6.25 && ZombiePathing.arrivesAt(at, goal))
+		// ...unless it has stopped moving: the line was clear but its body is caught on something, so it plans a way round
+		// (not one standing still where it means to be: waiting at its spot or in reach of the player)
+		boolean stuck = isStuck(s, at, tick) && at.distanceSquared(goal) > 1.0;
+		if(!stuck && at.distanceSquared(goal) < 6.25 && ZombiePathing.arrivesAt(at, goal))
 		{
 			s.route = null;
-			if(held == null || at.distanceSquared(goal) > 0.09)
+			// (level distance: on a half slab it stands half a block below its spot, which is at the window's floor)
+			double fx = at.getX() - goal.getX(), fz = at.getZ() - goal.getZ();
+			if(held == null || fx * fx + fz * fz > 0.25)
 				walkTo(mob, goal.getX(), goal.getY(), goal.getZ());
+			else
+			{
+				// At its spot: stand still facing the boards. Walking on to a point it is already on made Minecraft's
+				// movement overshoot and flip its heading every tick, so it spun on the spot.
+				Location face = held.getNearestBlockCenter(mob);
+				if(face != null)
+					mob.lookAt(face.getX(), face.getY() + 0.5, face.getZ());
+			}
 			return;
 		}
 
-		boolean stuck = isStuck(s, at, tick);
 		boolean replan = s.route == null || s.routeGoal == null || s.routeGoal.getWorld() != goal.getWorld()
 				|| s.routeGoal.distanceSquared(goal) > 4 || tick - s.routeTick > REPLAN_TICKS || stuck;
 		if(replan && tick >= s.failedUntil && mob.isOnGround() && takeSearch(tick))
@@ -211,7 +223,9 @@ public final class ZombieBrain
 			return new double[] {x, z};
 		org.bukkit.World world = mob.getWorld();
 		// its box, a hair above the floor and a hair narrower (so the floor and a wall it already touches don't count)
-		org.bukkit.util.BoundingBox box = mob.getBoundingBox().expand(-0.01, -0.01, -0.01).shift(0, 0.02, 0);
+		// Raised by a step's height (0.6), so a slab or a half-block step up it can walk onto is not taken for a wall: that
+		// slid it sideways at the edge of a window floor half a block above the slabs outside, and it turned on the spot
+		org.bukkit.util.BoundingBox box = mob.getBoundingBox().expand(-0.01, -0.01, -0.01).shift(0, 0.61, 0);
 		double step = 0.2;
 		if(!world.hasCollisionsIn(box.clone().shift(dx / len * step, 0, dz / len * step)))
 			return new double[] {x, z};
