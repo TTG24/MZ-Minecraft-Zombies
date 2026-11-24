@@ -76,6 +76,18 @@ public class BarrierManager
 			barrier.addSpawnPoints(StreamSupport.stream(barrierJson.get("spawns").getAsJsonArray().spliterator(), false).map(sp -> game.spawnManager.getSpawnPoint(sp.getAsString())).filter(Objects::nonNull).collect(Collectors.toList()));
 
 			barrier.setReward(CustomConfig.getInt(barrierJson, "reward", 1));
+			String side = CustomConfig.getString(barrierJson, "zombie_side", "");
+			if(!side.isEmpty())
+			{
+				try
+				{
+					barrier.setZombieSide(BlockFace.valueOf(side));
+				}
+				catch(IllegalArgumentException e)
+				{
+					COMZombies.log.warning("Barrier " + barrierID + ": unknown zombie_side " + side + ", ignored");
+				}
+			}
 
 			this.barriers.add(barrier);
 		}
@@ -114,6 +126,8 @@ public class BarrierManager
 			barrierJson.add("spawns", spawnsArray);
 
 			barrierJson.addProperty("reward", barrier.getReward());
+			if(barrier.getZombieSide() != null)
+				barrierJson.addProperty("zombie_side", barrier.getZombieSide().name());
 			saveJson.add(barrierJson);
 		}
 
@@ -185,7 +199,7 @@ public class BarrierManager
 		List<Barrier> sameHeight = new ArrayList<>();
 		for(Barrier b : barriers)
 		{
-			if(b.getBlocks().isEmpty() || toBarrier(at, b) > seek || !isOpenToPlayers(b))
+			if(b.getBlocks().isEmpty() || toBarrier(at, b) > seek || !isOpenToPlayers(b) || !entryFor(b, at))
 				continue;
 			all.add(b);
 			int closestDy = Integer.MAX_VALUE;
@@ -195,6 +209,107 @@ public class BarrierManager
 				sameHeight.add(b);
 		}
 		return sameHeight.isEmpty() ? all : sameHeight;
+	}
+
+	/**
+	 * May a zombie use this window as its way in at all? A window whose side is not known is used only while no window of
+	 * the arena has one (an arena not checked yet: the old guesses); once the arena is checked, a window the check could not
+	 * decide is not a way in until its side is set in barrier edit ("side"). Whether the zombie can get to the window's
+	 * zombie side is the planner's to say (canWalkUpTo walks to that side only): which side of a straight line through the
+	 * window it is on says nothing (a way round the end of the wall leads to the other side).
+	 */
+	private boolean entryFor(Barrier b, Location at)
+	{
+		return b.getZombieSide() != null || !sidesKnown();
+	}
+
+	/** Can the zombie walk to its nearest player without going through any window (it is inside already)? */
+	public boolean hasOpenWay(org.bukkit.entity.Mob mob)
+	{
+		Player player = game.spawnManager.getNearestPlayer(mob);
+		return player != null && openWayLength(mob, player.getLocation()) >= 0;
+	}
+
+	/** Has any window of this arena got its zombie side? */
+	public boolean sidesKnown()
+	{
+		for(Barrier b : barriers)
+			if(b.getZombieSide() != null)
+				return true;
+		return false;
+	}
+
+	/**
+	 * Works out each window's zombie side from the map: every place players can walk to from the player spawn(s) and the
+	 * teleporter arrivals, through doors (players open them) but never through a window, is inside. A window whose cells on
+	 * one face are all outside, while the opposite face has inside cells, has its zombies on that first face. Windows that
+	 * can't be told (both faces reachable by players, or neither) get no side and are listed.
+	 *
+	 * @param onlyMissing leave windows that already have a side as they are
+	 * @param only        just this window (null: all)
+	 * @return the windows that could not be decided
+	 */
+	public List<String> detectSides(boolean onlyMissing, Barrier only)
+	{
+		List<String> unclear = new ArrayList<>();
+		org.bukkit.World world = game.getWorld();
+		if(world == null || game.arena == null || game.arena.getMin() == null || game.arena.getMax() == null)
+			return unclear;
+		List<Location> seeds = new ArrayList<>();
+		if(game.arena.getPlayerTPLocation() != null)
+			seeds.add(game.arena.getPlayerTPLocation());
+		if(game.arena.getSecondPlayerTPLocation() != null)
+			seeds.add(game.arena.getSecondPlayerTPLocation());
+		if(game.linkManager.getMainframe() != null)
+			seeds.add(game.linkManager.getMainframe().arrival(world));
+		for(var link : game.linkManager.getLinks())
+			seeds.add(link.arrival(world));
+		if(seeds.isEmpty())
+			return unclear;
+		java.util.Set<Block> walls = new java.util.HashSet<>();
+		for(Barrier b : barriers)
+			walls.addAll(b.getBlocks());
+		java.util.Set<Block> doors = new java.util.HashSet<>();
+		for(com.theprogrammingturkey.comz.game.features.Door door : game.doorManager.getDoors())
+			doors.addAll(door.getBlocks());
+		// The planner counts unloaded chunks as solid: load the arena's
+		Location lo = game.arena.getMin(), hi = game.arena.getMax();
+		for(int cx = (Math.min(lo.getBlockX(), hi.getBlockX()) - 2) >> 4; cx <= (Math.max(lo.getBlockX(), hi.getBlockX()) + 2) >> 4; cx++)
+			for(int cz = (Math.min(lo.getBlockZ(), hi.getBlockZ()) - 2) >> 4; cz <= (Math.max(lo.getBlockZ(), hi.getBlockZ()) + 2) >> 4; cz++)
+				world.getChunkAt(cx, cz);
+		int maxDrop = Math.max(3, Math.min(32, COMZombies.getPlugin().getConfig().getInt("config.gameSettings.zombieSafeFallDistance", 16)));
+		java.util.Set<Long> inside = com.theprogrammingturkey.comz.game.ZombiePathing.reachable(world, seeds, game.arena.getMin(),
+				game.arena.getMax(), walls, doors, maxDrop);
+		for(Barrier b : barriers)
+		{
+			if((only != null && b != only) || (onlyMissing && b.getZombieSide() != null) || b.getBlocks().isEmpty())
+				continue;
+			BlockFace found = null;
+			int candidates = 0;
+			for(BlockFace face : b.crossingFaces())
+			{
+				int in = 0, out = 0, opposite = 0;
+				for(int[] c : b.cellsBeside(face))
+				{
+					if(inside.contains(com.theprogrammingturkey.comz.game.ZombiePathing.cellKey(c[0], c[1], c[2])))
+						in++;
+					else
+						out++;
+				}
+				for(int[] c : b.cellsBeside(face.getOppositeFace()))
+					if(inside.contains(com.theprogrammingturkey.comz.game.ZombiePathing.cellKey(c[0], c[1], c[2])))
+						opposite++;
+				if(in == 0 && out > 0 && opposite > 0)
+				{
+					found = face;
+					candidates++;
+				}
+			}
+			b.setZombieSide(candidates == 1 ? found : null);
+			if(candidates != 1)
+				unclear.add(b.getID());
+		}
+		return unclear;
 	}
 
 	// How far (in blocks) a barrier's zombie spawn may be from it to count as that window's spawn
@@ -274,7 +389,7 @@ public class BarrierManager
 			if(player == null || reallyReaches(mob, player.getLocation()))
 				return null;
 			for(Barrier b : barriers)
-				if(!b.getBlocks().isEmpty() && b.getBlocks().get(0).getWorld().equals(at.getWorld()) && isOpenToPlayers(b))
+				if(!b.getBlocks().isEmpty() && b.getBlocks().get(0).getWorld().equals(at.getWorld()) && isOpenToPlayers(b) && entryFor(b, at))
 					ranked.add(b);
 			if(ranked.isEmpty())
 				return null;
@@ -287,15 +402,19 @@ public class BarrierManager
 		// (A zombie with an open way to the player already went for the player above, so there is no open-way choice to make
 		// here; the check that used to be here ran another full path search per spawn and could never pass.)
 
+		// The best one it can really walk up to (to its zombie side). None: no window for it, rather than one it can't get to,
+		// where it would stand for good; its spawn is a dead end for now and is not used for a while.
 		int tried = 0;
 		for(Barrier b : ranked)
 		{
-			if(tried++ >= 5)
+			if(tried++ >= 12)
 				break;
 			if(canWalkUpTo(mob, b))
 				return b;
 		}
-		return ranked.get(0);
+		if(spawn != null)
+			game.spawnManager.markDeadEnd(spawn, "its zombies can't walk to any open window or player");
+		return null;
 	}
 
 	/**

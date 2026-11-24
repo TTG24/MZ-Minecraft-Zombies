@@ -81,8 +81,64 @@ public class GameManager
 			else
 				COMZombies.log.log(Level.SEVERE, "Failed to load arena {0}!", new Object[]{arena.getKey()});
 		}
+		// Each window's zombie side, worked out once from the map and saved (before the pools copy the arenas)
+		detectBarrierSides();
 		ArenaInstances.INSTANCE.loadPools();
 		Bukkit.broadcast(Colors.legacy(COMZombies.PREFIX + Colors.RED + " Done loading arenas!"));
+	}
+
+	/**
+	 * Arenas with windows that have no zombie side yet get one from the map (BarrierManager.detectSides), and the arenas
+	 * are saved. The first time, arenas.json is copied to arenas.json.bak-before-sides first. Windows that can't be decided
+	 * are logged: set those in barrier edit ("side").
+	 */
+	private void detectBarrierSides()
+	{
+		boolean changed = false;
+		for(Game game : games)
+		{
+			if(game.isInstance() || game.barrierManager.getBarriers().isEmpty())
+				continue;
+			boolean missing = false;
+			for(com.theprogrammingturkey.comz.game.features.Barrier b : game.barrierManager.getBarriers())
+				if(b.getZombieSide() == null)
+					missing = true;
+			if(!missing)
+				continue;
+			try
+			{
+				long t0 = System.nanoTime();
+				int before = 0;
+				for(com.theprogrammingturkey.comz.game.features.Barrier b : game.barrierManager.getBarriers())
+					if(b.getZombieSide() == null)
+						before++;
+				List<String> unclear = game.barrierManager.detectSides(true, null);
+				int set = before - unclear.size();
+				if(set > 0)
+					changed = true;
+				COMZombies.log.info(String.format("[MZ] Arena %s: zombie side worked out for %d window(s) in %d ms%s", game.getName(), set,
+						(System.nanoTime() - t0) / 1_000_000, unclear.isEmpty() ? "" : "; could not decide " + unclear
+								+ " (zombies won't use these until their side is set: /zombies editbarrier, then type side)"));
+			}
+			catch(RuntimeException e)
+			{
+				COMZombies.log.log(Level.WARNING, "Could not work out the window sides of arena " + game.getName(), e);
+			}
+		}
+		if(!changed)
+			return;
+		try
+		{
+			java.io.File arenas = new java.io.File(COMZombies.getPlugin().getDataFolder(), "arenas.json");
+			java.io.File backup = new java.io.File(COMZombies.getPlugin().getDataFolder(), "arenas.json.bak-before-sides");
+			if(arenas.exists() && !backup.exists())
+				java.nio.file.Files.copy(arenas.toPath(), backup.toPath());
+		}
+		catch(java.io.IOException e)
+		{
+			COMZombies.log.log(Level.WARNING, "Could not back up arenas.json before saving the window sides", e);
+		}
+		saveAllGames();
 	}
 
 	public void saveAllGames()

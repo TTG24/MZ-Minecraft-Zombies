@@ -481,9 +481,29 @@ public class SpawnManager
 		return canSpawn(point);
 	}
 
+	/** Spawns whose zombies found no way to any window or player: not used until this server tick. */
+	private final java.util.Map<SpawnPoint, Integer> deadEnds = new java.util.HashMap<>();
+	private static final int DEAD_END_TICKS = 1200;
+
+	/**
+	 * A zombie from this spawn has no way to any open window or to a player (walled in, or its window is in a room that is
+	 * still shut): the spawn is not used for a minute (rooms open meanwhile), and it is logged once each time.
+	 */
+	public void markDeadEnd(SpawnPoint point, String why)
+	{
+		int now = org.bukkit.Bukkit.getCurrentTick();
+		Integer until = deadEnds.get(point);
+		if(until == null || until <= now)
+			COMZombies.log.info("[MZ] " + game.getName() + ": spawn " + point.getID() + " not used for a minute: " + why);
+		deadEnds.put(point, now + DEAD_END_TICKS);
+	}
+
 	private boolean canSpawn(SpawnPoint point)
 	{
 		if(point == null)
+			return false;
+		Integer deadUntil = deadEnds.get(point);
+		if(deadUntil != null && deadUntil > org.bukkit.Bukkit.getCurrentTick())
 			return false;
 		if(point.isAlwaysActive())
 			return true;
@@ -577,6 +597,7 @@ public class SpawnManager
 	public void reset()
 	{
 		this.mobs.clear();
+		deadEnds.clear();
 		// Per-zombie timers: a zombie that left the list another way would otherwise stay here (and keep its world loaded)
 		lastActive.clear();
 		lastRespawn.clear();

@@ -21,7 +21,8 @@ import java.util.Map;
 
 /**
  * Edits an existing barrier in place. Chat: "blocks" (click blocks with the wooden sword to add or remove them),
- * "reward <n>", "done" (save), "cancel" (undo everything). Spawn links are no longer used (zombies pick the nearest
+ * "reward <n>", "side" (the side zombies come from: the one you stand on; "side auto" works it out from the map, "side clear"
+ * forgets it), "done" (save), "cancel" (undo everything). Spawn links are no longer used (zombies pick the nearest
  * reachable barrier), so old links are left as they are.
  * The barrier being edited is outlined in yellow.
  */
@@ -36,6 +37,7 @@ public class BarrierEditAction extends BaseAction
 	private final Map<Block, Material> savedBlocks;
 	private final List<SpawnPoint> savedSpawns;
 	private final int savedReward;
+	private final org.bukkit.block.BlockFace savedSide;
 	private Mode mode = Mode.BLOCKS;
 	private boolean finished = false;
 	/** Toggled by typing "tall": each click also takes the block above. */
@@ -50,13 +52,16 @@ public class BarrierEditAction extends BaseAction
 		savedBlocks = barrier.copyBlockMaterials();
 		savedSpawns = new ArrayList<>(barrier.getSpawnPoints());
 		savedReward = barrier.getReward();
+		savedSide = barrier.getZombieSide();
 
 		if(!player.getInventory().contains(Material.WOODEN_SWORD))
 			player.getInventory().addItem(new ItemStack(Material.WOODEN_SWORD));
 
 		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "" + Colors.STRIKETHROUGH + "------" + Colors.RED + "Edit Barrier " + barrier.getID() + Colors.DARK_GREEN + "" + Colors.STRIKETHROUGH + "-----");
 		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Mode: BLOCKS (outlined in yellow). Click blocks with the wooden sword to add them to / remove them from the barrier.");
-		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type: " + Colors.RED + "blocks" + Colors.GRAY + " | " + Colors.RED + "reward <n>" + Colors.GRAY + " (now " + savedReward + ") | " + Colors.RED + "tall" + Colors.GRAY + " (also take the block above) | " + Colors.RED + "done" + Colors.GRAY + " | " + Colors.RED + "cancel");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Type: " + Colors.RED + "blocks" + Colors.GRAY + " | " + Colors.RED + "reward <n>" + Colors.GRAY + " (now " + savedReward + ") | " + Colors.RED + "tall" + Colors.GRAY + " (also take the block above) | " + Colors.RED + "side" + Colors.GRAY + " | " + Colors.RED + "done" + Colors.GRAY + " | " + Colors.RED + "cancel");
+		CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Zombie side: " + sideName(savedSide) + Colors.GRAY + " (purple tiles). Stand on the side zombies come from and type "
+				+ Colors.RED + "side" + Colors.GRAY + ", or " + Colors.RED + "side auto" + Colors.GRAY + " to work it out from the map.");
 		// One tick later: the command only stores this action after the constructor returns, and the loop stops if it is not stored
 		COMZombies.scheduleTask(1, this::outline);
 	}
@@ -68,6 +73,7 @@ public class BarrierEditAction extends BaseAction
 			return;
 		finished = true;
 		barrier.restore(savedBlocks, savedSpawns, savedReward);
+		barrier.setZombieSide(savedSide);
 		game.resetSpawnLocationBlocks();
 		CommandUtil.sendMessageToPlayer(player, Colors.RED + "Barrier edit canceled, nothing was changed.");
 	}
@@ -149,6 +155,30 @@ public class BarrierEditAction extends BaseAction
 			CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Mode: BLOCKS. The barrier's " + barrier.getBlocks().size() + " block(s) are outlined in yellow. Click blocks to add/remove them.");
 			draw();
 		}
+		else if(msg.equals("side"))
+		{
+			org.bukkit.block.BlockFace face = barrier.faceTowards(player.getLocation());
+			if(face == null)
+			{
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "Stand in front of the window on the side zombies come from (not level with it), then type side.");
+				return;
+			}
+			barrier.setZombieSide(face);
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Zombie side set to " + sideName(face) + Colors.DARK_GREEN + ": zombies wait and break it from there and climb through to the other side.");
+			draw();
+		}
+		else if(msg.equals("side auto"))
+		{
+			boolean ok = game.barrierManager.detectSides(false, barrier).isEmpty();
+			CommandUtil.sendMessageToPlayer(player, ok ? Colors.DARK_GREEN + "Zombie side worked out from the map: " + sideName(barrier.getZombieSide()) + Colors.DARK_GREEN + "."
+					: Colors.RED + "Could not tell from the map which side zombies come from (players can reach both sides, or neither). Stand on the zombie side and type side.");
+			draw();
+		}
+		else if(msg.equals("side clear"))
+		{
+			barrier.setZombieSide(null);
+			CommandUtil.sendMessageToPlayer(player, Colors.GRAY + "Zombie side cleared." + (game.barrierManager.sidesKnown() ? " Zombies won't use this window until it has one." : ""));
+		}
 		else if(msg.startsWith("reward"))
 		{
 			String num = msg.substring(6).trim();
@@ -176,13 +206,21 @@ public class BarrierEditAction extends BaseAction
 			barrier.repairFull();
 			game.resetSpawnLocationBlocks();
 			GameManager.INSTANCE.saveAllGames();
-			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Barrier " + barrier.getID() + " saved: " + barrier.getBlocks().size() + " block(s), reward " + barrier.getReward() + ".");
+			CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + "Barrier " + barrier.getID() + " saved: " + barrier.getBlocks().size() + " block(s), reward " + barrier.getReward()
+					+ ", zombie side " + sideName(barrier.getZombieSide()) + Colors.DARK_GREEN + ".");
+			if(barrier.getZombieSide() == null && game.barrierManager.sidesKnown())
+				CommandUtil.sendMessageToPlayer(player, Colors.RED + "It has no zombie side, so zombies won't use it: edit it again and type side.");
 			COMZombies.scheduleTask(1, () -> COMZombies.getPlugin().activeActions.remove(player));
 		}
 		else
 		{
-			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type blocks, reward <n>, tall, done or cancel.");
+			CommandUtil.sendMessageToPlayer(player, Colors.RED + "Type blocks, reward <n>, tall, side, side auto, side clear, done or cancel.");
 		}
+	}
+
+	private static String sideName(org.bukkit.block.BlockFace face)
+	{
+		return face == null ? Colors.RED + "not set" : Colors.YELLOW + face.name().toLowerCase();
 	}
 
 	private void outline()
@@ -199,6 +237,14 @@ public class BarrierEditAction extends BaseAction
 		if(mode == Mode.BLOCKS)
 		{
 			Highlight.blocks(player, barrier.getBlocks(), Highlight.BARRIER);
+			// The zombie side: where zombies wait and break it from
+			if(barrier.getZombieSide() != null)
+				for(int[] c : barrier.cellsBeside(barrier.getZombieSide()))
+				{
+					double floor = com.theprogrammingturkey.comz.game.ZombiePathing.floorAt(player.getWorld(), c[0], c[1], c[2], new java.util.HashMap<>());
+					if(!Double.isNaN(floor))
+						Highlight.pad(player, player.getWorld(), c[0], floor, c[2], Highlight.ZOMBIE_SIDE);
+				}
 		}
 		else
 		{

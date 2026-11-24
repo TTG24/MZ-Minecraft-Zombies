@@ -18,9 +18,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * /zombies barriers <arena>: lists the arena's barriers (id, number of blocks, damage stage) and outlines their blocks until
- * the command is run again (a toggle). Green = intact, yellow = damaged, red = fully broken. The outline is on its own
- * layer, so it stays visible while adding or editing barriers, and barriers added meanwhile show up too.
+ * /zombies barriers <arena>: lists the arena's barriers (id, number of blocks, damage stage, zombie side) and outlines them
+ * until the command is run again (a toggle). Blocks: green = intact, yellow = damaged, red = fully broken. Each window's
+ * zombie side (where zombies wait and break it from) has glowing purple tiles on the floor; a window with no zombie side
+ * gets a second, white outline. The outlines are on their own layers, so they stay visible while adding or editing
+ * barriers, and barriers added or changed meanwhile show up too.
  */
 public class BarriersCommand extends SubCommand
 {
@@ -64,14 +66,22 @@ public class BarriersCommand extends SubCommand
 			return true;
 		}
 
-		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + barriers.size() + " barrier(s), outlined until you run the command again (green = intact, yellow = damaged, red = broken):");
+		CommandUtil.sendMessageToPlayer(player, Colors.DARK_GREEN + barriers.size() + " barrier(s), outlined until you run the command again (green = intact, yellow = damaged, red = broken; "
+				+ Colors.LIGHT_PURPLE + "purple tiles" + Colors.DARK_GREEN + " = zombie side, " + Colors.WHITE + "white outline" + Colors.DARK_GREEN + " = no zombie side):");
+		int withSide = 0;
 		for(Barrier b : barriers)
 		{
 			String stage = b.getStage() >= 5 ? "broken" : b.getStage() < 0 ? "intact" : "damage " + b.getStage() + "/5";
 			Location first = b.getBlocks().isEmpty() ? null : b.getBlocks().get(0).getLocation();
+			String side = b.getZombieSide() != null ? Colors.GRAY + ", zombie side: " + Colors.LIGHT_PURPLE + b.getZombieSide().name().toLowerCase()
+					: Colors.GRAY + ", zombie side: " + Colors.RED + "NOT SET" + (game.barrierManager.sidesKnown() ? " (zombies won't use it)" : "");
+			if(b.getZombieSide() != null)
+				withSide++;
 			player.sendMessage(Colors.GRAY + " - " + b.getID() + ": " + b.getBlocks().size() + " block(s), " + stage
-					+ (first == null ? "" : " near " + first.getBlockX() + ", " + first.getBlockY() + ", " + first.getBlockZ()));
+					+ (first == null ? "" : " near " + first.getBlockX() + ", " + first.getBlockY() + ", " + first.getBlockZ()) + side);
 		}
+		player.sendMessage((withSide == barriers.size() ? Colors.DARK_GREEN : Colors.RED) + "" + withSide + " of " + barriers.size()
+				+ " windows have a zombie side." + (withSide == barriers.size() ? "" : Colors.GRAY + " Set the others with /z editbarrier <id>, then type side (standing on the zombie side) or side auto."));
 		SHOWING.add(player.getUniqueId());
 		highlight(player, game);
 		return true;
@@ -89,6 +99,15 @@ public class BarriersCommand extends SubCommand
 			int stage = b.getStage();
 			Color color = stage >= 5 ? Highlight.BROKEN : stage >= 0 ? Highlight.DAMAGED : Highlight.INTACT;
 			Highlight.blocks(player, b.getBlocks(), color, 2);
+			if(b.getZombieSide() == null)
+				Highlight.blocks(player, b.getBlocks(), Highlight.NO_SIDE, 1);
+			else
+				for(int[] c : b.cellsBeside(b.getZombieSide()))
+				{
+					double floor = com.theprogrammingturkey.comz.game.ZombiePathing.floorAt(game.getWorld(), c[0], c[1], c[2], new java.util.HashMap<>());
+					if(!Double.isNaN(floor))
+						Highlight.pad(player, game.getWorld(), c[0], floor, c[2], Highlight.ZOMBIE_SIDE);
+				}
 		}
 		COMZombies.scheduleTask(10, () -> highlight(player, game));
 	}

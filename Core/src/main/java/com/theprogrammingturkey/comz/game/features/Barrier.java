@@ -63,6 +63,104 @@ public class Barrier
 	private final Set<Entity> releasedZombies = new HashSet<>();
 	/** The spot beside the barrier each held zombie has taken (its feet block), so they spread out instead of all piling onto the nearest one. */
 	private final java.util.Map<Entity, Block> slots = new java.util.HashMap<>();
+	/** When each zombie took its spot: its place in the line there is by this (first come, first at the boards). */
+	private final Map<Entity, Long> slotOrder = new HashMap<>();
+	private long slotSeq;
+	/**
+	 * The side zombies come from (NORTH, EAST, SOUTH or WEST), saved with the arena: they wait and break it only from there
+	 * and climb through to the other side, which is the inside. Null: not known (an arena not checked yet, or a window the
+	 * check could not decide; see BarrierManager.detectSides), and the old guess from where each zombie spawned is used.
+	 */
+	private BlockFace zombieSide;
+
+	public BlockFace getZombieSide()
+	{
+		return zombieSide;
+	}
+
+	public void setZombieSide(BlockFace side)
+	{
+		this.zombieSide = side == BlockFace.NORTH || side == BlockFace.SOUTH || side == BlockFace.EAST || side == BlockFace.WEST ? side : null;
+	}
+
+	/** The stored side as {axis, direction, centre x, centre z} (see {@link #wallSide}), or null when there is none. */
+	private double[] storedSide()
+	{
+		if(zombieSide == null || blocks.isEmpty())
+			return null;
+		double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+		for(Block b : blocks.keySet())
+		{
+			minX = Math.min(minX, b.getX() + 0.5);
+			maxX = Math.max(maxX, b.getX() + 0.5);
+			minZ = Math.min(minZ, b.getZ() + 0.5);
+			maxZ = Math.max(maxZ, b.getZ() + 0.5);
+		}
+		boolean alongX = zombieSide == BlockFace.EAST || zombieSide == BlockFace.WEST;
+		return new double[] {alongX ? 0 : 1, alongX ? zombieSide.getModX() : zombieSide.getModZ(), (minX + maxX) / 2, (minZ + maxZ) / 2};
+	}
+
+	/**
+	 * Is this location on the zombies' side of the window (true when that is not known)? For choosing a window: a zombie
+	 * on the inside never goes for one.
+	 */
+	public boolean isOnZombieSide(Location loc)
+	{
+		double[] side = storedSide();
+		return side == null || sideOffset(side, loc) > 0;
+	}
+
+	/**
+	 * The cells a zombie can stand in right beside this window on one side (the face given), at the window's floor or a
+	 * block up or down: {x, cell y, z}. For the side check and to show the zombie side while editing.
+	 */
+	public List<int[]> cellsBeside(BlockFace face)
+	{
+		List<int[]> out = new ArrayList<>();
+		Set<Long> seen = new HashSet<>();
+		Map<Long, Double> floors = new HashMap<>();
+		for(Block block : blocks.keySet())
+			for(int dy = -1; dy <= 1; dy++)
+			{
+				Block feet = block.getRelative(face).getRelative(0, dy, 0);
+				if(blocks.containsKey(feet) || !seen.add(com.theprogrammingturkey.comz.game.ZombiePathing.cellKey(feet.getX(), feet.getY(), feet.getZ())))
+					continue;
+				if(!Double.isNaN(com.theprogrammingturkey.comz.game.ZombiePathing.floorAt(feet.getWorld(), feet.getX(), feet.getY(), feet.getZ(), floors)))
+					out.add(new int[] {feet.getX(), feet.getY(), feet.getZ()});
+			}
+		return out;
+	}
+
+	/** The faces a window can be crossed through: across a row of blocks, or any of four for a single column. */
+	public List<BlockFace> crossingFaces()
+	{
+		int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+		for(Block b : blocks.keySet())
+		{
+			minX = Math.min(minX, b.getX());
+			maxX = Math.max(maxX, b.getX());
+			minZ = Math.min(minZ, b.getZ());
+			maxZ = Math.max(maxZ, b.getZ());
+		}
+		if(maxX - minX > maxZ - minZ)
+			return List.of(BlockFace.NORTH, BlockFace.SOUTH);
+		if(maxZ - minZ > maxX - minX)
+			return List.of(BlockFace.EAST, BlockFace.WEST);
+		return List.of(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST);
+	}
+
+	/**
+	 * Which crossing face of this window a location is on (the face pointing towards it), for setting the zombie side by
+	 * standing on it. Null when it is level with the window.
+	 */
+	public BlockFace faceTowards(Location loc)
+	{
+		double[] side = wallSide(loc.getX(), loc.getZ());
+		if(side == null)
+			return null;
+		BlockFace f = side[0] == 0 ? (side[1] > 0 ? BlockFace.EAST : BlockFace.WEST) : (side[1] > 0 ? BlockFace.SOUTH : BlockFace.NORTH);
+		return crossingFaces().contains(f) ? f : null;
+	}
 
 	public Barrier(String id, Game game)
 	{
@@ -433,24 +531,47 @@ public class Barrier
 			// reach once the barrier is broken (or by some other open way).
 			double[] side = sideFor(mob);
 			boolean atOwn = isAtBarrier(mob);
-			boolean pastWall = side != null && sideOffset(side, mob.getLocation()) < -0.75;
-			if(pastWall && !atOwn)
+			double offset = side != null ? sideOffset(side, mob.getLocation()) : Double.NaN;
+			if(zombieSide != null)
 			{
-				release(mob);
-				continue;
+				// Its side is known: once past the middle of the wall, right at the window, it is inside, and that is final. It
+				// never claws at a window from the inside, and never goes back out to one. (Only right at it: further away,
+				// which side of a straight line through the window it is on says nothing, the way can lead round the end of
+				// the wall. Away from it, it counts as inside when it can walk to a player without a window.)
+				if(offset < -0.6 && isNear(mob, 2.5))
+				{
+					release(mob);
+					continue;
+				}
 			}
-			// Broken (or already open in later rounds): it does not have to break it, but it still has to get to it and go
-			// through it, rather than heading for the player some other way.
-			if(stage >= 5 && (atOwn || (side != null && sideOffset(side, mob.getLocation()) < 0.75)))
+			else
 			{
-				release(mob);
-				continue;
+				// (An unchecked window: the old rules, sides guessed from where it spawned)
+				boolean pastWall = side != null && offset < -0.75;
+				if(pastWall && !atOwn)
+				{
+					release(mob);
+					continue;
+				}
+				if(stage >= 5 && (atOwn || (side != null && offset < 0.75)))
+				{
+					release(mob);
+					continue;
+				}
 			}
 
 			// The player moved: if another barrier now makes the way to them clearly shorter, go for that one instead
-			if(rechecks > 0 && (mob.getTicksLived() / 10) % 4 == (Math.abs(mob.getUniqueId().hashCode()) % 4))
+			// (not while it is climbing through this one)
+			boolean climbing = zombieSide != null && stage >= 5 && atOwn;
+			if(!climbing && rechecks > 0 && (mob.getTicksLived() / 10) % 4 == (Math.abs(mob.getUniqueId().hashCode()) % 4))
 			{
 				rechecks--;
+				// Already inside (it got in some other way): it hunts, it doesn't go back out to its window
+				if(zombieSide != null && offset < -0.6 && game.barrierManager.hasOpenWay(mob))
+				{
+					release(mob);
+					continue;
+				}
 				Barrier better = game.barrierManager.betterBarrier(mob, this, atOwn);
 				if(better != null)
 				{
@@ -459,59 +580,14 @@ public class Barrier
 				}
 			}
 
-			// A player within reach of the zombie gets hit, even with the barrier between them (not while it's shocked)
+			// A player within reach of the zombie gets hit, even with the barrier between them (not while it's shocked).
+			// (A zombie caught on something on its way is put back on its route by ZombieBrain, which logs it.)
 			if(mob.hasAI())
-			{
 				hurtPlayerInReach(mob);
-				unstick(mob, atOwn);
-			}
 
 		}
 
 		COMZombies.scheduleTask(10, () -> steerTick(loopId));
-	}
-
-	/** Per held zombie: where it last was when it made progress, and when (server tick). */
-	private final Map<Entity, Location> progressAt = new HashMap<>();
-	private final Map<Entity, Integer> progressTick = new HashMap<>();
-	/** How long a held zombie may make no progress, away from the barrier, before it is put at its spot (ticks). */
-	private static final int UNSTICK_TICKS = 60;
-
-	/**
-	 * Whatever a held zombie is caught on (a post by the window, a wall corner, another zombie), it never stays caught: if it
-	 * is not at the barrier and has not moved half a block in 3 seconds, it is put on its spot beside the barrier (always
-	 * open floor on its own side), where it starts clawing.
-	 */
-	private void unstick(Mob mob, boolean atBarrier)
-	{
-		int now = org.bukkit.Bukkit.getCurrentTick();
-		Location at = mob.getLocation();
-		Location last = progressAt.get(mob);
-		if(atBarrier || last == null || last.getWorld() != at.getWorld() || last.distanceSquared(at) > 0.25)
-		{
-			progressAt.put(mob, at);
-			progressTick.put(mob, now);
-			return;
-		}
-		if(now - progressTick.getOrDefault(mob, now) < UNSTICK_TICKS)
-			return;
-		Location spot = approachFor(mob);
-		progressAt.remove(mob);
-		progressTick.remove(mob);
-		if(spot == null || spot.getWorld() != at.getWorld() || spot.distanceSquared(at) > 8 * 8)
-			return; // nowhere near its barrier: it is still on its way, not caught at it
-		if(flatDistSquared(spot, at) < 0.6 * 0.6)
-			return; // standing where it should (waiting its turn further back in the line)
-		Location to = spot.clone();
-		// facing the barrier
-		Location face = getNearestBlockCenter(mob);
-		if(face != null)
-			to.setDirection(face.toVector().subtract(to.toVector()).setY(0).lengthSquared() > 1.0E-6
-					? face.toVector().subtract(to.toVector()).setY(0) : at.getDirection());
-		COMZombies.log.info(String.format("[Barrier %s] %s made no progress for 3s at %.2f %.2f %.2f, %.1f from its spot: put on its spot %.2f %.2f %.2f",
-				id, mob.getType().name().toLowerCase(), at.getX(), at.getY(), at.getZ(), Math.sqrt(flatDistSquared(spot, at)), to.getX(), to.getY(), to.getZ()));
-		mob.teleport(to);
-		com.theprogrammingturkey.comz.game.ZombieBrain.forget(mob);
 	}
 
 	/** Is the entity touching this barrier (within its break range)? */
@@ -525,8 +601,7 @@ public class Barrier
 	{
 		ents.remove(ent);
 		slots.remove(ent);
-		progressAt.remove(ent);
-		progressTick.remove(ent);
+		slotOrder.remove(ent);
 		zombieSides.remove(ent);
 		brokenSeen.remove(ent);
 		lastBarrierHit.remove(ent);
@@ -538,8 +613,7 @@ public class Barrier
 	{
 		ents.remove(mob);
 		slots.remove(mob);
-		progressAt.remove(mob);
-		progressTick.remove(mob);
+		slotOrder.remove(mob);
 		zombieSides.remove(mob);
 		brokenSeen.remove(mob);
 		lastBarrierHit.remove(mob);
@@ -549,67 +623,105 @@ public class Barrier
 	private void release(Mob mob)
 	{
 		slots.remove(mob);
-		progressAt.remove(mob);
-		progressTick.remove(mob);
+		slotOrder.remove(mob);
 		releasedZombies.add(mob);
 	}
 
-	/** The spot beside this barrier, on the zombie's own side, that it is walking to (the nearest one). */
+	/** A place to wait beside the window: the cell (what zombies share as "their spot") and where its floor really is. */
+	private record Spot(Block cell, Location stand) {}
+
+	/** How near its spot (blocks) a zombie has to come to take its place in the line there. */
+	private static final double ARRIVED = 2.5;
+
+	/**
+	 * Where the zombie is walking to at this window. Broken, with its zombie side known: through it, to the inside cell
+	 * nearest it (once past the middle of the wall it is released to hunt). Otherwise its spot beside the window on its
+	 * own side, and its place in the line there.
+	 */
 	public Location approachFor(Mob mob)
 	{
-		List<Location> approaches = ownSideApproaches(mob);
-		if(approaches.isEmpty())
+		if(zombieSide != null && stage >= 5)
+		{
+			Location in = climbTarget(mob);
+			if(in != null)
+				return in;
+		}
+		List<Spot> spots = ownSideSpots(mob);
+		if(spots.isEmpty())
 			return getNearestBlockCenter(mob);
 		// Each zombie keeps the spot it took; a new one takes the spot with the fewest zombies at it (the nearest of those)
 		slots.keySet().removeIf(e -> !ents.contains(e) || releasedZombies.contains(e) || e.isDead());
+		slotOrder.keySet().retainAll(slots.keySet());
 		Block mine = slots.get(mob);
-		Location spot = null;
+		Spot spot = null;
 		if(mine != null)
-			for(Location a : approaches)
-				if(a.getBlock().equals(mine))
-					spot = a;
+			for(Spot sp : spots)
+				if(sp.cell().equals(mine))
+					spot = sp;
 		if(spot == null)
 		{
 			int fewest = Integer.MAX_VALUE;
-			for(Location a : approaches)
+			for(Spot sp : spots)
 			{
 				int n = 0;
 				for(Block b : slots.values())
-					if(b.equals(a.getBlock()))
+					if(b.equals(sp.cell()))
 						n++;
 				if(n < fewest)
 				{
 					fewest = n;
-					spot = a;
+					spot = sp;
 				}
 			}
-			slots.put(mob, spot.getBlock());
+			slots.put(mob, spot.cell());
+			slotOrder.remove(mob);
 		}
-		// Its place in the line at that spot: by who is nearest the spot now, so the one already at the front keeps it and a
-		// newcomer queues behind. (It used to be by entity id: a lower-id zombie arriving late had to get past the one waiting
-		// at the front while that one walked back into it, and in a narrow way in they shoved each other forever with nobody
-		// at the barrier to break it.)
+		// Its place in the line: first come, first at the boards. The order is taken once, when it gets near the spot, and
+		// never changes (worked out from distances every tick, two zombies swapped places back and forth, and in a narrow way
+		// in they shoved each other with nobody at the boards). One still on its way queues behind all that are there.
 		Location me = mob.getLocation();
-		double mine2 = flatDistSquared(me, spot);
+		if(!slotOrder.containsKey(mob) && flatDistSquared(me, spot.stand()) < ARRIVED * ARRIVED)
+			slotOrder.put(mob, ++slotSeq);
+		long myOrder = slotOrder.getOrDefault(mob, Long.MAX_VALUE);
 		int rank = 0;
 		for(java.util.Map.Entry<Entity, Block> e : slots.entrySet())
 		{
-			if(e.getKey() == mob || !e.getValue().equals(spot.getBlock()) || !e.getKey().getWorld().equals(me.getWorld()))
+			if(e.getKey() == mob || !e.getValue().equals(spot.cell()))
 				continue;
-			double other2 = flatDistSquared(e.getKey().getLocation(), spot);
-			if(other2 < mine2 || (other2 == mine2 && e.getKey().getEntityId() < mob.getEntityId()))
+			long other = slotOrder.getOrDefault(e.getKey(), Long.MAX_VALUE);
+			if(other < myOrder || (other == myOrder && e.getKey().getEntityId() < mob.getEntityId()))
 				rank++;
 		}
-		double[] at = standSpot(spot.getX(), spot.getZ(), sideFor(mob), rank, mob.getEntityId());
-		Location stand = new Location(spot.getWorld(), at[0], spot.getY(), at[1]);
+		Location base = spot.stand();
+		double[] at = standSpot(base.getX(), base.getZ(), sideFor(mob), rank, mob.getEntityId());
+		Location stand = new Location(base.getWorld(), at[0], base.getY(), at[1]);
 		// Behind it may be a wall or a drop: then as near the barrier as there is room
-		while(rank > 0 && !standable(stand.getBlock()))
+		while(rank > 0 && !standableAt(stand))
 		{
 			rank--;
-			at = standSpot(spot.getX(), spot.getZ(), sideFor(mob), rank, mob.getEntityId());
-			stand = new Location(spot.getWorld(), at[0], spot.getY(), at[1]);
+			at = standSpot(base.getX(), base.getZ(), sideFor(mob), rank, mob.getEntityId());
+			stand = new Location(base.getWorld(), at[0], base.getY(), at[1]);
 		}
 		return stand;
+	}
+
+	/** The inside cell (the side away from the zombies) beside this window nearest the zombie, at its real floor; or null. */
+	private Location climbTarget(Mob mob)
+	{
+		Location best = null;
+		double bestDist = Double.MAX_VALUE;
+		for(int[] c : cellsBeside(zombieSide.getOppositeFace()))
+		{
+			double floor = com.theprogrammingturkey.comz.game.ZombiePathing.floorAt(mob.getWorld(), c[0], c[1], c[2], new HashMap<>());
+			Location l = new Location(mob.getWorld(), c[0] + 0.5, floor, c[2] + 0.5);
+			double d = l.distanceSquared(mob.getLocation());
+			if(d < bestDist)
+			{
+				bestDist = d;
+				best = l;
+			}
+		}
+		return best;
 	}
 
 	private static double flatDistSquared(Location a, Location b)
@@ -618,9 +730,11 @@ public class Barrier
 		return dx * dx + dz * dz;
 	}
 
-	private static boolean standable(Block feet)
+	/** Can a zombie stand at this point (its block, at the height of its feet: real floors, snow and slabs included)? */
+	private static boolean standableAt(Location stand)
 	{
-		return feet.isPassable() && feet.getRelative(BlockFace.UP).isPassable() && feet.getRelative(BlockFace.DOWN).getType().isSolid();
+		int cy = com.theprogrammingturkey.comz.game.ZombiePathing.cellOf(stand.getY());
+		return !Double.isNaN(com.theprogrammingturkey.comz.game.ZombiePathing.floorAt(stand.getWorld(), stand.getBlockX(), cy, stand.getBlockZ(), new HashMap<>()));
 	}
 
 	/**
@@ -644,36 +758,36 @@ public class Barrier
 	}
 
 	/**
-	 * Walkable spots beside this barrier on the zombie's own side (all sides if that can't be told), nearest first: in front
-	 * of each block, and also diagonally off its ends (in front of the wall beside the window, still within reach), so more
-	 * zombies get a place at the barrier instead of all queueing in front of it.
+	 * Places to wait beside this barrier on the zombie's own side, nearest first. With the zombie side known: the cells in
+	 * front of the window on that side. Otherwise (an unchecked window): in front of each block on every side, then only
+	 * those on the side the zombie spawned on.
 	 */
-	private List<Location> ownSideApproaches(Mob mob)
+	private List<Spot> ownSideSpots(Mob mob)
 	{
-		List<Location> approaches = new ArrayList<>();
-		java.util.Set<Block> seen = new HashSet<>();
-		for(Block block : blocks.keySet())
-			for(BlockFace side : new BlockFace[] {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST})
-				for(int dy = -1; dy <= 1; dy++)
-				{
-					Block feet = block.getRelative(side).getRelative(0, dy, 0);
-					if(!blocks.containsKey(feet) && seen.add(feet) && standable(feet))
-						approaches.add(feet.getLocation().add(0.5, 0, 0.5));
-				}
+		List<Spot> spots = new ArrayList<>();
+		org.bukkit.World world = mob.getWorld();
+		Map<Long, Double> floors = new HashMap<>();
+		List<BlockFace> faces = zombieSide != null ? List.of(zombieSide) : List.of(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST);
+		for(BlockFace face : faces)
+			for(int[] c : cellsBeside(face))
+			{
+				double floor = com.theprogrammingturkey.comz.game.ZombiePathing.floorAt(world, c[0], c[1], c[2], floors);
+				spots.add(new Spot(world.getBlockAt(c[0], c[1], c[2]), new Location(world, c[0] + 0.5, floor, c[2] + 0.5)));
+			}
 		// Only the zombie's own side: if the way to the near side fails for a moment, the next nearest spot used to be one on
 		// the player's side, reached by walking through some other open barrier.
 		double[] side = sideFor(mob);
-		if(side != null)
+		if(zombieSide == null && side != null)
 		{
-			List<Location> behind = new ArrayList<>();
-			for(Location approach : approaches)
-				if(sideOffset(side, approach) > 0.5)
-					behind.add(approach);
+			List<Spot> behind = new ArrayList<>();
+			for(Spot sp : spots)
+				if(sideOffset(side, sp.stand()) > 0.5)
+					behind.add(sp);
 			if(!behind.isEmpty())
-				approaches = behind;
+				spots = behind;
 		}
-		approaches.sort(Comparator.comparingDouble(loc -> loc.distanceSquared(mob.getLocation())));
-		return approaches;
+		spots.sort(Comparator.comparingDouble(sp -> sp.stand().distanceSquared(mob.getLocation())));
+		return spots;
 	}
 
 	/**
@@ -737,6 +851,8 @@ public class Barrier
 	/** The side data for this zombie: judged from where it spawned, else from the barrier's spawn points. */
 	private double[] sideFor(Entity ent)
 	{
+		if(zombieSide != null)
+			return storedSide();
 		double[] own = zombieSides.get(ent);
 		return own != null ? own : spawnSide();
 	}
@@ -822,8 +938,6 @@ public class Barrier
 		zombieSides.keySet().removeIf(entity -> entity == null || entity.isDead());
 		brokenSeen.keySet().removeIf(entity -> entity == null || entity.isDead());
 		lastBarrierHit.keySet().removeIf(entity -> entity == null || entity.isDead());
-		progressAt.keySet().removeIf(entity -> entity == null || entity.isDead());
-		progressTick.keySet().removeIf(entity -> entity == null || entity.isDead());
 		if(ents.isEmpty())
 		{
 			breaking = false;
@@ -850,19 +964,19 @@ public class Barrier
 		COMZombies.scheduleTask(60, () -> breakTick(loopId));
 	}
 
-	/** Walkable spots right beside this barrier's blocks (either side), nearest to the given location first. */
+	/**
+	 * Places a zombie can stand right beside this barrier's blocks, nearest to the given location first: on the zombie side
+	 * when that is known, otherwise either side. At their real floor heights.
+	 */
 	public List<Location> approachLocations(Location from)
 	{
 		List<Location> out = new ArrayList<>();
-		for(Block block : blocks.keySet())
-			for(BlockFace side : new BlockFace[] {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST})
-				for(int dy = -1; dy <= 1; dy++)
-				{
-					Block feet = block.getRelative(side).getRelative(0, dy, 0);
-					if(feet.isPassable() && feet.getRelative(BlockFace.UP).isPassable()
-							&& feet.getRelative(BlockFace.DOWN).getType().isSolid())
-						out.add(feet.getLocation().add(0.5, 0, 0.5));
-				}
+		Map<Long, Double> floors = new HashMap<>();
+		List<BlockFace> faces = zombieSide != null ? List.of(zombieSide) : List.of(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST);
+		for(BlockFace face : faces)
+			for(int[] c : cellsBeside(face))
+				out.add(new Location(from.getWorld(), c[0] + 0.5,
+						com.theprogrammingturkey.comz.game.ZombiePathing.floorAt(from.getWorld(), c[0], c[1], c[2], floors), c[2] + 0.5));
 		out.sort(Comparator.comparingDouble(loc -> loc.distanceSquared(from)));
 		return out;
 	}
@@ -884,9 +998,13 @@ public class Barrier
 		return false;
 	}
 
+	/** Held to it, at it, and on the zombies' side of it: only then does a zombie break it (never from the inside). */
 	private boolean isClawing(Entity ent)
 	{
-		return isHeldBack(ent) && isAtBarrier(ent);
+		if(!isHeldBack(ent) || !isAtBarrier(ent))
+			return false;
+		double[] side = storedSide();
+		return side == null || sideOffset(side, ent.getLocation()) > -0.2;
 	}
 
 	private boolean isAtBarrier(Entity ent)

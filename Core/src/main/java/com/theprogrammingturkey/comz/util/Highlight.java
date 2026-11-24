@@ -107,6 +107,50 @@ public final class Highlight
 	}
 
 	/**
+	 * A flat glowing tile on the floor of a block cell (at the real floor height {@code floor}), that only this player sees
+	 * (through walls too), kept alive like {@link #box}. Marks a place to stand without hiding what is above it.
+	 */
+	public static void pad(Player player, org.bukkit.World world, int x, double floor, int z, Color color)
+	{
+		if(world == null || !world.equals(player.getWorld()))
+			return;
+		long now = System.currentTimeMillis();
+		Map<String, Entry> mine = ACTIVE.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>());
+		String key = "pad:" + world.getName() + ":" + x + ":" + floor + ":" + z;
+		Entry entry = mine.get(key);
+		if(entry != null && entry.display.isValid())
+		{
+			entry.lastSeen = now;
+			if(!entry.color.equals(color))
+			{
+				entry.display.setGlowColorOverride(color);
+				entry.color = color;
+			}
+			return;
+		}
+		if(mine.size() >= MAX_PER_PLAYER)
+			return;
+		BlockDisplay display = world.spawn(new Location(world, x, floor, z), BlockDisplay.class, d ->
+		{
+			d.setVisibleByDefault(false);
+			d.setPersistent(false);
+			d.setBlock(Material.GLASS.createBlockData());
+			d.setGlowing(true);
+			d.setGlowColorOverride(color);
+			d.setBrightness(new BlockDisplay.Brightness(15, 15));
+			d.setTransformation(new Transformation(new Vector3f(0.08f, 0.02f, 0.08f), new AxisAngle4f(), new Vector3f(0.84f, 0.04f, 0.84f), new AxisAngle4f()));
+			d.setViewRange(2.0f);
+		});
+		player.showEntity(COMZombies.getPlugin(), display);
+		mine.put(key, new Entry(display, color, now));
+		startCleanup();
+	}
+
+	/** Where zombies wait at a window (its zombie side), and a window that has no zombie side yet. */
+	public static final Color ZOMBIE_SIDE = Color.fromRGB(190, 70, 255);
+	public static final Color NO_SIDE = Color.fromRGB(255, 255, 255);
+
+	/**
 	 * A thin glowing bar from a to b that only this player sees (through walls too), kept alive like {@link #box}: keep
 	 * calling it every few ticks while it should show. The entity sits in the middle so it is visible from either end.
 	 */

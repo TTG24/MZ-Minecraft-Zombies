@@ -38,7 +38,6 @@ public final class ZombieBrain
 	private static final int SEARCHES_PER_TICK = 4;
 	private static final int REPLAN_TICKS = 40;
 	private static final int FAILED_RETRY_TICKS = 60;
-	private static final double REACH_SQUARED = 2.4;
 	private static final int ATTACK_TICKS = 20;
 
 	private static final class State
@@ -58,6 +57,11 @@ public final class ZombieBrain
 		Location progressFrom;
 		long progressSince;
 		boolean reported;
+		/** Whether it was walked this tick (it has somewhere to go, as opposed to waiting); the last route point it stood on;
+		 *  when it was last put back there. */
+		boolean walking;
+		Location lastGood;
+		long lastRecover = Long.MIN_VALUE / 2;
 	}
 
 	/** A mob's AI as /zombies debug zombies shows it. {@code route} null: none (straight to its goal, or no way there). */
@@ -141,36 +145,56 @@ public final class ZombieBrain
 		if(goal == null || goal.getWorld() != mob.getWorld())
 			return;
 		Location at = mob.getLocation();
-		s.job = held != null ? "window " + held.getID() : player != null ? "hunting " + player.getName() : "idle";
+		s.job = held != null ? (held.getStage() >= 5 && held.getZombieSide() != null ? "climbing in at " : "window ") + held.getID()
+				: player != null ? "hunting " + player.getName() : "idle";
 		s.goal = goal;
 		watchProgress(mob, s, at, goal, held, player, tick);
+
+		boolean walkedBefore = s.walking;
+		s.walking = false;
+		// Who is at the goal, for "is it in reach from there": the player's real size (crouched, prone), or a zombie's at
+		// a window spot
+		double[] goalBody = player != null ? new double[] {player.getHeight(), player.getEyeHeight()} : ZombiePathing.ZOMBIE;
 
 		if(player != null)
 		{
 			attack(game, mob, player, s, tick);
 			if(at.distanceSquared(player.getLocation()) < 64)
 				mob.lookAt(player);
-		}
-
-		// Right there with nothing in between: straight to it (a player is a moving target; a barrier spot is just reached)
-		// ...unless it has stopped moving: the line was clear but its body is caught on something, so it plans a way round
-		// (not one standing still where it means to be: waiting at its spot or in reach of the player)
-		boolean stuck = isStuck(s, at, tick) && at.distanceSquared(goal) > 1.0;
-		if(!stuck && at.distanceSquared(goal) < 6.25 && ZombiePathing.arrivesAt(at, goal))
-		{
-			s.route = null;
-			// (level distance: on a half slab it stands half a block below its spot, which is at the window's floor)
-			double fx = at.getX() - goal.getX(), fz = at.getZ() - goal.getZ();
-			if(held == null || fx * fx + fz * fz > 0.25)
-				walkTo(mob, goal.getX(), goal.getY(), goal.getZ());
-			else
+			// In reach with nothing in between: it stands and hits (walking on into the player only shoved them about)
+			if(ZombiePathing.inReach(mob, player) && ZombiePathing.canHit(mob, player, null))
 			{
-				// At its spot: stand still facing the boards. Walking on to a point it is already on made Minecraft's
-				// movement overshoot and flip its heading every tick, so it spun on the spot.
+				s.route = null;
+				return;
+			}
+		}
+		else
+		{
+			// At its window spot: stand still facing the boards. Walking on to a point it is already on made Minecraft's
+			// movement overshoot and flip its heading every tick, so it spun on the spot. (Level distance: on a half slab it
+			// stands half a block below its spot, which is at the window's floor.)
+			double fx = at.getX() - goal.getX(), fz = at.getZ() - goal.getZ();
+			if(fx * fx + fz * fz <= 0.25 && Math.abs(at.getY() - goal.getY()) < 1.2)
+			{
+				s.route = null;
 				Location face = held.getNearestBlockCenter(mob);
 				if(face != null)
 					mob.lookAt(face.getX(), face.getY() + 0.5, face.getZ());
+				return;
 			}
+		}
+
+		// Caught for a while although it had a way to follow: back to the last point of its route it stood on
+		if(walkedBefore && recover(mob, s, at, tick))
+			return;
+
+		// Right there with nothing in between: straight to it (a player is a moving target; a barrier spot is just reached)
+		// ...unless it has stopped moving: the line was clear but its body is caught on something, so it plans a way round
+		boolean stuck = isStuck(s, at, tick) && at.distanceSquared(goal) > 1.0;
+		if(!stuck && at.distanceSquared(goal) < 6.25 && ZombiePathing.arrivesAt(at, goal, goalBody))
+		{
+			s.route = null;
+			walkTo(mob, s, goal.getX(), goal.getY(), goal.getZ());
 			return;
 		}
 
@@ -180,7 +204,7 @@ public final class ZombieBrain
 		{
 			int maxDrop = Math.max(3, Math.min(32, COMZombies.getPlugin().getConfig().getInt("config.gameSettings.zombieSafeFallDistance", 16)));
 			List<int[]> route = ZombiePathing.search(mob.getWorld(), at.getBlockX(), ZombiePathing.feetCell(at), at.getBlockZ(), at,
-					goal.getBlockX(), ZombiePathing.feetCell(goal), goal.getBlockZ(), maxDrop, goal, true);
+					goal.getBlockX(), ZombiePathing.feetCell(goal), goal.getBlockZ(), maxDrop, goal, goalBody, true);
 			s.routeTick = tick;
 			s.routeGoal = goal.clone();
 			s.stuckFrom = null;
@@ -194,6 +218,8 @@ public final class ZombieBrain
 			{
 				s.route = route;
 				s.index = 1;
+				if(mob.isOnGround())
+					s.lastGood = at.clone();
 			}
 		}
 		if(s.route == null)
@@ -212,7 +238,12 @@ public final class ZombieBrain
 			boolean last = s.index == s.route.size() - 1;
 			double near = last ? 0.2 * 0.2 : turns ? 0.3 * 0.3 : 0.36;
 			if(dx * dx + dz * dz < near && Math.abs(ZombiePathing.floorOf(n) - at.getY()) < 1.0)
+			{
+				// a point of its route it really stood on: where it goes back to if it gets caught further on
+				if(mob.isOnGround())
+					s.lastGood = new Location(at.getWorld(), n[0] + 0.5, ZombiePathing.floorOf(n), n[2] + 0.5);
 				s.index++;
+			}
 			else
 				break;
 		}
@@ -236,7 +267,7 @@ public final class ZombieBrain
 		}
 		int[] next = s.route.get(aim);
 		// to its real floor: Minecraft's movement jumps when that is more than a step above its feet, and only then
-		walkTo(mob, next[0] + 0.5, ZombiePathing.floorOf(next), next[2] + 0.5);
+		walkTo(mob, s, next[0] + 0.5, ZombiePathing.floorOf(next), next[2] + 0.5);
 	}
 
 	/**
@@ -302,6 +333,37 @@ public final class ZombieBrain
 		return Integer.signum(b[0] - a[0]) != Integer.signum(c[0] - b[0]) || Integer.signum(b[2] - a[2]) != Integer.signum(c[2] - b[2]);
 	}
 
+	/** No progress for this long while it had a way to follow: put back on its route. Not more often than every 10 s. */
+	private static final int RECOVER_TICKS = 120, RECOVER_GAP_TICKS = 200;
+
+	/**
+	 * A zombie that has had somewhere to walk but made no progress for {@link #RECOVER_TICKS} (its route was planned again
+	 * after a second, and that did not free it either) is put back on the last point of its route it really stood on, and
+	 * plans from there. Logged. A zombie waiting (at its window spot, in reach of its player, or with no way to its player at
+	 * all) is never moved.
+	 *
+	 * @return true if it was moved
+	 */
+	private static boolean recover(Mob mob, State s, Location at, long tick)
+	{
+		if(tick - s.progressSince < RECOVER_TICKS || tick - s.lastRecover < RECOVER_GAP_TICKS || s.lastGood == null
+				|| s.lastGood.getWorld() != at.getWorld() || s.lastGood.distanceSquared(at) < 1.0)
+			return false;
+		Location to = s.lastGood.clone();
+		to.setYaw(at.getYaw());
+		to.setPitch(0);
+		COMZombies.log.info(String.format("[ZombieBrain] %s caught for %ds at %.2f %.2f %.2f (%s): put back on its route at %.2f %.2f %.2f",
+				mob.getType().name().toLowerCase(), (tick - s.progressSince) / 20, at.getX(), at.getY(), at.getZ(), s.job, to.getX(), to.getY(), to.getZ()));
+		mob.teleport(to);
+		s.route = null;
+		s.stuckFrom = null;
+		s.progressFrom = to.clone();
+		s.progressSince = tick;
+		s.reported = false;
+		s.lastRecover = tick;
+		return true;
+	}
+
 	/** Hasn't moved half a block in the last second although it is trying to: its route needs redoing. */
 	private static boolean isStuck(State s, Location at, long tick)
 	{
@@ -324,7 +386,7 @@ public final class ZombieBrain
 		double fx = at.getX() - goal.getX(), fz = at.getZ() - goal.getZ();
 		// (in reach of its player only counts if it can really hit them: beside a corner it can be in reach and blocked)
 		boolean content = (held != null && fx * fx + fz * fz < 0.36)
-				|| (player != null && at.distanceSquared(player.getLocation()) <= REACH_SQUARED * 1.5 && ZombiePathing.canHit(mob, player, null));
+				|| (player != null && ZombiePathing.inReach(mob, player) && ZombiePathing.canHit(mob, player, null));
 		if(content || s.progressFrom == null || s.progressFrom.getWorld() != at.getWorld() || s.progressFrom.distanceSquared(at) > 1.0)
 		{
 			s.progressFrom = at.clone();
@@ -390,8 +452,7 @@ public final class ZombieBrain
 	private static void attack(Game game, Mob mob, Player player, State s, long tick)
 	{
 		if(tick - s.lastAttack < ATTACK_TICKS || game.downedPlayerManager.isDownedPlayer(player)
-				|| mob.getLocation().distanceSquared(player.getLocation()) > REACH_SQUARED
-				|| !ZombiePathing.canHit(mob, player, null))
+				|| !ZombiePathing.inReach(mob, player) || !ZombiePathing.canHit(mob, player, null))
 			return;
 		s.lastAttack = tick;
 		game.spawnManager.markActive(mob);
@@ -407,8 +468,9 @@ public final class ZombieBrain
 	 * Walks the mob towards a point with Minecraft's own movement control (it turns to it, walks at the mob's speed and
 	 * jumps when the point is a step up), or, if that can't be reached on this server, by setting its velocity directly.
 	 */
-	private static void walkTo(Mob mob, double x, double y, double z)
+	private static void walkTo(Mob mob, State s, double x, double y, double z)
 	{
+		s.walking = true;
 		double[] slid = alongWall(mob, x, y, z);
 		x = slid[0];
 		z = slid[1];
